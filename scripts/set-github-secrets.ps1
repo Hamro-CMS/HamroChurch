@@ -1,5 +1,5 @@
 param(
-    [string]$Repo = 'Hamro-Church/HamroChurch',
+    [string]$Repo = 'Hamro-CMS/HamroChurch',
     [ValidateSet('ftp', 'ssh', 'skip')]
     [string]$WebsiteDeploy = 'skip',
     [switch]$SetReleaseToken

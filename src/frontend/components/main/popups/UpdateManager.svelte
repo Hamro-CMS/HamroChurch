@@ -17,7 +17,7 @@
         currentVersion: "",
         latestVersion: "",
         releaseNotes: "",
-        releaseUrl: "https://github.com/Hamro-Church/HamroChurch/releases"
+        releaseUrl: "https://github.com/Hamro-CMS/HamroChurch/releases"
     }
     let errorMessage = ""
 

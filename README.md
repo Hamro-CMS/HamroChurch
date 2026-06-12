@@ -9,17 +9,17 @@ Hamro Church is bilingual church presentation software built for Nepali and Engl
 - Website: https://hamrocms.com
 - Documentation: https://hamrocms.com/docs
 - FAQ: https://hamrocms.com/faq
-- GitHub Repository: https://github.com/Hamro-Church/HamroChurch
-- Releases: https://github.com/Hamro-Church/HamroChurch/releases
-- Issue Tracker: https://github.com/Hamro-Church/HamroChurch/issues
+- GitHub Repository: https://github.com/Hamro-CMS/HamroChurch
+- Releases: https://github.com/Hamro-CMS/HamroChurch/releases
+- Issue Tracker: https://github.com/Hamro-CMS/HamroChurch/issues
 
 ## Downloads
 
 Current release downloads will be published through GitHub Releases:
 
-- Windows installer: https://github.com/Hamro-Church/HamroChurch/releases
-- macOS installer: https://github.com/Hamro-Church/HamroChurch/releases
-- Linux installer: https://github.com/Hamro-Church/HamroChurch/releases
+- Windows installer: https://github.com/Hamro-CMS/HamroChurch/releases
+- macOS installer: https://github.com/Hamro-CMS/HamroChurch/releases
+- Linux installer: https://github.com/Hamro-CMS/HamroChurch/releases
 
 ## Core Capabilities
 

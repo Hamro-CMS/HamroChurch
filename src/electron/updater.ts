@@ -10,8 +10,8 @@ import { pipeline } from "stream/promises"
 import type { AppUpdateAsset, AppUpdateDownloadResult, AppUpdateInfo } from "../types/Main"
 import { config } from "./data/store"
 
-const RELEASES_LATEST_URL = "https://api.github.com/repos/Hamro-Church/HamroChurch/releases/latest"
-const RELEASES_PAGE_URL = "https://github.com/Hamro-Church/HamroChurch/releases"
+const RELEASES_LATEST_URL = "https://api.github.com/repos/Hamro-CMS/HamroChurch/releases/latest"
+const RELEASES_PAGE_URL = "https://github.com/Hamro-CMS/HamroChurch/releases"
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
 const UPDATE_TEMP_DIR = path.join(os.tmpdir(), "Hamro Church Updates")
 

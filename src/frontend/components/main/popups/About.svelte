@@ -55,11 +55,11 @@
         </div>
         <div>
             • Report issue
-            <Link url="https://github.com/Hamro-Church/HamroChurch/issues">GitHub issues</Link>
+            <Link url="https://github.com/Hamro-CMS/HamroChurch/issues">GitHub issues</Link>
         </div>
         <div>
             • Source code
-            <Link url="https://github.com/Hamro-Church/HamroChurch">github.com/Hamro-Church/HamroChurch</Link>
+            <Link url="https://github.com/Hamro-CMS/HamroChurch">github.com/Hamro-CMS/HamroChurch</Link>
         </div>
         <div>
             • Translations

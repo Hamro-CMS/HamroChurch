@@ -11,7 +11,7 @@ files:
 
 publish:
     provider: github
-    owner: Hamro-Church
+    owner: Hamro-CMS
     repo: HamroChurch
     releaseType: release
 

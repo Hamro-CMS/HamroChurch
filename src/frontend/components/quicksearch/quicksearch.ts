@@ -671,7 +671,7 @@ const faq = [
     { id: "https://hamrocms.com/docs/stage-display", name: "Stage Display Guide", icon: "help", aliases: ["-obs", "-livestream", "-outputs"] },
     { id: "https://hamrocms.com/docs/remote-control", name: "Remote Control Guide", icon: "help", aliases: ["-remote", "-controller", "-companion"] },
     { id: "https://hamrocms.com/faq", name: "Hamro Church FAQ", icon: "help" },
-    { id: "https://github.com/Hamro-Church/HamroChurch/releases", name: "Release Notes", icon: "help" }
+    { id: "https://github.com/Hamro-CMS/HamroChurch/releases", name: "Release Notes", icon: "help" }
 ]
 
 function getFaq() {

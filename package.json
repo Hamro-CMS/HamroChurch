@@ -6,10 +6,10 @@
     "description": "Nepali-localized church presentation software for worship services.",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Hamro-Church/HamroChurch.git"
+        "url": "https://github.com/Hamro-CMS/HamroChurch.git"
     },
     "bugs": {
-        "url": "https://github.com/Hamro-Church/HamroChurch/issues"
+        "url": "https://github.com/Hamro-CMS/HamroChurch/issues"
     },
     "homepage": "https://hamrocms.com",
     "author": "Hamro Church",

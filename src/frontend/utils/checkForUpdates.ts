@@ -5,7 +5,7 @@ import { requestMain, sendMain } from "../IPC/main"
 import { activePopup, alertUpdates, isDev, popupData, special, version } from "./../stores"
 import { newToast } from "./common"
 
-const RELEASES_PAGE_URL = "https://github.com/Hamro-Church/HamroChurch/releases"
+const RELEASES_PAGE_URL = "https://github.com/Hamro-CMS/HamroChurch/releases"
 
 function includeBetaUpdates() {
     const currentVersion = get(version)
