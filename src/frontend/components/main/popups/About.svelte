@@ -51,7 +51,7 @@
         </div>
         <div>
             • Documentation
-            <Link url="https://hamrocms.com/docs">hamrocms.com/docs</Link>
+            <Link url="https://hamrocms.com/docs/">hamrocms.com/docs/</Link>
         </div>
         <div>
             • Report issue

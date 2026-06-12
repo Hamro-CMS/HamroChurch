@@ -1,6 +1,6 @@
 (function () {
-    const apiUrl = "https://api.github.com/repos/Hamro-Church/HamroChurch/releases/latest"
-    const fallbackUrl = "https://github.com/Hamro-Church/HamroChurch/releases/latest"
+    const apiUrl = "https://api.github.com/repos/Hamro-CMS/HamroChurch/releases/latest"
+    const fallbackUrl = "https://github.com/Hamro-CMS/HamroChurch/releases"
 
     const pageLinks = document.querySelectorAll("[data-release-page]")
     const windowsLinks = document.querySelectorAll("[data-release-windows]")
@@ -53,6 +53,6 @@
             setLinkGroup(linuxLinks, linuxAsset ? linuxAsset.browser_download_url : releaseUrl)
         })
         .catch(() => {
-            setTextGroup(summaryNodes, "Use the latest GitHub Release page if asset detection is unavailable.")
+            setTextGroup(summaryNodes, "Failed to fetch latest release metadata. Use the GitHub release page directly if needed.")
         })
 })()

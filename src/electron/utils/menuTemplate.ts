@@ -68,7 +68,7 @@ export function template(strings: Dictionary): any {
             { label: strings.popup?.shortcuts || "Shortcuts", click: () => mc("shortcuts") },
             { label: strings.about?.check_updates || "Check for updates", click: () => mc("check_updates") },
             { type: "separator" },
-            { label: strings.main?.docs || "Docs", click: () => openURL("https://hamrocms.com/docs") },
+            { label: strings.main?.docs || "Docs", click: () => openURL("https://hamrocms.com/docs/") },
             { label: "Visit Website", click: () => openURL("https://hamrocms.com") },
             { label: "Report Issue", click: () => openURL("https://github.com/Hamro-CMS/HamroChurch/issues") },
             { label: strings.guide?.start || "Quick start guide", click: () => mc("quick_start_guide") },

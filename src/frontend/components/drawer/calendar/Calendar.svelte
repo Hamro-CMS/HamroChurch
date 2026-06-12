@@ -298,6 +298,9 @@
                     <div class="day" class:today={isSameDay(day, today)} class:faded={useBs ? !bsInfo.get(day.getTime())?.inMonth : day.getMonth() !== month || day.getFullYear() !== year} class:active={$activeDays?.includes(copyDate(day).getTime())} on:mousedown={(e) => dayClick(e, day)} on:mousemove={(e) => move(e, day)}>
                         <!-- // isSameDay(day, new Date($activeDays[0]))} -->
                         <span style="font-size: 1.5em;font-weight: 600;">{useBs ? toNepaliDigits(bsInfo.get(day.getTime())?.bsDay ?? day.getDate()) : day.getDate()}</span>
+                        {#if useBs}
+                            <span class="ad-date">{day.getDate()}</span>
+                        {/if}
                         <span class="events">
                             {#each dayEvents as event, i}
                                 {@const eventIcon = getEventIcon(event.type, { actionId: event.action?.id })}
@@ -410,6 +413,7 @@
     .day {
         flex-direction: column;
         overflow: hidden;
+        position: relative;
     }
     .day:hover {
         background-color: var(--hover);
@@ -447,5 +451,15 @@
         width: 10px;
         border-radius: 50%;
         margin: 2px;
+    }
+
+    .ad-date {
+        position: absolute;
+        right: 6px;
+        bottom: 4px;
+        font-size: 0.58em;
+        line-height: 1;
+        opacity: 0.75;
+        pointer-events: none;
     }
 </style>
