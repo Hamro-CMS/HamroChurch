@@ -7,7 +7,8 @@
     import { localizeNumberText, shouldUseNepaliLocale } from "../../../../common/nepali"
     import { sanitizeVerseText } from "../../../../common/scripture/sanitizeVerseText"
     import { defaultBibleBookNames } from "../../../converters/bebliaBible"
-    import { activeEdit, activeScripture, activeTriggerFunction, customScriptureBooks, language, notFound, openScripture, outLocked, outputs, resized, scriptureHistory, scriptureHistoryUsed, scriptureMode, scriptures, scriptureSettings, selected } from "../../../stores"
+    import { activeEdit, activeScripture, activeTriggerFunction, customScriptureBooks, language, notFound, openScripture, outLocked, outputs, resized, scriptureHistory, scriptureHistoryUsed, scriptureMode, scriptures, scripturesCache, scriptureSettings, selected } from "../../../stores"
+    import { buildBibleIndex, fastBibleSearch } from "../../../utils/searchFast"
     import { wait } from "../../../utils/common"
     import { translateText } from "../../../utils/language"
     import { clone } from "../../helpers/array"
@@ -780,6 +781,37 @@
     let contentSearchValue = ""
     let contentSearchResults: VerseReference[] | null = null
 
+    type RankedVerseReference = VerseReference & { score: number; source: "book" | "text" }
+
+    function getVerseMatchKey(match: VerseReference) {
+        return `${match.book}-${match.chapter}-${match.verse?.number || 0}`
+    }
+
+    function addRankedMatch(bucket: Map<string, RankedVerseReference>, match: VerseReference, score: number, source: "book" | "text") {
+        if (!match?.book || !match?.chapter || !match?.verse?.number) return
+
+        const key = getVerseMatchKey(match)
+        const existing = bucket.get(key)
+        if (!existing || score > existing.score) {
+            bucket.set(key, { ...match, score, source })
+        }
+    }
+
+    function getTextMatchScore(match: VerseReference, query: string) {
+        const normalizedQuery = query.toLowerCase()
+        const reference = String(match.reference || "").toLowerCase()
+        const verseText = String(match.verse?.text || "").toLowerCase()
+
+        let score = 0
+        if (reference.startsWith(normalizedQuery)) score += 600
+        else if (reference.includes(normalizedQuery)) score += 450
+
+        if (verseText.startsWith(normalizedQuery)) score += 230
+        else if (verseText.includes(normalizedQuery)) score += 120
+
+        return score
+    }
+
     // auto search when char length is 5 or longer
     function searchValueChanged(e: any) {
         contentSearchValue = e.target?.value || ""
@@ -792,15 +824,81 @@
     }
 
     async function searchInBible() {
-        if (contentSearchValue.length < 3) {
+        const query = contentSearchValue.trim()
+        if (query.length < 3) {
             contentSearchResults = null
             return
         }
 
-        const result = await currentBibleData?.bibleData?.textSearch(contentSearchValue)
-        if (!result) return
+        const bibleData = currentBibleData?.bibleData
+        if (!bibleData) {
+            contentSearchResults = null
+            return
+        }
 
-        contentSearchResults = result
+        const rankedMatches = new Map<string, RankedVerseReference>()
+
+        // Priority 1: reference/book matches.
+        const referenceResult = bibleData.bookSearch(query)
+        if (referenceResult?.book) {
+            try {
+                const bookData = await bibleData.getBook(referenceResult.book)
+                const chapterNumber = Number(referenceResult.chapter || 1)
+                const chapterData = await bookData.getChapter(chapterNumber)
+                const verseNumbers = referenceResult.verses?.length ? referenceResult.verses : [1]
+
+                verseNumbers.slice(0, 40).forEach((verseNumber, index) => {
+                    const verse = chapterData.getVerse(Number(verseNumber))
+                    const verseText = verse?.getHTML?.() || verse?.data?.text || ""
+                    const match = {
+                        reference: `${bookData.name} ${chapterNumber}:${Number(verseNumber)}`,
+                        book: Number(referenceResult.book),
+                        chapter: chapterNumber,
+                        verse: { number: Number(verseNumber), text: verseText }
+                    } as VerseReference
+
+                    addRankedMatch(rankedMatches, match, 10_000 - index, "book")
+                })
+            } catch {
+                // Ignore malformed reference results and continue with text search.
+            }
+        }
+
+        // Priority 2: verse text search (with local fast index when available).
+        let textMatches: VerseReference[] = []
+        const scriptureMeta = $scriptures[previewBibleId]
+        if (!scriptureMeta?.api && previewBibleId) {
+            const rawBible = $scripturesCache[previewBibleId] || currentBibleData?.bibleData?.data
+            if (rawBible?.books?.length) {
+                await buildBibleIndex(previewBibleId, rawBible)
+                const fastMatches = fastBibleSearch(query, 120)
+                textMatches = fastMatches.map(
+                    (match) =>
+                        ({
+                            reference: match.reference,
+                            book: match.book,
+                            chapter: match.chapter,
+                            verse: { number: match.verse, text: match.text }
+                        }) as VerseReference
+                )
+            }
+        }
+
+        if (!textMatches.length) {
+            textMatches = ((await bibleData.textSearch(query)) || []) as VerseReference[]
+        }
+
+        textMatches.forEach((match, index) => {
+            const score = getTextMatchScore(match, query) + Math.max(0, 100 - index)
+            addRankedMatch(rankedMatches, match, score, "text")
+        })
+
+        contentSearchResults = Array.from(rankedMatches.values())
+            .sort((left, right) => {
+                if (left.source !== right.source) return left.source === "book" ? -1 : 1
+                return right.score - left.score
+            })
+            .map(({ score: _score, source: _source, ...match }) => match as VerseReference)
     }
 
     // reset if another reference is loaded

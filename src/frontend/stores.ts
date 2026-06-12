@@ -108,6 +108,8 @@ export const activeTimerTagFilter: Writable<string[]> = writable([])
 
 // CALENDAR
 export const activeDays: Writable<number[]> = writable([])
+export type CalendarDateMode = "bs" | "ad"
+export const calendarDateMode: Writable<CalendarDateMode> = writable("bs")
 export const eventEdit: Writable<null | string> = writable(null)
 export const nextActionEventStart: Writable<any> = writable({})
 export const nextActionEventPaused: Writable<boolean> = writable(false)
@@ -403,6 +405,7 @@ export const $ = {
     activeEdit,
     activeStage,
     activeDays,
+    calendarDateMode,
     activeTimers,
     activeRename,
     activeDrawerTab,

@@ -479,6 +479,6 @@ export function romanizeNepali(text: string): string {
         if (char.charCodeAt(0) < 128) result += char
     }
 
-    const marker = new RegExp(`${INHERENT_VOWEL}(?=$|[^A-Za-z0-9])`, "gu")
-    return result.replace(marker, "").replace(/\u0001/g, "a").replace(/\s+/g, " ").trim()
+    // Keep terminal schwa for hymn transliteration readability (e.g. "बढ" -> "badha").
+    return result.replace(/\u0001/g, "a").replace(/\s+/g, " ").trim()
 }

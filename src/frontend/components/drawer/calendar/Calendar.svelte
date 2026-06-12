@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { activeDays, activePopup, eventEdit, events, labelsDisabled, popupData, special } from "../../../stores"
+    import { activeDays, activePopup, calendarDateMode, eventEdit, events, labelsDisabled, popupData, special } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import { BS_MONTHS, bsToGregorian, getBsDateParts, getBsMonthLength, toNepaliDigits } from "../../../../common/nepali"
     import { actionData } from "../../actions/actionData"
@@ -18,9 +18,8 @@
 
     $: sundayFirstDay = ($special.firstDayOfWeek || "7") === "7"
 
-    // The Hamro Church calendar should always use Bikram Sambat.
-    const useBs = true
-    $: bsView = getBsDateParts(current)
+    $: useBs = $calendarDateMode !== "ad"
+    $: bsView = useBs ? getBsDateParts(current) : null
     const BS_WEEKDAYS_SHORT = ["आइत", "सोम", "मंगल", "बुध", "बिही", "शुक्र", "शनि"]
 
     let today = new Date()
@@ -346,6 +345,11 @@
             {current.getFullYear()}
         {/if}
     </span>
+
+    <div class="mode-toggle" role="group" aria-label="Calendar mode switch">
+        <button class:active={useBs} on:click={() => calendarDateMode.set("bs")}>BS</button>
+        <button class:active={!useBs} on:click={() => calendarDateMode.set("ad")}>AD</button>
+    </div>
 </FloatingInputs>
 
 <FloatingInputs onlyOne>
@@ -461,5 +465,30 @@
         line-height: 1;
         opacity: 0.75;
         pointer-events: none;
+    }
+
+    .mode-toggle {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--primary-lighter);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-inline-start: 6px;
+    }
+    .mode-toggle button {
+        border: none;
+        background: transparent;
+        color: var(--text);
+        font-size: 0.75em;
+        font-weight: 700;
+        padding: 0.3rem 0.7rem;
+        cursor: pointer;
+    }
+    .mode-toggle button:hover {
+        background-color: var(--hover);
+    }
+    .mode-toggle button.active {
+        background: var(--secondary);
+        color: var(--primary-darkest);
     }
 </style>

@@ -2,7 +2,7 @@
     import { onMount } from "svelte"
     import { uid } from "uid"
     import type { Event } from "../../../../types/Calendar"
-    import { activeDays, activePopup, drawerTabsData, eventEdit, events, popupData } from "../../../stores"
+    import { activeDays, activePopup, calendarDateMode, drawerTabsData, eventEdit, events, popupData } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import CreateAction from "../../actions/CreateAction.svelte"
     import { getTime, isSameDay } from "../../drawer/calendar/calendar"
@@ -307,14 +307,20 @@
 {/if}
 
 {#if !actionSelector}
+    <div class="date-mode-toggle" role="group" aria-label="Date mode switch">
+        <span><T id="sort.date" /></span>
+        <button type="button" class:active={$calendarDateMode === "bs"} on:click={() => calendarDateMode.set("bs")}>BS</button>
+        <button type="button" class:active={$calendarDateMode === "ad"} on:click={() => calendarDateMode.set("ad")}>AD</button>
+    </div>
+
     <!-- TODO: update totime if fromtime is newer -->
     <InputRow style="margin-top: {showMore ? 0 : 10}px;">
-        <MaterialDatePicker label={selectedType === "event" ? "calendar.from_date" : "sort.date"} style="flex: 1;" value={editEvent.isoFrom || ""} on:change={(e) => (editEvent.isoFrom = e.detail)} />
+        <MaterialDatePicker label={selectedType === "event" ? "calendar.from_date" : "sort.date"} style="flex: 1;" displayMode={$calendarDateMode} value={editEvent.isoFrom || ""} on:change={(e) => (editEvent.isoFrom = e.detail)} />
         <MaterialTimePicker label={selectedType === "event" ? "calendar.from_time" : "calendar.time"} style="width: 200px;" disabled={!editEvent.time} value={editEvent.fromTime || ""} on:input={(e) => (editEvent.fromTime = e.detail)} on:change={() => updateTime("from")} />
     </InputRow>
     {#if selectedType === "event"}
         <InputRow>
-            <MaterialDatePicker label="calendar.to_date" style="flex: 1;" value={editEvent.isoTo || ""} on:change={(e) => (editEvent.isoTo = e.detail)} />
+            <MaterialDatePicker label="calendar.to_date" style="flex: 1;" displayMode={$calendarDateMode} value={editEvent.isoTo || ""} on:change={(e) => (editEvent.isoTo = e.detail)} />
             <MaterialTimePicker label="calendar.to_time" style="width: 200px;" disabled={!editEvent.time} value={editEvent.toTime || ""} on:input={(e) => (editEvent.toTime = e.detail)} on:change={() => updateTime("to")} />
         </InputRow>
     {/if}
@@ -335,7 +341,7 @@
             <MaterialDropdown label="calendar.type" disabled={!!editEvent.group} style="width: 130px;" options={endings} value={editEvent.repeatData.ending} on:change={(e) => (editEvent.repeatData.ending = e.detail)} />
 
             {#if editEvent.repeatData.ending === "date"}
-                <MaterialDatePicker label="calendar.to_date" style="flex: 0;" disabled={!!editEvent.group} value={editEvent.repeatData.endingDate} on:change={(e) => (editEvent.repeatData.endingDate = e.detail)} />
+                <MaterialDatePicker label="calendar.to_date" style="flex: 0;" displayMode={$calendarDateMode} disabled={!!editEvent.group} value={editEvent.repeatData.endingDate} on:change={(e) => (editEvent.repeatData.endingDate = e.detail)} />
             {:else if editEvent.repeatData.ending === "after"}
                 <MaterialNumberInput label="edit.count" disabled={!!editEvent.group} style="width: 80px;" value={editEvent.repeatData.afterRepeats} min={1} on:change={(e) => (editEvent.repeatData.afterRepeats = e.detail)} />
                 <span style="display: flex;align-items: center;padding: 0 10px;"><T id="calendar.ending_times" /></span>
@@ -361,3 +367,43 @@
         {/if}
     </InputRow>
 {/if}
+
+<style>
+    .date-mode-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        border: 1px solid var(--primary-lighter);
+        border-radius: 999px;
+        padding: 0.2rem;
+        margin: 6px 0 8px;
+    }
+
+    .date-mode-toggle span {
+        font-size: 0.72rem;
+        opacity: 0.75;
+        padding-inline: 0.45rem;
+        white-space: nowrap;
+    }
+
+    .date-mode-toggle button {
+        border: none;
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        font-size: 0.72rem;
+        font-weight: 700;
+        border-radius: 999px;
+        padding: 0.36rem 0.72rem;
+        cursor: pointer;
+    }
+
+    .date-mode-toggle button:hover {
+        background-color: var(--hover);
+    }
+
+    .date-mode-toggle button.active {
+        background-color: var(--secondary);
+        color: var(--primary-darkest);
+    }
+</style>

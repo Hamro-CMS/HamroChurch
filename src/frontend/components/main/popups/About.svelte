@@ -62,6 +62,12 @@
             <Link url="https://github.com/Hamro-CMS/HamroChurch">github.com/Hamro-CMS/HamroChurch</Link>
         </div>
         <div>
+            • Upstream credit
+            <Link url="https://freeshow.app/">FreeShow</Link>
+            by
+            <Link url="https://github.com/ChurchApps/FreeShow">Kristoffer Vassbø / ChurchApps</Link>
+        </div>
+        <div>
             • Translations
             <Link url="https://hamrocms.com/translations">hamrocms.com/translations</Link>
         </div>
