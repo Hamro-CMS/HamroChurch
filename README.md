@@ -95,7 +95,7 @@ Original project (upstream):
 - Project name: FreeShow
 - Website: https://freeshow.app/
 - Source code: https://github.com/ChurchApps/FreeShow
-- Original author/copyright: Kristoffer Vassbo / ChurchApps
+- Original author/copyright: Kristoffer Vassbø / ChurchApps
 
 Modified project (this repository):
 
