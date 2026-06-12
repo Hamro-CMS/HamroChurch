@@ -4,6 +4,31 @@
 
 Hamro Church is bilingual church presentation software built for Nepali and English worship services. It supports scripture projection, hymn and lyric slides, media playback, stage display, remote control, and multi-output presentation workflows.
 
+---
+
+## Open Source Credits & GPL Compliance
+
+HamroChurch is a specialized, modified fork of **FreeShow**. We gratefully acknowledge and respect the original creators for building the core presentation engine that made this localized project possible.
+
+* **Original Project (Upstream):**
+  * Project Name: FreeShow
+  * Website: [freeshow.app](https://freeshow.app/)
+  * Source Code: [GitHub - ChurchApps/FreeShow](https://github.com/ChurchApps/FreeShow)
+  * Original Author/Copyright: Kristoffer Vassbø / ChurchApps
+
+* **Modified Project (This Repository):**
+  * Project Name: HamroChurch
+  * Organization Website: [hamrocms.com](https://hamrocms.com)
+  * Key Modifications: Full native Nepali user interface language, localized Nepali Calendar, Nepali Bible modules, and Nepali/Bhutanese Bhajan databases.
+
+* **License Statement:**
+  * This software is distributed under the **GNU General Public License v3.0 (GPL-3.0)**.
+  * HamroChurch includes modifications to FreeShow and remains 100% open-source. All custom additions and derivative works in this repository are distributed under the exact same GPL-3.0 license.
+
+We sincerely thank the FreeShow maintainers, ChurchApps, and the wider open-source community for their foundational contributions!
+
+---
+
 ## Links
 
 - Website: https://hamrocms.com
@@ -84,30 +109,4 @@ Recommended validation before release:
 
 ## License
 
-Hamro Church is licensed under GPL-3.0. See the `LICENSE` file for details.
-
-## Open Source Credits and GPL Compliance
-
-HamroChurch is a modified fork of FreeShow. We gratefully acknowledge and respect the original creators for building the core presentation engine that made this work possible.
-
-Original project (upstream):
-
-- Project name: FreeShow
-- Website: https://freeshow.app/
-- Source code: https://github.com/ChurchApps/FreeShow
-- Original author/copyright: Kristoffer Vassbø / ChurchApps
-
-Modified project (this repository):
-
-- Project name: HamroChurch
-- Organization website: https://hamrocms.com
-- Modified source repository: https://github.com/Hamro-CMS/HamroChurch/
-- Key modifications: full native Nepali user interface language, localized Nepali Calendar, Nepali Bible modules, and Nepali/Bhutanese Bhajan databases.
-
-License statement:
-
-- This software is distributed under the GNU General Public License v3.0 (GPL-3.0).
-- HamroChurch includes modifications to FreeShow and remains fully open-source under GPL-3.0.
-- Our custom additions and all derivative work in this repository are also distributed as 100% open-source under the same GPL-3.0 license.
-
-We sincerely thank the FreeShow maintainers, ChurchApps, and the wider open-source community for their foundational contributions and continued inspiration.
+Hamro Church is licensed under the GNU General Public License v3.0. See the `LICENSE` file in this repository for full details.
