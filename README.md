@@ -22,6 +22,14 @@ HamroChurch is a specialized, modified fork of **FreeShow**. We gratefully ackno
   * Key Modifications: Full native Nepali user interface language, localized Nepali Calendar, and Nepali Bible modules.
   * Data & Lyrics Acknowledgement: Special thanks to [Nepali Christian Songs](https://www.nepalichristiansongs.com) for providing the public lyrics database utilized for our Nepali/Bhutanese Bhajan workflows.
 
+* **Modified Project Details (This Repository):**
+  * Project Name: HamroChurch
+  * Organization Website: [hamrocms.com](https://hamrocms.com)
+  * Key Modifications: Full native Nepali user interface language, localized Nepali Calendar, and embedded Nepali scripture tools.
+  * Data & Credits Acknowledgement: 
+    * Special thanks to [Nepali Christian Songs](https://www.nepalichristiansongs.com) for providing the public lyrics database utilized for our Nepali/Bhutanese Bhajan features.
+    * Scripture modules utilize the **Nepali New Revised Version (NNRV)** text, with copyright and translation ownership belonging natively to the **Nepal Bible Society**. This text is bundled strictly for non-commercial local church presentation use.
+    
 * **License Statement:**
   * This software is distributed under the **GNU General Public License v3.0 (GPL-3.0)**.
   * HamroChurch includes modifications to FreeShow and remains 100% open-source. All custom additions and derivative works in this repository are distributed under the exact same GPL-3.0 license.
