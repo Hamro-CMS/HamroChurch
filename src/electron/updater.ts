@@ -223,20 +223,42 @@ async function downloadAsset(asset: AppUpdateAsset) {
     return targetPath
 }
 
+async function launchDetachedExecutable(command: string, args: string[] = []) {
+    await new Promise<void>((resolve, reject) => {
+        const child = spawn(command, args, { detached: true, stdio: "ignore", windowsHide: true })
+        let settled = false
+
+        const finish = (error?: Error) => {
+            if (settled) return
+            settled = true
+            if (error) reject(error)
+            else resolve()
+        }
+
+        child.once("error", finish)
+        child.unref()
+        setTimeout(() => finish(), 500)
+    })
+}
+
 async function launchInstaller(filePath: string) {
     const extension = path.extname(filePath).toLowerCase()
 
     if (process.platform === "win32") {
-        const child = spawn(filePath, [], { detached: true, stdio: "ignore" })
-        child.unref()
-        setTimeout(() => app.quit(), 250)
+        // Prefer shell launch so elevation/UAC prompts are handled by Windows.
+        const openResult = await shell.openPath(filePath)
+        if (openResult) {
+            await launchDetachedExecutable(filePath)
+        }
+
+        setTimeout(() => app.quit(), 1000)
         return
     }
 
     if (process.platform === "darwin") {
         const child = spawn("open", [filePath], { detached: true, stdio: "ignore" })
         child.unref()
-        setTimeout(() => app.quit(), 250)
+        setTimeout(() => app.quit(), 1000)
         return
     }
 
@@ -244,20 +266,20 @@ async function launchInstaller(filePath: string) {
         await fs.promises.chmod(filePath, 0o755)
         const child = spawn(filePath, [], { detached: true, stdio: "ignore" })
         child.unref()
-        setTimeout(() => app.quit(), 250)
+        setTimeout(() => app.quit(), 1000)
         return
     }
 
     if (process.platform === "linux" && [".deb", ".rpm"].includes(extension)) {
         const child = spawn("xdg-open", [filePath], { detached: true, stdio: "ignore" })
         child.unref()
-        setTimeout(() => app.quit(), 250)
+        setTimeout(() => app.quit(), 1000)
         return
     }
 
     const result = await shell.openPath(filePath)
     if (result) throw new Error(result)
-    setTimeout(() => app.quit(), 250)
+    setTimeout(() => app.quit(), 1000)
 }
 
 export async function downloadAndInstallUpdate(options: { includeBeta?: boolean } = {}): Promise<AppUpdateDownloadResult> {
