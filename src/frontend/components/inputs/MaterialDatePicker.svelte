@@ -68,6 +68,21 @@
         dispatch("input", iso)
         if (emitChange) dispatch("change", iso)
     }
+
+    function handleYearInput(event: Event) {
+        bsYear = normalizeNumberInput((event.currentTarget as HTMLInputElement)?.value || "")
+        updateFromBs()
+    }
+
+    function handleMonthChange(event: Event) {
+        bsMonth = Number((event.currentTarget as HTMLSelectElement)?.value || bsMonth)
+        updateFromBs(true)
+    }
+
+    function handleDayInput(event: Event) {
+        bsDay = normalizeNumberInput((event.currentTarget as HTMLInputElement)?.value || "")
+        updateFromBs()
+    }
 </script>
 
 {#if displayMode === "ad"}
@@ -87,10 +102,7 @@
                 {id}
                 {disabled}
                 {autofocus}
-                on:input={(e) => {
-                    bsYear = normalizeNumberInput((e.target as HTMLInputElement).value)
-                    updateFromBs()
-                }}
+                on:input={handleYearInput}
                 on:change={() => updateFromBs(true)}
             />
 
@@ -99,10 +111,7 @@
                 class:disabled
                 {disabled}
                 value={bsMonth}
-                on:change={(e) => {
-                    bsMonth = Number((e.target as HTMLSelectElement).value)
-                    updateFromBs(true)
-                }}
+                on:change={handleMonthChange}
             >
                 {#each BS_MONTHS as monthName, index}
                     <option value={index + 1}>{toNepaliDigits(index + 1)} {monthName}</option>
@@ -117,10 +126,7 @@
                 maxlength="2"
                 placeholder={toNepaliDigits("1")}
                 {disabled}
-                on:input={(e) => {
-                    bsDay = normalizeNumberInput((e.target as HTMLInputElement).value)
-                    updateFromBs()
-                }}
+                on:input={handleDayInput}
                 on:change={() => updateFromBs(true)}
             />
         </div>
