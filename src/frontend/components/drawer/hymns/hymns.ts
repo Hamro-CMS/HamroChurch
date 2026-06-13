@@ -78,7 +78,7 @@ export const hymnSourcePath = writable("")
 export const hymnSourceDates = writable<{ created: number | null; modified: number | null }>({ created: null, modified: null })
 
 export type HymnSortField = "number" | "name"
-export const hymnSort = writable<{ field: HymnSortField | null; direction: "asc" | "desc" }>({ field: null, direction: "asc" })
+export const hymnSort = writable<{ field: HymnSortField | null; direction: "asc" | "desc" }>({ field: "number", direction: "asc" })
 export const hymnEditTarget = writable<HymnRecord | null>(null)
 
 const EXCLUDED_HYMN_SOURCE_KEYS = new Set(["song1928", "song1929", "song1930"])

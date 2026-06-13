@@ -31,7 +31,7 @@
 
     <div class="filters">
         {#each categoryOrder.filter((category) => category.id !== "all") as category}
-            <button class="item" class:active={isChecked(category.id)} on:click={() => toggleCategory(category.id)}>
+            <button class="item categoryItem" class:active={isChecked(category.id)} on:click={() => toggleCategory(category.id)}>
                 <span class="icon">{category.icon}</span>
                 <span class="label">{getHymnCategoryDisplay(category.id, $language)}</span>
                 <span class="count">{counts[category.id]}</span>
@@ -88,6 +88,22 @@
     .item.active {
         background: color-mix(in srgb, var(--secondary) 14%, var(--primary-darker) 86%);
         border-left-color: var(--secondary);
+    }
+
+    .categoryItem.active {
+        background: linear-gradient(90deg, color-mix(in srgb, #ff4d4f 30%, var(--primary-darker) 70%) 0%, color-mix(in srgb, #ff8a00 18%, var(--primary-darker) 82%) 100%);
+        border-left-color: #ff5a5d;
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, #ff5a5d 62%, transparent 38%), 0 0 0 1px color-mix(in srgb, #ff8a00 25%, transparent 75%);
+    }
+
+    .categoryItem.active .label {
+        font-weight: 700;
+    }
+
+    .categoryItem.active .count,
+    .categoryItem.active .icon {
+        color: #ffd5a6;
+        opacity: 1;
     }
 
     .icon {
