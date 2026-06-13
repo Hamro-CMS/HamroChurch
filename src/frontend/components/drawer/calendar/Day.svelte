@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { activeDays, activePopup, eventEdit, events } from "../../../stores"
+    import { BS_MONTHS, getBsDateParts, toNepaliDigits } from "../../../../common/nepali"
+    import { activeDays, activePopup, calendarDateMode, eventEdit, events } from "../../../stores"
     import { triggerClickOnEnterSpace } from "../../../utils/clickable"
     import { translateText } from "../../../utils/language"
     import { actionData } from "../../actions/actionData"
@@ -14,6 +15,8 @@
 
     let current = new Date($activeDays[0])
     let currentEvents: any[] = []
+    $: useBs = $calendarDateMode === "bs"
+    $: bsCurrent = useBs ? getBsDateParts(current) : null
 
     $: updateEvents({ type, $activeDays, $events })
 
@@ -40,8 +43,12 @@
 {#if $activeDays.length}
     <div class="main">
         <span class="date">
-            {current.getDate()}. {translateText("month." + (current.getMonth() + 1))}
-            {current.getFullYear()}
+            {#if useBs && bsCurrent}
+                {toNepaliDigits(bsCurrent.day)} {BS_MONTHS[bsCurrent.monthIndex]} {toNepaliDigits(bsCurrent.year)}
+            {:else}
+                {current.getDate()}. {translateText("month." + (current.getMonth() + 1))}
+                {current.getFullYear()}
+            {/if}
         </span>
 
         <div class="scroll">

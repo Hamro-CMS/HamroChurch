@@ -178,6 +178,13 @@
 
     .bs-part.month {
         padding-inline: 0.4rem;
+        color-scheme: dark;
+        background-color: rgb(255 255 255 / 0.08);
+    }
+
+    .bs-part.month option {
+        background-color: var(--primary-darkest);
+        color: var(--text);
     }
 
     .bs-part:focus {

@@ -23,7 +23,7 @@
 
 <div style="text-align: center;">
     <div class="logo">
-        <img style="height: 35px;" src="./icon.png" alt="Hamro Church logo" draggable={false} />
+        <img style="height: 35px;" src="./hamrochurch.png" alt="Hamro Church logo" draggable={false} />
         <h1 style="color: var(--text);font-size: 1.7em;">Hamro Church</h1>
     </div>
 
@@ -73,7 +73,7 @@
         </div>
         <div>
             • Support the project
-            <Link url="https://hamrocms.com/support">hamrocms.com/support</Link>
+            <Link url="https://hamrocms.com/contact">hamrocms.com/contact</Link>
         </div>
     </div>
 
@@ -105,6 +105,10 @@
         opacity: 0.88;
         margin: 0 auto 6px;
         max-width: 760px;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        overflow-wrap: anywhere;
     }
 
     .logo {

@@ -377,6 +377,7 @@
         border-radius: 999px;
         padding: 0.2rem;
         margin: 6px 0 8px;
+        background-color: var(--primary-darkest);
     }
 
     .date-mode-toggle span {
@@ -396,14 +397,19 @@
         border-radius: 999px;
         padding: 0.36rem 0.72rem;
         cursor: pointer;
+        opacity: 0.8;
+        transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
     }
 
     .date-mode-toggle button:hover {
         background-color: var(--hover);
+        opacity: 1;
     }
 
     .date-mode-toggle button.active {
         background-color: var(--secondary);
-        color: var(--primary-darkest);
+        color: #fff;
+        opacity: 1;
+        box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.35);
     }
 </style>

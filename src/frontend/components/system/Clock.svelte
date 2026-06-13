@@ -2,7 +2,7 @@
     import dayjs from "dayjs"
     import localizedFormat from "dayjs/plugin/localizedFormat"
     import { formatLocalizedDate, formatLocalizedTime, shouldUseNepaliLocale, toNepaliDigits } from "../../../common/nepali"
-    import { language, timeFormat } from "../../stores"
+    import { calendarDateMode, language, timeFormat } from "../../stores"
 
     import AnalogClock from "./AnalogClock.svelte"
     import { onDestroy } from "svelte"
@@ -18,7 +18,8 @@
     export let showTime = true
     export let seconds = true
 
-    $: twelve = $timeFormat === "12"
+    $: useNepaliClock = $calendarDateMode === "bs" || shouldUseNepaliLocale($language)
+    $: twelve = !useNepaliClock && $timeFormat === "12"
 
     let d: Date = new Date()
     const clockInterval = setInterval(() => (d = new Date()), 250)
@@ -41,14 +42,15 @@
     }
 
     function formatTime(date: Date): string {
-        const is12Hour = $timeFormat === "12"
-        return formatLocalizedTime(date, $language, is12Hour, seconds)
+        const is12Hour = useNepaliClock ? false : $timeFormat === "12"
+        const locale = useNepaliClock ? "ne" : $language
+        return formatLocalizedTime(date, locale, is12Hour, seconds)
     }
 
     function formatDateTime(date: Date, format: string) {
         if (format === "none") return ""
         if (format === "LL" || format === "ll" || format === "DD/MM/YYYY" || format === "MM/DD/YYYY" || format === "YYYY-MM-DD") {
-            return formatLocalizedDate(date, $language, true)
+            return formatLocalizedDate(date, useNepaliClock ? "ne" : $language, true)
         }
 
         // any custom formats?
@@ -77,10 +79,10 @@
         if (typeof format !== "string" || !format) return dayjs(date)
 
         try {
-            return shouldUseNepaliLocale($language) ? toNepaliDigits(dayjs(date).format(format)) : dayjs(date).format(format)
+            return useNepaliClock ? toNepaliDigits(dayjs(date).format(format)) : dayjs(date).format(format)
         } catch (err) {
             console.error(err)
-            return shouldUseNepaliLocale($language) ? toNepaliDigits(dayjs(date).format("HH:mm")) : dayjs(date).format("HH:mm")
+            return useNepaliClock ? toNepaliDigits(dayjs(date).format("HH:mm")) : dayjs(date).format("HH:mm")
         }
     }
 
@@ -102,10 +104,10 @@
 {:else}
     <div class="align autoFontSize" class:styled={style} style="{fontStyle}{item?.alignX ? '' : (item?.align || 'justify-content: center;').replaceAll('text-align', 'justify-content')}">
         {#if style}
-            <span class="colored">{shouldUseNepaliLocale($language) ? toNepaliDigits(("0" + h).slice(-2)) : ("0" + h).slice(-2)}</span>:
-            <span class="colored">{shouldUseNepaliLocale($language) ? toNepaliDigits(("0" + m).slice(-2)) : ("0" + m).slice(-2)}</span>
-            {#if seconds}<span style="font-size: 0.5em;">:{shouldUseNepaliLocale($language) ? toNepaliDigits(("0" + s).slice(-2)) : ("0" + s).slice(-2)}</span>{/if}
-            {#if twelve}<span style="font-size: 0.3em;font-weight: bold;" class:colored={pm}>&nbsp;{shouldUseNepaliLocale($language) ? (pm ? "अपराह्न" : "पूर्वाह्न") : pm ? "PM" : "AM"}</span>{/if}
+            <span class="colored">{useNepaliClock ? toNepaliDigits(("0" + h).slice(-2)) : ("0" + h).slice(-2)}</span>:
+            <span class="colored">{useNepaliClock ? toNepaliDigits(("0" + m).slice(-2)) : ("0" + m).slice(-2)}</span>
+            {#if seconds}<span style="font-size: 0.5em;">:{useNepaliClock ? toNepaliDigits(("0" + s).slice(-2)) : ("0" + s).slice(-2)}</span>{/if}
+            {#if twelve}<span style="font-size: 0.3em;font-weight: bold;" class:colored={pm}>&nbsp;{pm ? "PM" : "AM"}</span>{/if}
         {:else}
             {#if formattedDate}{formattedDate}{/if}
             <!-- {#if formattedDate && showTime}&nbsp;{/if} -->

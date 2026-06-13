@@ -1,7 +1,7 @@
 <script lang="ts">
     import { getBsDateParts, shouldUseNepaliLocale, toNepaliDigits } from "../../../common/nepali"
     import { onDestroy, onMount } from "svelte"
-    import { language } from "../../stores"
+    import { calendarDateMode, language } from "../../stores"
     import T from "../helpers/T.svelte"
 
     // let format = "dd/mm/yyyy"
@@ -20,8 +20,10 @@
     })
 
     // WIP same format as dateToString(d, true, $dictionary)
+    $: useNepaliCalendar = $calendarDateMode === "bs" || shouldUseNepaliLocale($language)
+
     $: data = (() => {
-        if (shouldUseNepaliLocale($language)) {
+        if (useNepaliCalendar) {
             const parts = getBsDateParts(d)
             return {
                 d: toNepaliDigits(parts.day) + ".",

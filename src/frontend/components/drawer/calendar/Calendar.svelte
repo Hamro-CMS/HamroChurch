@@ -474,6 +474,7 @@
         border-radius: 999px;
         overflow: hidden;
         margin-inline-start: 6px;
+        background-color: var(--primary-darkest);
     }
     .mode-toggle button {
         border: none;
@@ -483,12 +484,17 @@
         font-weight: 700;
         padding: 0.3rem 0.7rem;
         cursor: pointer;
+        opacity: 0.8;
+        transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
     }
     .mode-toggle button:hover {
         background-color: var(--hover);
+        opacity: 1;
     }
     .mode-toggle button.active {
         background: var(--secondary);
-        color: var(--primary-darkest);
+        color: #fff;
+        opacity: 1;
+        box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.35);
     }
 </style>
