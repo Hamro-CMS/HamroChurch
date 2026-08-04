@@ -122,6 +122,11 @@
         setCaret(textElem, caret)
     }
 
+    function insertLineBreakAtSelection() {
+        paste({}, "\n")
+        return true
+    }
+
     function keydown(e: KeyboardEvent) {
         if (e.key === "Enter" && e.shiftKey) {
             // by default the browser contenteditable will add a <br> instead of our custom <span class="break"> when pressing SHIFT
@@ -619,6 +624,12 @@
     function textElemKeydown(e: KeyboardEvent) {
         if (e.key === "Enter" || e.key === "Backspace" || e.key === "Delete") {
             recentKeyboardLineMutationAt = Date.now()
+        }
+
+        if (e.key === "Enter" && !e.shiftKey && !e.altKey) {
+            e.preventDefault()
+            insertLineBreakAtSelection()
+            return
         }
 
         if (e.ctrlKey || e.metaKey) {
