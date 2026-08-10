@@ -1,7 +1,8 @@
 <script lang="ts">
+    import { onDestroy } from "svelte"
     import type { Show } from "../../../types/Show"
     import { getQuickExample } from "../../converters/txt"
-    import { activePopup, textEditActive, textEditZoom } from "../../stores"
+    import { activePopup, activeShow, textEditActive, textEditZoom } from "../../stores"
     import { transposeText } from "../../utils/chordTranspose"
     import { newToast } from "../../utils/common"
     import Icon from "../helpers/Icon.svelte"
@@ -15,7 +16,44 @@
     export let currentShow: Show | undefined
 
     let text = ""
-    $: if (currentShow) text = getPlainEditorText()
+    let loadedShowId = ""
+    let dirtyText = false
+
+    function normalizeEditorText(value: string) {
+        return String(value || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim()
+    }
+
+    function commitPendingText(showId = loadedShowId) {
+        if (!showId || !dirtyText) return
+
+        const nextText = normalizeEditorText(text)
+        const currentText = normalizeEditorText(getPlainEditorText(showId))
+        if (nextText !== currentText) formatText(nextText, showId)
+        dirtyText = false
+    }
+
+    function handleEdit(event: CustomEvent<string>) {
+        text = event.detail
+        dirtyText = true
+    }
+
+    function handleChange(event: CustomEvent<string>) {
+        text = event.detail
+        commitPendingText()
+    }
+
+    $: activeShowId = $activeShow?.id || ""
+    $: showText = activeShowId && currentShow ? getPlainEditorText(activeShowId) : ""
+    $: if (activeShowId && currentShow) {
+        if (activeShowId !== loadedShowId) {
+            if (loadedShowId) commitPendingText(loadedShowId)
+            loadedShowId = activeShowId
+            text = showText
+            dirtyText = false
+        } else if (!dirtyText && text !== showText) {
+            text = showText
+        }
+    }
 
     $: hasLockedSlide = Object.values(currentShow?.slides || {}).some((a) => a?.locked)
     $: isLocked = currentShow?.locked || hasLockedSlide
@@ -36,9 +74,13 @@
     }
 
     $: showHasChords = Object.values(currentShow?.slides || {}).find((a) => a?.items?.find((a) => a.lines?.find((a) => a.chords)))
+
+    onDestroy(() => {
+        commitPendingText()
+    })
 </script>
 
-<Notes class="context #editbox_text" disabled={isLocked} style="padding: 30px;font-size: {$textEditZoom / 8}em;" placeholder={getQuickExample()} value={text} on:change={(e) => formatText(e.detail)} on:keydown={keydown} />
+<Notes class="context #editbox_text" disabled={isLocked} style="padding: 30px;font-size: {$textEditZoom / 8}em;" placeholder={getQuickExample()} value={text} on:edit={handleEdit} on:change={handleChange} on:keydown={keydown} />
 
 <FloatingInputs arrow let:open>
     <MaterialZoom hidden={!open} columns={$textEditZoom / 10} min={0.5} max={2} defaultValue={1} addValue={-0.1} on:change={(e) => textEditZoom.set(e.detail * 10)} />
