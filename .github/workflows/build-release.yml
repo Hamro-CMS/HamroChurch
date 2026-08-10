@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build_windows:
     name: Build Windows Installer
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Check out Git repository
@@ -36,17 +36,49 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up MSVC build tools
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Install dependencies
         shell: pwsh
         working-directory: repo
         run: |
           npm ci --ignore-scripts
 
-      - name: Prepare NDI SDK and rebuild native dependencies
+      - name: Prepare NDI SDK
         shell: pwsh
         working-directory: repo
         run: |
-          npm run rebuild:native
+          npm run prepare:grandiose-ndi
+
+      - name: Rebuild Electron native dependencies
+        shell: pwsh
+        working-directory: repo
+        env:
+          npm_config_msvs_version: "2022"
+        run: |
+          npx electron-rebuild --version 37.10.3 --arch x64 --module-dir . --only @discordjs/opus,better-sqlite3,libltc-wrapper,macadam --sequential
+
+      - name: Rebuild grandiose for Electron
+        shell: pwsh
+        working-directory: repo\node_modules\grandiose
+        env:
+          npm_config_msvs_version: "2022"
+        run: |
+          npx node-gyp rebuild --runtime=electron --target=37.10.3 --dist-url=https://electronjs.org/headers --arch=x64
+
+      - name: Verify rebuilt native binaries
+        shell: pwsh
+        working-directory: repo
+        run: |
+          if (-not (Test-Path .\node_modules\grandiose\build\Release\grandiose.node)) {
+            throw "grandiose.node was not rebuilt successfully."
+          }
+          if (-not (Test-Path .\node_modules\better-sqlite3\build\Release\better_sqlite3.node)) {
+            throw "better_sqlite3.node was not rebuilt successfully."
+          }
 
       - name: Build production bundles
         shell: pwsh
@@ -60,7 +92,7 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: |
-          npx electron-builder --config config/building/electron-builder.yaml --config.win.signtoolOptions.sign=scripts/skipWindowsSign.js --publish never
+          npx electron-builder --config config/building/electron-builder.yaml --config.npmRebuild=false --config.win.signtoolOptions.sign=scripts/skipWindowsSign.js --publish never
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
