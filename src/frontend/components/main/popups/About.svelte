@@ -23,8 +23,7 @@
 
 <div style="text-align: center;">
     <div class="logo">
-        <img style="height: 35px;" src="./hamrochurch.png" alt="Hamro Church logo" draggable={false} />
-        <h1 style="color: var(--text);font-size: 1.7em;">Hamro Church</h1>
+        <img src="./logo.png" alt="Hamro Church logo" draggable={false} />
     </div>
 
     <p style="font-size: 0.8em;margin-top: 2px;">
@@ -49,27 +48,10 @@
             • Website
             <Link url="https://hamrocms.com">hamrocms.com</Link>
         </div>
-        <div>
-            • Documentation
-            <Link url="https://hamrocms.com/docs/">hamrocms.com/docs/</Link>
-        </div>
-        <div>
-            • Report issue
-            <Link url="https://github.com/Hamro-CMS/HamroChurch/issues">GitHub issues</Link>
-        </div>
-        <div>
-            • Source code
-            <Link url="https://github.com/Hamro-CMS/HamroChurch">github.com/Hamro-CMS/HamroChurch</Link>
-        </div>
-        <div>
-            • Upstream credit
-            <Link url="https://freeshow.app/">FreeShow</Link>
-            by
-            <Link url="https://github.com/ChurchApps/FreeShow">Kristoffer Vassbø / ChurchApps</Link>
-        </div>
-        <div>
-            • Translations
-            <Link url="https://hamrocms.com/translations">hamrocms.com/translations</Link>
+        <div class="church-cta">
+            <h3>Church management made for Nepali churches</h3>
+            <p>HamroCMS is a complete church management system specially built for Nepali churches. Register your church to manage your church's work in one place.</p>
+            <Link url="https://hamrocms.com/register-church">Register your church at hamrocms.com</Link>
         </div>
         <div>
             • Support the project
@@ -115,9 +97,40 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0px 10px;
+        padding: 10px;
         width: 100%;
-        gap: 10px;
+    }
+
+    .logo img {
+        height: 90px;
+        max-width: min(100%, 320px);
+        object-fit: contain;
+    }
+
+    .church-cta {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 8px 0;
+        padding: 14px;
+        border: 1px solid var(--primary-lighter);
+        border-radius: 8px;
+        background-color: var(--primary-darker);
+    }
+
+    .church-cta h3 {
+        color: var(--text);
+        font-size: 1.05em;
+    }
+
+    .church-cta p {
+        line-height: 1.5;
+    }
+
+    .church-cta :global(a) {
+        align-self: flex-start;
+        color: var(--secondary);
+        font-weight: bold;
     }
 
     h5 {
