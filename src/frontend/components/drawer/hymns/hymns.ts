@@ -140,43 +140,65 @@ function mapCategoryId(rawCategory: string) {
     return "bhajan"
 }
 
-function extractSongNumber(sourceRefs: string[] = [], categoryId: HymnCategoryId = "bhajan") {
-    const categoryPatternMap: Partial<Record<Exclude<HymnCategoryId, "all">, RegExp>> = {
-        bhajan: /^(?:[a-z]+)?s(\d+)$/i,
-        chorus: /^(?:[a-z]+)?c(\d+)$/i,
-        children: /^(?:[a-z]+)?ch(\d+)$/i,
-        new: /^(?:[a-z]+)?(?:nw|np|ms)(\d+)$/i
+type HymnBookCategoryId = Exclude<HymnCategoryId, "all">
+
+const HYMN_NUMBER_PATTERNS: Record<HymnBookCategoryId, RegExp> = {
+    bhajan: /^(?:[a-z]+)?s(\d+)$/i,
+    chorus: /^(?:[a-z]+)?c(\d+)$/i,
+    children: /^(?:[a-z]+)?ch(\d+)$/i,
+    new: /^(?:[a-z]+)?(?:nw|np|ms)(\d+)$/i
+}
+// order matters: "ch" (children) must be tested before "c" (chorus)
+const KB_CATEGORY_ORDER: HymnBookCategoryId[] = ["children", "chorus", "bhajan"]
+
+function splitRef(ref: string) {
+    const [prefix = "", code = ""] = String(ref || "").split(":")
+    return { prefix: prefix.toLowerCase(), code: code.trim() }
+}
+
+/**
+ * Resolves the hymn book number (and the category it belongs to).
+ * The "kb" (ख्रीष्टीय भजन) reference is the source of truth for numbering. Some songs in the bundled data
+ * are filed under a different category than their kb number (e.g. Bhajan 516 filed as Chorus), which used to hide the number.
+ */
+function resolveHymnNumber(sourceRefs: string[] = [], categoryId: HymnBookCategoryId = "bhajan"): { number: string; categoryId: HymnBookCategoryId } {
+    const toNumber = (value: string) => String(Number.parseInt(value, 10))
+
+    // 1. User-entered numbers from the add/edit hymn form (manual:<prefix><number>) always win.
+    for (const ref of sourceRefs) {
+        const { prefix, code } = splitRef(ref)
+        if (prefix !== "manual") continue
+        const digits = code.match(/(\d+)\s*$/)
+        if (digits?.[1]) return { number: toNumber(digits[1]), categoryId }
     }
 
-    const categoryPattern = categoryPatternMap[categoryId as Exclude<HymnCategoryId, "all">]
-    if (categoryPattern) {
-        for (const ref of sourceRefs) {
-            const [prefix, code = ""] = String(ref || "").split(":")
-            if (prefix?.toLowerCase() !== "kb") continue
-            const match = code.match(categoryPattern)
-            if (match?.[1]) return String(Number.parseInt(match[1], 10))
-        }
-
-        // User-entered numbers from the add/edit hymn form are stored as manual:<prefix><number>.
-        for (const ref of sourceRefs) {
-            const [prefix, code = ""] = String(ref || "").split(":")
-            if (prefix?.toLowerCase() !== "manual") continue
-            const digits = code.match(/(\d+)\s*$/)
-            if (digits?.[1]) return String(Number.parseInt(digits[1], 10))
-        }
-
-        if (categoryId === "new") {
-            for (const ref of sourceRefs) {
-                const code = String(ref || "").split(":")[1] || ""
-                const match = code.match(categoryPattern)
-                if (match?.[1]) return String(Number.parseInt(match[1], 10))
-            }
-        }
-
-        return ""
+    // 2. kb number matching the song's category.
+    for (const ref of sourceRefs) {
+        const { prefix, code } = splitRef(ref)
+        if (prefix !== "kb") continue
+        const match = code.match(HYMN_NUMBER_PATTERNS[categoryId])
+        if (match?.[1]) return { number: toNumber(match[1]), categoryId }
     }
 
-    return ""
+    // 3. kb number of another category: the song was filed in the wrong category, follow the hymn book.
+    for (const ref of sourceRefs) {
+        const { prefix, code } = splitRef(ref)
+        if (prefix !== "kb") continue
+        for (const kbCategory of KB_CATEGORY_ORDER) {
+            const match = code.match(HYMN_NUMBER_PATTERNS[kbCategory])
+            if (match?.[1]) return { number: toNumber(match[1]), categoryId: kbCategory }
+        }
+    }
+
+    // 4. New songs are numbered by other song books (nw/np/ms).
+    if (categoryId === "new") {
+        for (const ref of sourceRefs) {
+            const match = splitRef(ref).code.match(HYMN_NUMBER_PATTERNS.new)
+            if (match?.[1]) return { number: toNumber(match[1]), categoryId }
+        }
+    }
+
+    return { number: "", categoryId }
 }
 
 function shouldExcludeHymn(song: RawHymnSong) {
@@ -337,8 +359,9 @@ export async function loadHymns() {
                 const lyrics = normalizeWhitespace(String(song.lyrics || verses.join("\n\n")))
                 if (!title || !lyrics || !verses.length) return
 
-                const categoryId = mapCategoryId(song.category || category.name || "")
-                const number = extractSongNumber(song.sourceRefs || [], categoryId)
+                const resolved = resolveHymnNumber(song.sourceRefs || [], mapCategoryId(song.category || category.name || "") as HymnBookCategoryId)
+                const categoryId = resolved.categoryId
+                const number = resolved.number
                 const firstLine = verses[0]?.split("\n").map((line) => line.trim()).find(Boolean) || title
                 const transliteration = normalizeWhitespace(titleEn || romanizeNepali(title))
                 const slidesCount = verses.length

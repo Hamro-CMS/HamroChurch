@@ -404,10 +404,30 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
 
         const trimmedNumber = String(data.number || "").trim()
         const manualPrefix = data.categoryId === "chorus" ? "c" : data.categoryId === "children" ? "ch" : data.categoryId === "new" ? "n" : "s"
-        const sourceRefs = trimmedNumber ? [`manual:${manualPrefix}${trimmedNumber}`] : []
+
+        // When editing, keep the original song book references (kb:, mg:, sz:...) and source page, so the hymn book number is not lost.
+        // kb refs of another category are dropped, so an explicit category change by the user is respected.
+        let previousSong: any = null
+        if (editId) {
+            for (const entry of payload.categories) {
+                const found = Array.isArray(entry.songs) ? entry.songs.find((song: any) => String(song.sourceKey || "") === editId) : null
+                if (found) {
+                    previousSong = found
+                    break
+                }
+            }
+        }
+        const kbPatterns = { bhajan: /^(?:[a-z]+)?s\d+$/i, chorus: /^(?:[a-z]+)?c\d+$/i, children: /^(?:[a-z]+)?ch\d+$/i, new: /^(?:[a-z]+)?(?:nw|np|ms)\d+$/i } as const
+        const keptRefs: string[] = (Array.isArray(previousSong?.sourceRefs) ? previousSong.sourceRefs : []).filter((ref: any) => {
+            const [prefix = "", code = ""] = String(ref || "").split(":")
+            if (prefix.toLowerCase() === "manual") return false
+            if (prefix.toLowerCase() === "kb") return (kbPatterns[data.categoryId] || kbPatterns.bhajan).test(code.trim())
+            return true
+        })
+        const sourceRefs = trimmedNumber ? [`manual:${manualPrefix}${trimmedNumber}`, ...keptRefs] : keptRefs
         const songRecord = {
             sourceKey: hymnId,
-            sourcePage: "",
+            sourcePage: String(previousSong?.sourcePage || ""),
             title: String(data.title || "").trim(),
             titleEn: String(data.titleEn || "").trim() || null,
             category: categoryName,
