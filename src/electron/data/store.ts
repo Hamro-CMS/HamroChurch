@@ -55,8 +55,19 @@ checkStores(appDataPath)
 export async function setupStores() {
     const oldLocation = await migrateConfig()
     createStores(oldLocation, true)
+    migrateLanguageDefault()
 
     checkStores(getDataFolderPath("userData"))
+}
+
+function migrateLanguageDefault() {
+    if (config.get("englishLanguageDefaultApplied")) return
+
+    const settings = _store.SETTINGS
+    if (!settings) return
+
+    if (settings.get("language") === "ne") settings.set("language", "en")
+    config.set("englishLanguageDefaultApplied", true)
 }
 
 // Check that files are parsed properly!

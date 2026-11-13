@@ -1,6 +1,6 @@
 import type { SaveListSettings, SaveListSyncedSettings } from "../../types/Save"
 
-export const defaultConfig = { loaded: false, maximized: true, bounds: { width: 800, height: 600, x: 0, y: 0 }, dataPath: null, disableHardwareAcceleration: null }
+export const defaultConfig = { loaded: false, maximized: true, bounds: { width: 800, height: 600, x: 0, y: 0 }, dataPath: null, disableHardwareAcceleration: null, englishLanguageDefaultApplied: false }
 
 export const defaultGroups = {
     break: { name: "break", default: true, color: "#f5255e" },
@@ -52,7 +52,7 @@ export const defaultSettings: { [key in SaveListSettings]: any } = {
     mediaOptions: { columns: 5, mode: "grid" },
     drawerTabsData: {},
     drawer: { height: 300, stored: null },
-    language: "ne",
+    language: "en",
     labelsDisabled: false,
     groupNumbers: true,
     fullColors: false,

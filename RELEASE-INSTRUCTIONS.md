@@ -104,6 +104,7 @@ After the GitHub Release is live:
    - Nepali Bible is present after installation.
    - Nepali hymns are present after installation.
    - Hymn edits survive app restart.
+   - Existing projects and saved hymns remain after upgrading from the previous release.
    - The `Reset to original` option restores the bundled hymns and Bible.
 
 ## Troubleshooting

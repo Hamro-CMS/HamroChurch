@@ -11,6 +11,7 @@ export interface Config {
     autoErrorReporting?: boolean
     mediaFolderPath?: string
     lastUpdateCheck?: number
+    englishLanguageDefaultApplied?: boolean
 }
 
 export interface AppUpdateAsset {
