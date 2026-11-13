@@ -2,6 +2,7 @@ import { get } from "svelte/store"
 import { shouldUseNepaliLocale } from "../../common/nepali"
 import { handleKeyPress, nepaliTypingTips, romanizeNepali, toUnicode, type NepaliTypingEventLike } from "../../lib/nepaliTyping"
 import { language, nepaliTypingEnabled } from "../stores"
+import { nepaliTypingMode } from "./googleNepaliTyping"
 
 const STORAGE_KEY = "hamrochurch.nepaliTyping.enabled"
 
@@ -46,6 +47,7 @@ export function toggleNepaliTyping() {
 
 function shouldTransformTextInput(target: HTMLInputElement | HTMLTextAreaElement) {
     if (!get(nepaliTypingEnabled)) return false
+    if (get(nepaliTypingMode) === "google") return false
     if ((target as HTMLElement).dataset.disableNepaliTyping === "true") return false
     if (target instanceof HTMLInputElement) return ["text", "search"].includes(target.type || "text")
     return true
@@ -78,6 +80,8 @@ export function transformTextInputTarget(target: HTMLInputElement | HTMLTextArea
 
 export function transformEditableTextNode(textNode: Text, cursorPosition: number, eventLike: NepaliTypingEventLike) {
     if (!get(nepaliTypingEnabled)) return null
+    // "Google suggestions" mode handles typing itself (see googleNepaliTyping.ts)
+    if (get(nepaliTypingMode) === "google") return null
     const currentValue = textNode.textContent || ""
     const result = handleKeyPress(eventLike, currentValue, cursorPosition)
     if (!result || result.newValue === currentValue) return null

@@ -138,6 +138,7 @@ export enum Main {
     SAVE_HYMN = "SAVE_HYMN",
     SYNC_HYMN_SHOWS = "SYNC_HYMN_SHOWS",
     RESET_HYMNS = "RESET_HYMNS",
+    NEPALI_TRANSLITERATE = "NEPALI_TRANSLITERATE",
     FILE_INFO = "FILE_INFO",
     READ_FOLDER = "READ_FOLDER",
     READ_FILE = "READ_FILE",
@@ -238,6 +239,7 @@ export interface MainSendPayloads {
     [Main.READ_HYMNS]?: undefined
     [Main.SAVE_HYMN]: { id?: string; title: string; titleEn?: string; lyrics: string; categoryId: "bhajan" | "chorus" | "children" | "new"; number?: string; authors?: string }
     [Main.SYNC_HYMN_SHOWS]: { id?: string; title: string; titleEn?: string; lyrics: string; categoryId: "bhajan" | "chorus" | "children" | "new"; number?: string; authors?: string }[]
+    [Main.NEPALI_TRANSLITERATE]: { text: string; num?: number }
     [Main.RESET_HYMNS]?: undefined
     [Main.FILE_INFO]: string
     [Main.READ_FOLDER]: { path: string | string[]; depth?: number; generateThumbnails?: boolean; captureFolderContent?: boolean }
@@ -343,6 +345,7 @@ export interface MainReturnPayloads {
     [Main.SAVE_HYMN]: { success: boolean; path?: string; id?: string; error?: string }
     [Main.SYNC_HYMN_SHOWS]: void
     [Main.RESET_HYMNS]: Promise<{ success: boolean; error?: string }>
+    [Main.NEPALI_TRANSLITERATE]: Promise<string[]>
     [Main.FILE_INFO]: { path: string; stat: Stats; extension: string; folder: boolean } | null
     [Main.READ_FOLDER]: Promise<{ [key: string]: FileFolder }>
     [Main.READ_FILE]: { content: string }

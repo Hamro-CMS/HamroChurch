@@ -11,6 +11,7 @@
     import ProgressPanel from "./components/main/ProgressPanel.svelte"
     import MenuBar from "./components/main/MenuBar.svelte"
     import NepaliTypingControls from "./components/main/NepaliTypingControls.svelte"
+    import GoogleTypingPopup from "./components/main/GoogleTypingPopup.svelte"
     import Popup from "./components/main/Popup.svelte"
     import ProfileSelector from "./components/main/ProfileSelector.svelte"
     import Recorder from "./components/main/Recorder.svelte"
@@ -84,6 +85,7 @@
         {:else if $loaded}
             <Popup />
             <NepaliTypingControls />
+            <GoogleTypingPopup />
             <QuickSearch />
             <Toast />
             <StatusIndicator />

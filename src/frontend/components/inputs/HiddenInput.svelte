@@ -2,6 +2,7 @@
     import { createEventDispatcher } from "svelte"
     import { activeEdit, activePage, activeProject, activeRename, projectView } from "../../stores"
     import { translateText } from "../../utils/language"
+    import { nepaliTypingInput } from "../helpers/inputActions"
 
     export let value = ""
     export let style = ""
@@ -44,7 +45,7 @@
             return
         }
 
-        if (e.target.closest("input") || e.target.closest(".edit") || e.target.closest(".contextMenu")) return
+        if (e.target.closest("input") || e.target.closest(".edit") || e.target.closest(".contextMenu") || e.target.closest(".googleTypingPopup")) return
 
         cancelEdit()
     }
@@ -112,6 +113,7 @@
     <input
         bind:this={inputElem}
         {value}
+        use:nepaliTypingInput
         on:change={change}
         on:keydown={(e) => {
             // stop space from triggering other keydown events

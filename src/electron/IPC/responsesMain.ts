@@ -29,6 +29,7 @@ import { apiReturnData, emitOSC, startWebSocketAndRest, stopApiListener } from "
 import { closeMain } from "../utils/close"
 import { addToMediaFolder, bundleMediaFiles, createFolder, getDataFolderPath, getDataFolderRoot, getFileInfo, getMediaCodec, getMediaSyncFolderPath, getMediaTracks, getPaths, getSimularPaths, loadFile, loadShowsAsync, locateMediaFile, openInSystem, readExifData, readFile, readFolder, readFolderContent, selectFiles, selectFilesDialog, selectFolder, setMediaSyncFolderPath, writeFile } from "../utils/files"
 import { getMachineId } from "../utils/helpers"
+import { fetchNepaliTransliteration } from "../utils/nepaliTransliteration"
 import { LyricSearch } from "../utils/LyricSearch"
 import { closeMidiInPorts, getMidiInputs, getMidiOutputs, receiveMidi, sendMidi } from "../utils/midi"
 import { deleteShows, deleteShowsNotIndexed, getAllShows, getEmptyShows, refreshAllShows } from "../utils/shows"
@@ -171,6 +172,7 @@ export const mainResponses: MainResponses = {
     [Main.SAVE_HYMN]: (data) => saveHamroHymn(data),
     [Main.SYNC_HYMN_SHOWS]: (data) => syncHamroHymnShows(data),
     [Main.RESET_HYMNS]: () => resetHamroData(),
+    [Main.NEPALI_TRANSLITERATE]: async (data) => await fetchNepaliTransliteration(data),
     [Main.FILE_INFO]: (data) => getFileInfo(data),
     [Main.READ_FOLDER]: (data) => readFolderContent(data),
     [Main.READ_FILE]: (data) => ({ content: readFile(data.path) }),

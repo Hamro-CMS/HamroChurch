@@ -814,6 +814,7 @@
                 class:hidden={chordsMode}
                 class:autoSize={item.auto && autoSize}
                 contenteditable
+                data-nepali-typing="true"
                 on:input={textElemInput}
                 on:keydown={textElemKeydown}
                 bind:innerHTML={html}

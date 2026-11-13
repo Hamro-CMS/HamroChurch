@@ -16,10 +16,23 @@
 
         return labels[section]
     }
+    $: isNe = $language === "ne"
+    $: modeTips = isNe
+        ? ["अ (तुरुन्त फोनेटिक — डिफल्ट): अक्षर टाइप गर्नासाथ तुरुन्त नेपाली युनिकोड बन्छ।", "G (Google सुझाव मोड): रोमनमा पूरै शब्द टाइप गर्नुहोस् (जस्तै: yeshu, parmeshwar, namaste) → मुनि नेपाली शब्दहरूको सूची देखिन्छ।", "G मोडका किबोर्ड सर्टकटहरू: Space = पहिलो शब्द छान्ने, 1–5 वा ▲/▼ = अर्को विकल्प छान्ने, Enter/Tab = स्पेस नराखी शब्द छान्ने, Esc = अंग्रेजी शब्द जस्ताको तस्तै राख्ने।", "अफलाइन सपोर्ट: इन्टरनेट नहुँदा पनि चर्चका शब्दकोश र फोनेटिक सुझावहरू स्वतः काम गर्छन्।"]
+        : ["अ (Instant Phonetic — Default): Converts letters into Nepali Unicode immediately as you type.", "G (Google Suggestions Mode): Type a full Roman word (e.g. yeshu, parmeshwar, namaste) to see a popup list of Nepali word suggestions.", "G Mode Keys: Space = pick top word, 1–5 or ▲/▼ = pick another suggestion, Enter/Tab = commit without trailing space, Esc = keep English word.", "Offline Ready: Automatically falls back to built-in worship vocabulary & phonetic suggestions when offline."]
 </script>
 
 <div class="tips">
     <p class="intro"><T id="typing.popup_intro" /></p>
+
+    <section class="card">
+        <h3>{isNe ? "टाइपिङ मोडहरू (अ र G)" : "Typing Modes (अ & G)"}</h3>
+        <ul>
+            {#each modeTips as tip}
+                <li>{tip}</li>
+            {/each}
+        </ul>
+    </section>
 
     {#each sections as [section, entries]}
         <section class="card">
