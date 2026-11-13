@@ -6,7 +6,7 @@ Use this checklist when you want to publish a new Windows installer and deploy t
 
 ### Required repository settings
 
-1. Open the GitHub repository settings for `Hamro-Church/HamroChurch`.
+1. Open the GitHub repository settings for `Hamro-CMS/HamroChurch`.
 2. Go to `Settings -> Actions -> General`.
 3. Make sure Actions are enabled.
 4. Under `Workflow permissions`, select `Read and write permissions`.

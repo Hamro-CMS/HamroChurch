@@ -52,10 +52,12 @@ function Wait-ForReleaseWorkflow {
 
     $runId = $null
     for ($attempt = 1; $attempt -le 30; $attempt++) {
-        $runId = gh run list --workflow build-release.yml --limit 20 --json databaseId,headSha,event --jq ".[] | select(.event == \"push\" and .headSha == \"$CommitSha\") | .databaseId" | Select-Object -First 1
+        $runs = gh run list --workflow build-release.yml --commit $CommitSha --event push --limit 20 --json databaseId
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to query GitHub Actions runs with gh."
         }
+        $matchingRun = $runs | ConvertFrom-Json | Select-Object -First 1
+        if ($matchingRun) { $runId = $matchingRun.databaseId }
         if ($runId) { break }
         Start-Sleep -Seconds 10
     }
@@ -107,7 +109,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "git push --tags failed."
 }
 
-$releaseUrl = "https://github.com/Hamro-Church/HamroChurch/releases/tag/$tag"
+$releaseUrl = "https://github.com/Hamro-CMS/HamroChurch/releases/tag/$tag"
 Write-Host "Expected release URL: $releaseUrl"
 Write-Host "The website deploy workflow is triggered by the version-bump push to main."
 
