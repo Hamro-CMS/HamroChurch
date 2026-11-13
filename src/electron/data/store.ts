@@ -10,6 +10,7 @@ import type { History } from "../../types/History"
 import { Main } from "../../types/IPC/Main"
 import { ToMain } from "../../types/IPC/ToMain"
 import type { Config, ErrorLog, Media } from "../../types/Main"
+import type { Outputs } from "../../types/Output"
 import type { Themes } from "../../types/Settings"
 import type { Overlays, Templates, TrimmedShows } from "../../types/Show"
 import type { StageLayouts } from "../../types/Stage"
@@ -56,6 +57,7 @@ export async function setupStores() {
     const oldLocation = await migrateConfig()
     createStores(oldLocation, true)
     migrateLanguageDefault()
+    migrateEnglishOutputLabels()
 
     checkStores(getDataFolderPath("userData"))
 }
@@ -68,6 +70,31 @@ function migrateLanguageDefault() {
 
     if (settings.get("language") === "ne") settings.set("language", "en")
     config.set("englishLanguageDefaultApplied", true)
+}
+
+function migrateEnglishOutputLabels() {
+    if (config.get("englishOutputLabelsApplied")) return
+
+    const settings = _store.SETTINGS
+    if (!settings) return
+
+    const outputs: Outputs = settings.get("outputs") || {}
+    let changed = false
+
+    if (outputs.default?.name === "मुख्य") {
+        outputs.default.name = "Primary"
+        changed = true
+    }
+
+    Object.values(outputs).forEach((output) => {
+        if (output?.stageOutput && output.name === "पूर्वनिर्धारित") {
+            output.name = "Default"
+            changed = true
+        }
+    })
+
+    if (changed) settings.set("outputs", outputs)
+    config.set("englishOutputLabelsApplied", true)
 }
 
 // Check that files are parsed properly!

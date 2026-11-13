@@ -12,6 +12,7 @@ export interface Config {
     mediaFolderPath?: string
     lastUpdateCheck?: number
     englishLanguageDefaultApplied?: boolean
+    englishOutputLabelsApplied?: boolean
 }
 
 export interface AppUpdateAsset {
