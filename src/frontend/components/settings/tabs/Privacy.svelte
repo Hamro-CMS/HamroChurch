@@ -104,27 +104,29 @@
                 {/if}
             </span>
         </div>
-        <p class="status-desc">
+        <div class="status-desc">
             All presentations, hymns, Bibles, and church records remain <strong>100% local and offline</strong> on your
             computer. We <strong>NEVER</strong> collect your name, IP address, computer hostname, system username, or
             any church/member data.
-        </p>
+        </div>
     </div>
 
-    <MaterialToggleSwitch
-        label="Share Anonymous Usage Statistics (OS, City/Country, Duration)"
-        checked={sharingEnabled}
-        defaultValue={false}
-        disabled={loading}
-        on:change={handleToggle}
-    />
+    <div class="privacy-toggle-wrap">
+        <MaterialToggleSwitch
+            label="Share Anonymous Usage Statistics (OS, City/Country, Duration)"
+            checked={sharingEnabled}
+            defaultValue={false}
+            disabled={loading}
+            on:change={handleToggle}
+        />
+    </div>
 
     <div class="card">
-        <h3>Anonymous Device ID</h3>
-        <p class="helper">
+        <div class="card-heading">Anonymous Device ID</div>
+        <div class="helper">
             A random local UUID v4 used solely to prevent duplicate device counting when anonymous statistics are
             enabled. It contains zero hardware or personal identifiers.
-        </p>
+        </div>
 
         <div class="device-id-row">
             <code class="device-id-code">{anonymousDeviceId || "Generating..."}</code>
@@ -135,11 +137,11 @@
     </div>
 
     <div class="card">
-        <h3>Server Logs &amp; Data Deletion</h3>
-        <p class="helper">
+        <div class="card-heading">Server Logs &amp; Data Deletion</div>
+        <div class="helper">
             You can permanently erase any anonymous usage statistics associated with your local Anonymous Device ID at
             any time, or contact privacy support at <strong>support@hamrocms.com</strong>.
-        </p>
+        </div>
 
         <InputRow>
             <MaterialButton
@@ -165,7 +167,7 @@
         </InputRow>
 
         {#if statusNote}
-            <p class="status-note">{statusNote}</p>
+            <div class="status-note">{statusNote}</div>
         {/if}
     </div>
 </div>
@@ -176,6 +178,19 @@
         flex-direction: column;
         gap: 16px;
         max-width: 780px;
+    }
+
+    .privacy-toggle-wrap :global(.togglefield) {
+        height: auto;
+        min-height: 50px;
+    }
+
+    .privacy-toggle-wrap :global(.toggle-label),
+    .privacy-toggle-wrap :global(.toggle-label .label-text) {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        line-height: 1.4;
     }
 
     .status-banner {
@@ -195,6 +210,8 @@
         gap: 8px;
         font-weight: 600;
         margin-bottom: 6px;
+        white-space: normal;
+        overflow: visible;
     }
 
     .updated-meta {
@@ -206,9 +223,13 @@
 
     .status-desc {
         margin: 0;
-        font-size: 0.9em;
-        line-height: 1.55;
-        opacity: 0.86;
+        font-size: 0.92em;
+        line-height: 1.6;
+        opacity: 0.9;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        overflow-wrap: break-word;
     }
 
     .card {
@@ -221,17 +242,24 @@
         gap: 10px;
     }
 
-    .card h3 {
+    .card-heading {
         margin: 0;
-        font-size: 1.02em;
-        color: var(--text);
+        font-size: 1.05em;
+        font-weight: 600;
+        color: var(--secondary);
+        white-space: normal;
+        overflow: visible;
     }
 
     .helper {
         margin: 0;
-        font-size: 0.88em;
-        line-height: 1.5;
-        opacity: 0.8;
+        font-size: 0.9em;
+        line-height: 1.55;
+        opacity: 0.86;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        overflow-wrap: break-word;
     }
 
     .device-id-row {
@@ -256,7 +284,11 @@
 
     .status-note {
         margin: 4px 0 0;
-        font-size: 0.88em;
+        font-size: 0.9em;
+        line-height: 1.5;
         color: var(--secondary);
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
     }
 </style>

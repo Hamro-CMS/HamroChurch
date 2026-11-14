@@ -56,6 +56,9 @@
     .intro {
         margin: 0;
         opacity: 0.82;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
     }
 
     .card {
