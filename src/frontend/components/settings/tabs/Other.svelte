@@ -15,7 +15,7 @@
         // getAudioOutputs()
         sendMain(Main.FULL_SHOWS_LIST)
         requestMain(Main.GET_STORE_VALUE, { file: "config", key: "autoErrorReporting" }, (value) => {
-            autoErrorReporting = value !== false
+            autoErrorReporting = value === true
         })
         requestMain(Main.GET_STORE_VALUE, { file: "config", key: "disableHardwareAcceleration" }, (value) => {
             disableHardwareAcceleration = !!value
@@ -45,7 +45,7 @@
     }
 
     // auto error reporting
-    let autoErrorReporting = true
+    let autoErrorReporting = false
     function toggleAutoErrorReporting(e: any) {
         autoErrorReporting = e.detail
         sendMain(Main.SET_STORE_VALUE, { file: "config", key: "autoErrorReporting", value: autoErrorReporting })
@@ -180,7 +180,7 @@
 
 <MaterialToggleSwitch label="settings.log_song_usage" checked={$special.logSongUsage || false} defaultValue={false} on:change={(e) => updateSpecial(e.detail, "logSongUsage")} />
 
-<MaterialToggleSwitch label="settings.auto_error_reporting" checked={autoErrorReporting} defaultValue={true} on:change={toggleAutoErrorReporting} />
+<MaterialToggleSwitch label="settings.auto_error_reporting" checked={autoErrorReporting} defaultValue={false} on:change={toggleAutoErrorReporting} />
 
 <MaterialToggleSwitch label="settings.disable_hardware_acceleration" checked={disableHardwareAcceleration} defaultValue={false} on:change={toggleHardwareAcceleration} />
 <!-- "optimized_mode": "Optimized mode", -->

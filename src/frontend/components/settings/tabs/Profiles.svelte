@@ -127,7 +127,7 @@
     $: stageAccess = currentProfile.access.stage || {}
 
     // "display_settings" (can change position still), "connection" (can use still)
-    const tabs: SettingsTabs[] = ["general", "display_settings", "styles", "connection", "files", "profiles", "theme", "other"]
+    const tabs: SettingsTabs[] = ["general", "display_settings", "styles", "connection", "files", "profiles", "theme", "privacy", "other"]
     $: settingsList = tabs.map((id) => ({ id, name: `settings.${id}` }))
     $: settingsAccess = currentProfile.access.settings || {}
 

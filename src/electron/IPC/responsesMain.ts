@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/electron/main"
 import type { BrowserWindow, DesktopCapturerSource } from "electron"
 import { app, desktopCapturer, screen, shell, systemPreferences } from "electron"
 import os from "os"
@@ -30,6 +29,7 @@ import { closeMain } from "../utils/close"
 import { addToMediaFolder, bundleMediaFiles, createFolder, getDataFolderPath, getDataFolderRoot, getFileInfo, getMediaCodec, getMediaSyncFolderPath, getMediaTracks, getPaths, getSimularPaths, loadFile, loadShowsAsync, locateMediaFile, openInSystem, readExifData, readFile, readFolder, readFolderContent, selectFiles, selectFilesDialog, selectFolder, setMediaSyncFolderPath, writeFile } from "../utils/files"
 import { getMachineId } from "../utils/helpers"
 import { fetchNepaliTransliteration } from "../utils/nepaliTransliteration"
+import { deleteAnalyticsServerData, getPrivacySettings, setAnalyticsConsent } from "../utils/softwareHeartbeat"
 import { LyricSearch } from "../utils/LyricSearch"
 import { closeMidiInPorts, getMidiInputs, getMidiOutputs, receiveMidi, sendMidi } from "../utils/midi"
 import { deleteShows, deleteShowsNotIndexed, getAllShows, getEmptyShows, refreshAllShows } from "../utils/shows"
@@ -246,7 +246,11 @@ export const mainResponses: MainResponses = {
     [Main.SPOTIFY_COMMAND]: async (data) => {
         await executeSpotifyCommand(data.command, data.value)
         return true
-    }
+    },
+    // Privacy & Anonymous Telemetry
+    [Main.GET_PRIVACY_SETTINGS]: () => getPrivacySettings(),
+    [Main.SET_ANALYTICS_CONSENT]: (data) => setAnalyticsConsent(!!data?.consent),
+    [Main.DELETE_ANALYTICS_DATA]: () => deleteAnalyticsServerData()
 }
 
 /// ///////
@@ -591,11 +595,11 @@ async function sendSocketMessage(data: { churchId: string; teamId: string; displ
 }
 
 function getOS() {
-    return { platform: os.platform(), name: os.hostname(), arch: os.arch() } as OS
+    return { platform: os.platform(), name: "", arch: os.arch() } as OS
 }
 
 function getDeviceName() {
-    return (os.hostname() || "").replace(".local", "")
+    return "HamroChurch"
 }
 
 function checkRamUsage() {
@@ -733,18 +737,7 @@ export function createLog(err: Error) {
 }
 
 export function autoErrorReport() {
-    if (!isProd) return
-    if (config.get("autoErrorReporting") === false) return
-
-    Sentry.init({
-        dsn: "https://5d1069c3cb6faaa6e7ad0d9dc0145361@o4510419080445952.ingest.us.sentry.io/4510419082346496",
-        beforeSend(event) {
-            // filter out known non-critical errors
-            const errorMessage = event.exception?.values?.[0]?.value || ""
-            const shouldFilter = ERROR_FILTER.some((filter) => errorMessage.includes(filter))
-            return shouldFilter ? null : event
-        }
-    })
+    // Third-party Sentry error telemetry disabled for Zero-PII compliance.
 }
 
 // STORE MEDIA AS BASE64

@@ -21,7 +21,7 @@ import { initializeUpdater } from "./updater"
 import { callClose, exitApp, saveAndClose } from "./utils/close"
 import { isDraggableAreaVisible, isWithinDisplayBounds, mainWindowInitialize, openDevTools, parseCommandLineArgs, waitForBundle } from "./utils/init"
 import { template } from "./utils/menuTemplate"
-import { startSoftwareHeartbeat, stopSoftwareHeartbeat } from "./utils/softwareHeartbeat"
+import { initSoftwareTelemetry, stopSoftwareHeartbeat } from "./utils/softwareHeartbeat"
 import { spellcheck } from "./utils/spellcheck"
 import { loadingOptions, mainOptions } from "./utils/windowOptions"
 
@@ -114,7 +114,7 @@ async function startApp() {
 
     await setupStores()
     initializeUpdater()
-    startSoftwareHeartbeat()
+    initSoftwareTelemetry()
     await runHamroChurchMigration()
 
     registerProtectedProtocol()

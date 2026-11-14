@@ -28,9 +28,6 @@
             </div>
         {/each}
         <div class="footer">
-            <span class="status" class:online={state.online === true} class:offline={state.online === false}>
-                {#if state.online === null}…{:else if state.online}Google{:else}Offline{/if}
-            </span>
             <span class="hint">Space ✓ · Esc ✕</span>
         </div>
     </div>
@@ -85,20 +82,12 @@
 
     .footer {
         display: flex;
-        justify-content: space-between;
-        gap: 10px;
+        justify-content: flex-end;
         padding: 3px 10px;
         font-size: 0.72rem;
         color: #777;
         background: #f7f7f7;
         border-top: 1px solid #e3e3e3;
         font-family: Arial, sans-serif;
-    }
-    .status.online {
-        color: #1a73e8;
-        font-weight: 600;
-    }
-    .status.offline {
-        color: #b26a00;
     }
 </style>

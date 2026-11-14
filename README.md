@@ -110,6 +110,16 @@ Recommended validation before release:
 2. Run `npm run build`.
 3. Verify branding, scripture, hymn, stage, remote, and output flows manually.
 
+## Privacy & Anonymous Telemetry
+
+Hamro Church is built with a strict **Zero-PII** architecture compliant with **UK GDPR** and **Nepal's Individual Privacy Act, 2075**:
+
+- **100% Local & Offline Data:** All church records, worship presentations, custom hymns, Bibles, member directories, financial slides, and media files remain **100% local and offline** on your computer.
+- **Strictly Opt-In Anonymous Statistics:** On first launch, you can choose whether to share minimal anonymous statistics. **No telemetry ping is ever sent unless you explicitly click `Accept`.**
+- **Minimal Non-Personal Fields Only:** When enabled, telemetry records **only** `City/Country` (resolved in memory — **raw or partial IP addresses are never stored**), `Operating System` (`Windows`, `macOS`, `Linux` & CPU architecture), `App Version`, a random local `Anonymous Device ID` (UUID v4 — never your computer hostname or username), and `Session Duration`.
+- **Full Control & Instant Erasure:** You can disable anonymous statistics or permanently delete server logs for your Anonymous Device ID at any time under **Settings > Privacy**, or by contacting **[support@hamrocms.com](mailto:support@hamrocms.com)**.
+- Read the full policy in **[PRIVACY.md](./PRIVACY.md)**.
+
 ## License
 
 Hamro Church is licensed under the GNU General Public License v3.0. See the `LICENSE` file in this repository for full details.

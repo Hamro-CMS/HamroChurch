@@ -1,30 +1,39 @@
 <script lang="ts">
-    import { onMount } from "svelte"
+    import { onDestroy, onMount } from "svelte"
     import { currentWindow, language, nepaliTypingEnabled } from "../../stores"
     import { initializeNepaliTypingPreference, toggleNepaliTyping } from "../../utils/nepaliTyping"
 
     function keydown(event: KeyboardEvent) {
-        if (!(event.ctrlKey && event.altKey && event.key.toLowerCase() === "n")) return
+        const hasAltGr = typeof event.getModifierState === "function" && event.getModifierState("AltGraph")
+        const isCtrlAlt = (event.ctrlKey && event.altKey) || (event.metaKey && event.altKey) || hasAltGr
+        const isKeyN = event.code === "KeyN" || event.key?.toLowerCase() === "n"
+
+        if (!isCtrlAlt || !isKeyN || event.shiftKey || event.repeat) return
         if ($currentWindow) return
+
         event.preventDefault()
+        event.stopPropagation()
         toggleNepaliTyping()
     }
 
     onMount(() => {
         initializeNepaliTypingPreference()
+        window.addEventListener("keydown", keydown, true)
+    })
+
+    onDestroy(() => {
+        window.removeEventListener("keydown", keydown, true)
     })
 
     $: modeTitle =
         $language === "ne"
             ? $nepaliTypingEnabled
-                ? "Google नेपाली टाइपिङ सक्रिय छ (शब्द टाइप गरी Space थिच्नुहोस्)। बन्द गर्न क्लिक वा Ctrl+Alt+N थिच्नुहोस्।"
-                : "Google नेपाली टाइपिङ खोल्न क्लिक गर्नुहोस् (Ctrl+Alt+N)।"
+                ? "नेपाली टाइपिङ सक्रिय छ (शब्द टाइप गरी Space थिच्नुहोस्)। बन्द गर्न क्लिक वा Ctrl+Alt+N थिच्नुहोस्।"
+                : "नेपाली टाइपिङ खोल्न क्लिक गर्नुहोस् (Ctrl+Alt+N)।"
             : $nepaliTypingEnabled
-              ? "Google Nepali typing is ON (type a word, press Space). Click or press Ctrl+Alt+N to turn off."
-              : "Click to enable Google Nepali typing (Ctrl+Alt+N)."
+              ? "Nepali typing is ON (type a word, press Space). Click or press Ctrl+Alt+N to turn off."
+              : "Click to enable Nepali typing (Ctrl+Alt+N)."
 </script>
-
-<svelte:window on:keydown={keydown} />
 
 {#if !$currentWindow}
     <div class="typingControls">

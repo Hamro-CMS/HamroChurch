@@ -622,7 +622,8 @@ const settings = [
         aliases: ["settings.autosave", "settings.auto_backup", "settings.data_location", "settings.cloud", "-Cloud sync", "-Sync", "settings.backup_all", "settings.restore"]
     },
     { id: "profiles", name: "settings.profiles", icon: "profiles" },
-    { id: "theme", name: "settings.theme", icon: "theme" }
+    { id: "theme", name: "settings.theme", icon: "theme" },
+    { id: "privacy", name: "settings.privacy", icon: "privacy", aliases: ["-Analytics", "-Telemetry", "-Anonymous"] }
     // { id: "other", name: "settings.other", icon: "other" }
 ]
 

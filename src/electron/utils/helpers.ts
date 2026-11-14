@@ -60,22 +60,18 @@ export function waitUntilValueIsDefined(value: () => any, intervalTime = 50, tim
 export function getMachineId(): string {
     try {
         const { config } = require("../data/store")
-        let id = config?.get ? config.get("machineId") : undefined
-        if (id) return id
+        let id = config?.get ? config.get("anonymous_device_id") || config.get("machineId") : undefined
+        if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(id))) return id
 
-        try {
-            // we need to store this value for now, because it's already used, but we can remove eventually once it's stored in the config for most users
-            const { machineIdSync } = require("node-machine-id")
-            id = machineIdSync()
-        } catch (machineIdErr) {
-            console.warn("Could not retrieve legacy hardware machine ID, generating UUID instead:", machineIdErr)
-            id = crypto.randomUUID()
+        id = crypto.randomUUID()
+
+        if (config?.set) {
+            config.set("anonymous_device_id", id)
+            config.set("machineId", id)
         }
-
-        if (config?.set) config.set("machineId", id)
         return id
     } catch (err) {
-        console.warn("Could not get machine ID from config store:", err)
-        return "fallback-machine-id"
+        console.warn("Could not get anonymous device ID from config store:", err)
+        return crypto.randomUUID()
     }
 }

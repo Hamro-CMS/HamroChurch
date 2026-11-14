@@ -38,6 +38,8 @@ extraResources:
       to: slideshow
       filter:
           - connector-*
+    - from: public/icon.ico
+      to: hamrochurch-icon.ico
 
 # windows
 
@@ -57,6 +59,7 @@ nsis:
     uninstallerIcon: build/public/icon.ico
     installerHeaderIcon: build/public/icon.ico
     createDesktopShortcut: always
+    include: scripts/windows/installer.nsh
 
 # linux
 

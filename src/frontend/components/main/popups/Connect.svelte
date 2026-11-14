@@ -40,7 +40,7 @@
 
     $: port = $ports[id] || defaultPorts[id]
     $: hostname = `${$os.name.toLowerCase()}${$os.platform === "win32" ? ".local" : ""}`
-    $: url = `http://${useHostname ? hostname : ip}:${port}`
+    $: url = `http://${useHostname && $os.name ? hostname : ip}:${port}`
     $: if (url) generateQR(url)
 
     function mouseup(e: any) {
@@ -131,7 +131,9 @@
         <hr />
 
         <MaterialNumberInput label="settings.max_connections" value={$maxConnections} max={100} on:change={(e) => maxConnections.set(e.detail)} />
-        <MaterialToggleSwitch label="settings.use_hostname" checked={$special.connectionHostname} defaultValue={false} on:change={(e) => updateSpecial("connectionHostname", e.detail)} />
+        {#if $os.name}
+            <MaterialToggleSwitch label="settings.use_hostname" checked={$special.connectionHostname} defaultValue={false} on:change={(e) => updateSpecial("connectionHostname", e.detail)} />
+        {/if}
     {/if}
 {:else}
     <div on:mouseup={mouseup}>

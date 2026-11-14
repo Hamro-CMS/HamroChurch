@@ -1,69 +1,10 @@
-import { os, version, deviceId, isDev, activePage, activeDrawerTab } from "../stores"
-import { get } from "svelte/store"
-
-const MEASUREMENT_ID = "G-CEE6P1QXG6"
-const API_SECRET = atob("YlVwZE42bXpRVjYyWDc2d0Z3OGMwZw==")
-const SESSION_ID = Date.now().toString()
-
-function trackEvent(eventName: string, params?: Record<string, any>) {
-    if (get(isDev)) return
-
-    const clientId = get(deviceId)
-    if (!clientId) return
-
-    const eventParams = {
-        session_id: SESSION_ID,
-        app_version: get(version),
-        engagement_time_msec: 1,
-        ...params
-    }
-
-    const payload = {
-        client_id: clientId,
-        events: [{ name: eventName, params: eventParams }]
-    }
-
-    fetch(`https://www.google-analytics.com/mp/collect?api_secret=${API_SECRET}&measurement_id=${MEASUREMENT_ID}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-    })
-}
+// Upstream Google Analytics has been removed for 100% Zero-PII privacy compliance.
+// Anonymous, opt-in usage statistics are handled exclusively via Settings > Privacy.
 
 export function startTracking() {
-    trackFirstOpenIfNeeded()
-    trackEvent("session_start")
-    trackAppLaunch()
-
-    // listeners
-    activePage.subscribe(trackPageView)
-    activeDrawerTab.subscribe(trackDrawerView)
+    // No-op: third-party Google Analytics tracking is disabled.
 }
 
-function trackFirstOpenIfNeeded() {
-    const key = "hamrochurch_first_open_sent"
-    if (!localStorage.getItem(key)) {
-        trackEvent("first_open")
-        localStorage.setItem(key, "1")
-    }
-}
-
-function trackAppLaunch() {
-    trackEvent("application_start", { platform: get(os).platform })
-}
-
-function trackPageView(title: string) {
-    trackEvent("page_view", { page_location: "https://hamrocms.com/_app/" + title, page_title: title })
-}
-
-function trackDrawerView(title: string) {
-    trackEvent("drawer_view", { drawer_location: "https://hamrocms.com/_app/" + title, drawer_title: title })
-}
-
-const previouslyTracked: { [key: string]: string } = {}
-export function trackScriptureUsage(translationName: string, apiId: string | null, verseRef: string) {
-    if (previouslyTracked[translationName] === verseRef) return
-    previouslyTracked[translationName] = verseRef
-
-    trackEvent("scripture_usage", { translation_name: translationName, api_id: apiId, verse_ref: verseRef })
+export function trackScriptureUsage(_translationName: string, _apiId: string | null, _verseRef: string) {
+    // No-op: third-party scripture tracking is disabled.
 }

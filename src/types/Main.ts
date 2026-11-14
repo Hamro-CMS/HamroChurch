@@ -13,6 +13,23 @@ export interface Config {
     lastUpdateCheck?: number
     englishLanguageDefaultApplied?: boolean
     englishOutputLabelsApplied?: boolean
+    analytics_consent?: boolean | null
+    anonymous_device_id?: string
+    analytics_consent_updated_at?: string | null
+    machineId?: string
+}
+
+export interface PrivacySettings {
+    consent: boolean | null
+    anonymousDeviceId: string
+    consentUpdatedAt: string | null
+}
+
+export interface DeleteAnalyticsResult {
+    success: boolean
+    anonymousDeviceId: string
+    deleted?: number
+    error?: string
 }
 
 export interface AppUpdateAsset {
@@ -353,6 +370,7 @@ export interface ErrorLog {
 
 export type Popups =
     | "initialize"
+    | "analytics_consent"
     | "confirm"
     | "add_hymn"
     | "edit_hymn"

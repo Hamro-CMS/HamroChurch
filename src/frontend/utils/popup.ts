@@ -6,6 +6,7 @@ import About from "../components/main/popups/About.svelte"
 import Action from "../components/main/popups/Action.svelte"
 import ActionHistory from "../components/main/popups/ActionHistory.svelte"
 import Alert from "../components/main/popups/Alert.svelte"
+import AnalyticsConsent from "../components/main/popups/AnalyticsConsent.svelte"
 import AspectRatio from "../components/main/popups/AspectRatio.svelte"
 import AudioStream from "../components/main/popups/AudioStream.svelte"
 import CategoryAction from "../components/main/popups/CategoryAction.svelte"
@@ -85,6 +86,7 @@ import { activePopup, popupData } from "../stores"
 
 export const popups: { [key in Popups]: ComponentType } = {
     initialize: Initialize,
+    analytics_consent: AnalyticsConsent,
     confirm: Confirm,
     add_hymn: AddHymn,
     edit_hymn: AddHymn,

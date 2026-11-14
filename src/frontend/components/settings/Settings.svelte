@@ -12,6 +12,7 @@
     import Outputs from "./tabs/Outputs.svelte"
     import OutputsGeneral from "./tabs/OutputsGeneral.svelte"
     import OutputsTabs from "./tabs/OutputsTabs.svelte"
+    import Privacy from "./tabs/Privacy.svelte"
     import Profiles from "./tabs/Profiles.svelte"
     import ProfilesTabs from "./tabs/ProfilesTabs.svelte"
     import Styles from "./tabs/Styles.svelte"
@@ -75,6 +76,8 @@
             <Profiles />
         {:else if tabId === "theme"}
             <Theme />
+        {:else if tabId === "privacy"}
+            <Privacy />
         {:else if tabId === "other"}
             <Other />
         {/if}

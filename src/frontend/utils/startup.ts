@@ -72,6 +72,7 @@ async function startupMain() {
     remoteListen()
     checkStartupActions()
     startTracking()
+    void maybePromptAnalyticsConsent()
     contentProviderSync()
 
     // custom alert
@@ -92,6 +93,25 @@ async function startupMain() {
     // RAM MONITOR (every 10 minutes)
     setTimeout(() => checkRamUsage(), 10000)
     setInterval(() => checkRamUsage(), 600000)
+}
+
+async function maybePromptAnalyticsConsent() {
+    const privacy = await requestMain(Main.GET_PRIVACY_SETTINGS)
+    if (!privacy || privacy.consent !== null) return
+
+    if (!get(activePopup)) {
+        activePopup.set("analytics_consent")
+        return
+    }
+
+    const unsubscribe = activePopup.subscribe((current) => {
+        if (current === null) {
+            unsubscribe()
+            setTimeout(() => {
+                if (!get(activePopup)) activePopup.set("analytics_consent")
+            }, 150)
+        }
+    })
 }
 
 async function ensureBundledNepaliBibleRegistered() {

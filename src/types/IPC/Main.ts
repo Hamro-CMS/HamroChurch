@@ -6,7 +6,7 @@ import type { SyncProviderId } from "../../electron/cloud/syncManager"
 import type { ContentFile, ContentLibraryCategory, ContentProviderId, MediaLicense } from "../../electron/contentProviders/base/types"
 import type { _store } from "../../electron/data/store"
 import type { TimecodeMode } from "../../electron/timecode/timecode"
-import type { AppUpdateDownloadResult, AppUpdateInfo, ErrorLog, FileFolder, LessonsData, LyricSearchResult, MainFilePaths, Media, OS, SpotifyState, Subtitle } from "../Main"
+import type { AppUpdateDownloadResult, AppUpdateInfo, DeleteAnalyticsResult, ErrorLog, FileFolder, LessonsData, LyricSearchResult, MainFilePaths, Media, OS, PrivacySettings, SpotifyState, Subtitle } from "../Main"
 import type { Output } from "../Output"
 import type { Folders, Projects } from "../Projects"
 import type { Dictionary, Resolution, Themes } from "../Settings"
@@ -170,7 +170,11 @@ export enum Main {
     TIMECODE_STATUS = "TIMECODE_STATUS",
     // Spotify
     SPOTIFY_GET_STATE = "SPOTIFY_GET_STATE",
-    SPOTIFY_COMMAND = "SPOTIFY_COMMAND"
+    SPOTIFY_COMMAND = "SPOTIFY_COMMAND",
+    // Privacy & Anonymous Telemetry
+    GET_PRIVACY_SETTINGS = "GET_PRIVACY_SETTINGS",
+    SET_ANALYTICS_CONSENT = "SET_ANALYTICS_CONSENT",
+    DELETE_ANALYTICS_DATA = "DELETE_ANALYTICS_DATA"
 }
 
 export interface MainSendPayloads {
@@ -271,6 +275,10 @@ export interface MainSendPayloads {
     // Spotify
     [Main.SPOTIFY_GET_STATE]: undefined
     [Main.SPOTIFY_COMMAND]: { command: "playpause" | "next" | "prev" | "seek" | "setVolume" | "pause"; value?: number }
+    // Privacy & Anonymous Telemetry
+    [Main.GET_PRIVACY_SETTINGS]?: undefined
+    [Main.SET_ANALYTICS_CONSENT]: { consent: boolean }
+    [Main.DELETE_ANALYTICS_DATA]?: undefined
 }
 
 export interface MainReturnPayloads {
@@ -371,6 +379,10 @@ export interface MainReturnPayloads {
     // Spotify
     [Main.SPOTIFY_GET_STATE]: Promise<SpotifyState | null>
     [Main.SPOTIFY_COMMAND]: Promise<boolean>
+    // Privacy & Anonymous Telemetry
+    [Main.GET_PRIVACY_SETTINGS]: PrivacySettings
+    [Main.SET_ANALYTICS_CONSENT]: PrivacySettings
+    [Main.DELETE_ANALYTICS_DATA]: Promise<DeleteAnalyticsResult>
 }
 
 ///////////

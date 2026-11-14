@@ -1303,6 +1303,7 @@
         "calendar": "Calendar",
         "text_import": "Text",
         "media_import": "Media",
+        "privacy": "Privacy",
         "other": "Other",
         "language": "Language",
         "autosave": "Autosave",

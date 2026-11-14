@@ -77,7 +77,7 @@ const altKeys = {
     Enter: () => (get(activePage) === "show" ? menuClick("cut_in_half", true, null, null, null, get(selected)) : null)
 }
 
-export const disablePopupClose = ["initialize", "cloud_method"]
+export const disablePopupClose = ["initialize", "cloud_method", "analytics_consent"]
 const keys = {
     Escape: () => {
         // hide quick search
@@ -165,6 +165,10 @@ export function keydown(e: KeyboardEvent) {
     }
 
     if (e.ctrlKey || e.metaKey) {
+        if ((e.altKey || e.getModifierState?.("AltGraph")) && (e.code === "KeyN" || e.key?.toLowerCase() === "n")) {
+            return
+        }
+
         const drawerMenus = Object.keys(drawerTabs) as DrawerTabIds[]
         if (document.activeElement === document.body && Object.keys(drawerMenus).includes((Number(e.key) - 1).toString())) {
             activeDrawerTab.set(drawerMenus[Number(e.key) - 1])
@@ -211,6 +215,8 @@ export function keydown(e: KeyboardEvent) {
 
             return true
         }
+
+        if ((e.altKey || e.getModifierState?.("AltGraph")) && key !== "i") return
 
         if (invokeCtrlShortcut(key)) return
 
