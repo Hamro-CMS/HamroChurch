@@ -95,12 +95,12 @@
     <!-- {#if !isWindows}
     <div class="dragZone" />
     {/if} -->
-    <span style="width: var(--navigation-width);">
+    <span style="flex: 1 1 0; min-width: 0;">
         {#if !$saved && $os.platform !== "win32"}
             <div class="unsaved" />
         {/if}
         <!-- logo -->
-        <h1 style="align-self: center;width: 100%;padding: 0px 10px;text-align: center;font-size: 1.8em;">Hamro Church</h1>
+        <h1 class="brandTitle">Hamro Church <span class="brandDomain">(hamrocms.com)</span></h1>
         <!-- <div class="logo">
             <img style="height: 35px;" src="./import-logos/freeshow.webp" alt="FreeShow-logo" draggable={false} />
             <h1 style="color: var(--text);font-size: 1.7em;">FreeShow</h1>
@@ -111,7 +111,7 @@
         <TopButton id="edit" disabled={editDisabled} />
         <TopButton id="stage" />
     </span>
-    <span style="width: var(--navigation-width);justify-content: flex-end;">
+    <span style="flex: 1 1 0; min-width: 0; justify-content: flex-end;">
         <TopButton id="draw" red={$drawTool === "fill" || ($drawTool === "zoom" && $drawSettings.zoom?.size !== 100) || !!($drawTool === "paint" && $paintCache?.length)} hideLabel />
         {#if !settingsDisabled}
             <TopButton id="settings" hideLabel />
@@ -208,6 +208,31 @@
         height: 100%;
         width: 5px;
         background-color: var(--red);
+    }
+
+    .brandTitle {
+        align-self: center;
+        padding-inline: 42px 12px;
+        font-size: 1.8em;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .brandDomain {
+        font-size: 0.62em;
+        font-weight: 600;
+        color: var(--text);
+        opacity: 0.88;
+        letter-spacing: 0.01em;
+    }
+
+    @media screen and (max-width: 780px) {
+        .brandTitle {
+            padding-inline: 14px 8px;
+            font-size: 1.45em;
+        }
     }
 
     /* .logo {

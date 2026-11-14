@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { language } from "../../../stores"
-    import { copySelectedHymnToClipboard, formatHymnNumber, getHymnCategoryDisplay, getSelectedHymn, hymnFavoriteIds, hymnSourceDates, toggleFavorite, insertSelectedHymnIntoSlides } from "../hymns/hymns"
+    import { activePopup, language } from "../../../stores"
+    import { copySelectedHymnToClipboard, formatHymnNumber, getHymnCategoryDisplay, hymnEditTarget, hymnFavoriteIds, hymnItems, hymnSelectedId, hymnSourceDates, toggleFavorite, insertSelectedHymnIntoSlides } from "../hymns/hymns"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import T from "../../helpers/T.svelte"
     import InfoMetadata from "./InfoMetadata.svelte"
@@ -10,7 +10,13 @@
         toggleFavorite(hymn.id)
     }
 
-    $: hymn = getSelectedHymn()
+    function editSelectedHymn() {
+        if (!hymn) return
+        hymnEditTarget.set(hymn)
+        activePopup.set("edit_hymn")
+    }
+
+    $: hymn = $hymnItems.find((item) => item.id === $hymnSelectedId) || null
     $: info = hymn
         ? [
               { label: "info.created", value: $hymnSourceDates.created, type: "date" },
@@ -19,7 +25,7 @@
               { label: "info.category", value: getHymnCategoryDisplay(hymn.categoryId, $language) },
               { label: "info.slides", value: hymn.slidesCount },
               { label: "info.words", value: hymn.wordCount },
-                            { label: "hymns.number", value: formatHymnNumber(hymn.number, $language) }
+              { label: "hymns.number", value: formatHymnNumber(hymn.number, $language) }
           ]
         : []
 </script>
@@ -33,6 +39,9 @@
         <div class="actions">
             <MaterialButton variant="contained" icon="add" on:click={insertSelectedHymnIntoSlides}>
                 <T id="hymns.insert" />
+            </MaterialButton>
+            <MaterialButton variant="outlined" icon="edit" on:click={editSelectedHymn} white>
+                <T id="hymns.edit" />
             </MaterialButton>
             <MaterialButton variant="outlined" icon="copy" on:click={copySelectedHymnToClipboard} white>
                 <T id="hymns.copy" />

@@ -404,11 +404,13 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
             .map((entry) => entry.trim())
             .filter(Boolean)
 
-        const trimmedNumber = String(data.number || "").trim()
+        const toAsciiDigits = (raw: string) => raw.replace(/[०-९]/g, (d) => String(d.charCodeAt(0) - 0x0966))
+        const trimmedNumber = toAsciiDigits(String(data.number || "")).replace(/[^\d]/g, "")
         const manualPrefix = data.categoryId === "chorus" ? "c" : data.categoryId === "children" ? "ch" : data.categoryId === "new" ? "n" : "s"
 
         // When editing, keep the original song book references (kb:, mg:, sz:...) and source page, so the hymn book number is not lost.
         // kb refs of another category are dropped, so an explicit category change by the user is respected.
+        // If the user explicitly clears the number while editing, drop kb: refs too so the cleared state persists.
         let previousSong: any = null
         if (editId) {
             for (const entry of payload.categories) {
@@ -423,7 +425,10 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
         const keptRefs: string[] = (Array.isArray(previousSong?.sourceRefs) ? previousSong.sourceRefs : []).filter((ref: any) => {
             const [prefix = "", code = ""] = String(ref || "").split(":")
             if (prefix.toLowerCase() === "manual") return false
-            if (prefix.toLowerCase() === "kb") return (kbPatterns[data.categoryId] || kbPatterns.bhajan).test(code.trim())
+            if (prefix.toLowerCase() === "kb") {
+                if (editId && !trimmedNumber) return false
+                return (kbPatterns[data.categoryId] || kbPatterns.bhajan).test(toAsciiDigits(code.trim()))
+            }
             return true
         })
         const sourceRefs = trimmedNumber ? [`manual:${manualPrefix}${trimmedNumber}`, ...keptRefs] : keptRefs
@@ -467,9 +472,11 @@ function syncHamroHymnShows(updates: { id?: string; title: string; titleEn?: str
         if (category === "new") return "new"
         return "bhajan"
     }
+    const toAsciiDigits = (raw: string) => raw.replace(/[०-९]/g, (d) => String(d.charCodeAt(0) - 0x0966))
+    const normalizeNumber = (value: any) => toAsciiDigits(String(value || "")).replace(/[^\d]/g, "")
     const extractNumber = (sourceRefs: any[] = []) => {
         for (const ref of sourceRefs) {
-            const match = String(ref || "").match(/:(?:[a-z]+)?(\d+)\s*$/i)
+            const match = toAsciiDigits(String(ref || "")).match(/:(?:[a-z]+)?(\d+)\s*$/i)
             if (match?.[1]) return String(Number.parseInt(match[1], 10))
         }
         return ""
@@ -483,7 +490,7 @@ function syncHamroHymnShows(updates: { id?: string; title: string; titleEn?: str
     const findExistingSong = (payload: any, data: { id?: string; title: string; number?: string }) => {
         const editId = normalize(data.id)
         const title = normalize(data.title)
-        const number = normalize(data.number)
+        const number = normalizeNumber(data.number)
         const matches: { song: any; categoryId: "bhajan" | "chorus" | "children" | "new" }[] = []
 
         for (const category of payload?.categories || []) {
@@ -518,7 +525,7 @@ function syncHamroHymnShows(updates: { id?: string; title: string; titleEn?: str
                     normalize(currentSong?.title) === title &&
                     normalize(currentSong?.titleEn) === normalize(update?.titleEn) &&
                     normalize(currentSong?.authors) === normalize(update?.authors) &&
-                    normalize(extractNumber(currentSong?.sourceRefs || [])) === normalize(update?.number) &&
+                    normalizeNumber(extractNumber(currentSong?.sourceRefs || [])) === normalizeNumber(update?.number) &&
                     matched?.categoryId === nextCategoryId &&
                     getSongLyrics(currentSong) === lyrics
 
@@ -533,7 +540,7 @@ function syncHamroHymnShows(updates: { id?: string; title: string; titleEn?: str
                 titleEn: normalize(update?.titleEn) || undefined,
                 lyrics,
                 categoryId: nextCategoryId,
-                number: normalize(update?.number) || undefined,
+                number: normalizeNumber(update?.number) || undefined,
                 authors: normalize(update?.authors) || undefined
             })
 

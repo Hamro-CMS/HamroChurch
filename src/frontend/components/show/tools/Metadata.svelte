@@ -88,7 +88,7 @@
             {@const autofillValue = shouldAutofill ? autofillValues[key]?.() || "" : ""}
             {@const numberStored = key === "number" && currentShow?.quickAccess?.number}
 
-            <MaterialTextInput {label} style={numberStored ? "border-bottom: 1px solid var(--secondary);" : ""} {value} autofill={autofillValue} on:change={(e) => changeValue(e.detail, key)} />
+            <MaterialTextInput {label} style={numberStored ? "border-bottom: 1px solid var(--secondary);" : ""} {value} autofill={autofillValue} disableNepaliTyping={key === "number" || key === "CCLI"} on:change={(e) => changeValue(e.detail, key)} />
         {/each}
 
         <!-- not visible as metadata (only in project) -->

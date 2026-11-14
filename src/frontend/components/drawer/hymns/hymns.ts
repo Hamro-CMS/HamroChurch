@@ -153,7 +153,7 @@ const KB_CATEGORY_ORDER: HymnBookCategoryId[] = ["children", "chorus", "bhajan"]
 
 function splitRef(ref: string) {
     const [prefix = "", code = ""] = String(ref || "").split(":")
-    return { prefix: prefix.toLowerCase(), code: code.trim() }
+    return { prefix: prefix.toLowerCase(), code: fromNepaliDigits(code.trim()) }
 }
 
 /**

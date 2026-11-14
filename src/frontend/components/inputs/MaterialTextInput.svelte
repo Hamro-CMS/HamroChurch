@@ -22,6 +22,7 @@
     export let autofocus = false
     export let autoselect = false
     export let pasteBtn = false
+    export let disableNepaliTyping = false
 
     const dispatch = createEventDispatcher()
 
@@ -83,7 +84,7 @@
     {#if type === "password" && !showText}
         <input bind:value type="password" {id} {placeholder} {disabled} {autofocus} use:select use:blurOnEnter class="input edit" on:input={input} on:change={change} on:keydown />
     {:else}
-        <input bind:value type="text" {id} {placeholder} {disabled} {autofocus} use:select use:blurOnEnter use:nepaliTypingInput class="input edit" on:input={input} on:change={change} on:keydown />
+        <input bind:value type="text" {id} {placeholder} {disabled} {autofocus} data-disable-nepali-typing={disableNepaliTyping ? "true" : undefined} use:select use:blurOnEnter use:nepaliTypingInput class="input edit" on:input={input} on:change={change} on:keydown />
     {/if}
 
     <label for={id}>{@html translateText(label, $dictionary)}</label>

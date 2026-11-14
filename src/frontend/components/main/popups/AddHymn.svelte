@@ -1,9 +1,10 @@
 <script lang="ts">
     import { onDestroy } from "svelte"
     import { get } from "svelte/store"
+    import { fromNepaliDigits } from "../../../../common/nepali"
     import { Main } from "../../../../types/IPC/Main"
     import { requestMain } from "../../../IPC/main"
-    import { activePopup } from "../../../stores"
+    import { activePopup, shows, showsCache } from "../../../stores"
     import { hymnEditTarget, hymnSelectedId, loadHymns } from "../../drawer/hymns/hymns"
     import { newToast } from "../../../utils/common"
     import T from "../../helpers/T.svelte"
@@ -16,10 +17,14 @@
     const isEditing = !!editTarget
     const editId = editTarget?.id || ""
 
+    function sanitizeHymnNumber(raw: string) {
+        return fromNepaliDigits(String(raw || "")).replace(/[^\d]/g, "")
+    }
+
     let title = editTarget?.title || ""
     let titleEn = editTarget?.titleEn || ""
     let lyrics = editTarget?.lyrics || ""
-    let number = editTarget?.number || ""
+    let number = sanitizeHymnNumber(editTarget?.number || "")
     let authors = editTarget?.authors || ""
     let saving = false
     let errorMessage = ""
@@ -32,11 +37,68 @@
         { value: "new", label: "New Songs / नयाँ गीत" }
     ]
 
+    function syncLinkedHymnShows(savedHymnId: string, cleanNumber: string) {
+        if (!savedHymnId) return
+
+        const matchedIds: string[] = []
+        showsCache.update((cache) => {
+            for (const [showId, show] of Object.entries(cache || {})) {
+                if (show?.quickAccess?.metadata?.hymnSourceKey !== savedHymnId) continue
+                matchedIds.push(showId)
+                const nextQuickAccess = {
+                    ...(show.quickAccess || {}),
+                    metadata: {
+                        ...(show.quickAccess?.metadata || {}),
+                        hymnCategoryId: categoryId,
+                        hymnTitleEn: titleEn.trim()
+                    }
+                }
+                if (cleanNumber) nextQuickAccess.number = cleanNumber
+                else delete nextQuickAccess.number
+
+                cache[showId] = {
+                    ...show,
+                    quickAccess: nextQuickAccess,
+                    meta: {
+                        ...(show.meta || {}),
+                        title: title.trim(),
+                        number: cleanNumber || undefined,
+                        author: authors.trim() || undefined
+                    }
+                }
+            }
+            return cache
+        })
+
+        if (matchedIds.length) {
+            shows.update((allShows) => {
+                for (const showId of matchedIds) {
+                    if (!allShows[showId]) continue
+                    const nextQuickAccess = {
+                        ...(allShows[showId].quickAccess || {}),
+                        metadata: {
+                            ...(allShows[showId].quickAccess?.metadata || {}),
+                            hymnCategoryId: categoryId,
+                            hymnTitleEn: titleEn.trim()
+                        }
+                    }
+                    if (cleanNumber) nextQuickAccess.number = cleanNumber
+                    else delete nextQuickAccess.number
+                    allShows[showId].quickAccess = nextQuickAccess
+                }
+                return allShows
+            })
+        }
+    }
+
     async function saveHymn() {
         if (!title.trim() || !lyrics.trim()) {
             errorMessage = "Title and lyrics are required."
             return
         }
+
+        const cleanNumber = sanitizeHymnNumber(number)
+        number = cleanNumber
 
         saving = true
         errorMessage = ""
@@ -46,7 +108,7 @@
             titleEn,
             lyrics,
             categoryId,
-            number,
+            number: cleanNumber,
             authors
         })
         saving = false
@@ -57,7 +119,11 @@
         }
 
         await loadHymns()
-        if (result.id) hymnSelectedId.set(result.id)
+        const resolvedId = result.id || editId
+        if (resolvedId) {
+            hymnSelectedId.set(resolvedId)
+            syncLinkedHymnShows(resolvedId, cleanNumber)
+        }
         if (isEditing) newToast("hymns.updated")
         activePopup.set(null)
     }
@@ -69,7 +135,7 @@
     <MaterialTextInput label="hymns.form_title" value={title} on:input={(e) => (title = e.detail)} autofocus />
     <MaterialTextInput label="hymns.form_transliteration" value={titleEn} on:input={(e) => (titleEn = e.detail)} />
     <MaterialDropdown label="hymns.form_category" options={categoryOptions} value={categoryId} on:change={(e) => (categoryId = e.detail)} />
-    <MaterialTextInput label="hymns.form_number" value={number} on:input={(e) => (number = e.detail)} />
+    <MaterialTextInput label="hymns.form_number" value={number} disableNepaliTyping on:input={(e) => (number = sanitizeHymnNumber(e.detail))} />
     <MaterialTextInput label="hymns.form_author" value={authors} on:input={(e) => (authors = e.detail)} />
     <MaterialTextarea label="hymns.form_lyrics" value={lyrics} rows={10} on:input={(e) => (lyrics = e.detail)} />
 

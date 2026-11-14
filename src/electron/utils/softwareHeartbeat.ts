@@ -11,6 +11,17 @@ const MACHINE_ID_FILE = ".hamro-machine-id"
 
 let heartbeatTimer: NodeJS.Timeout | null = null
 let machineIdCache = ""
+let stopped = false
+
+const sessionStartedAt = Date.now()
+const sessionStartedIso = new Date(sessionStartedAt).toISOString()
+const sessionId =
+    typeof randomUUID === "function"
+        ? randomUUID()
+        : createHash("sha256")
+              .update(`${os.hostname()}|${process.pid}|${sessionStartedAt}`)
+              .digest("hex")
+              .slice(0, 36)
 
 function getMachineIdFilePath() {
     return path.join(app.getPath("userData"), MACHINE_ID_FILE)
@@ -68,10 +79,18 @@ function timezoneName() {
     }
 }
 
-function buildPayload() {
+type HeartbeatEvent = "start" | "heartbeat" | "stop"
+
+function buildPayload(event: HeartbeatEvent) {
     return {
         machine_id: resolveMachineId(),
+        session_id: sessionId,
+        session_started_at: sessionStartedIso,
+        session_seconds: Math.max(0, Math.floor((Date.now() - sessionStartedAt) / 1000)),
+        event,
         platform: normalizePlatform(),
+        os_version: os.release(),
+        arch: process.arch,
         app_version: app.getVersion(),
         device_name: os.hostname(),
         locale: app.getLocale(),
@@ -79,10 +98,10 @@ function buildPayload() {
     }
 }
 
-async function sendHeartbeat() {
+async function sendHeartbeat(event: HeartbeatEvent = "heartbeat", timeout = 8000) {
     try {
-        await axios.post(HEARTBEAT_URL, buildPayload(), {
-            timeout: 8000,
+        await axios.post(HEARTBEAT_URL, buildPayload(event), {
+            timeout,
             headers: {
                 Accept: "application/json",
                 "User-Agent": `HamroChurch/${app.getVersion()}`,
@@ -96,17 +115,23 @@ async function sendHeartbeat() {
 
 export function startSoftwareHeartbeat() {
     if (heartbeatTimer) return
+    stopped = false
 
-    void sendHeartbeat()
+    void sendHeartbeat("start")
 
     heartbeatTimer = setInterval(() => {
-        void sendHeartbeat()
+        void sendHeartbeat("heartbeat")
     }, HEARTBEAT_INTERVAL_MS)
 }
 
 export function stopSoftwareHeartbeat() {
-    if (!heartbeatTimer) return
+    if (heartbeatTimer) {
+        clearInterval(heartbeatTimer)
+        heartbeatTimer = null
+    }
 
-    clearInterval(heartbeatTimer)
-    heartbeatTimer = null
+    if (!stopped) {
+        stopped = true
+        void sendHeartbeat("stop", 2500)
+    }
 }

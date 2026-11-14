@@ -6,7 +6,7 @@
     import { newToast } from "../../../utils/common"
     import HymnList from "./HymnList.svelte"
     import HymnSearchBar from "./HymnSearchBar.svelte"
-    import { getActiveCategoryId, getCategoryCounts, getHymnCategoryDisplay, hymnEditTarget, hymnItems, hymnLoadError, hymnLoading, hymnSelectedCategories, initializeHymnsPreferences, insertSelectedHymnIntoSlides, loadHymns } from "./hymns"
+    import { getActiveCategoryId, getCategoryCounts, getHymnCategoryDisplay, hymnEditTarget, hymnItems, hymnLoadError, hymnLoading, hymnSelectedCategories, hymnSelectedId, initializeHymnsPreferences, insertSelectedHymnIntoSlides, loadHymns } from "./hymns"
     import Loader from "../../main/Loader.svelte"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import T from "../../helpers/T.svelte"
@@ -16,11 +16,19 @@
 
     $: counts = getCategoryCounts($hymnItems)
     $: activeCategory = getActiveCategoryId($hymnSelectedCategories)
+    $: selectedHymn = $hymnItems.find((item) => item.id === $hymnSelectedId) || null
 
     function openAddHymn() {
         confirmingReset = false
         hymnEditTarget.set(null)
         activePopup.set("add_hymn")
+    }
+
+    function openEditHymn() {
+        if (!selectedHymn) return
+        confirmingReset = false
+        hymnEditTarget.set(selectedHymn)
+        activePopup.set("edit_hymn")
     }
 
     async function resetHymns() {
@@ -75,6 +83,9 @@
         <div class="toolbarActions">
             <MaterialButton variant="outlined" icon="add" on:click={openAddHymn}>
                 <T id="hymns.add_new" />
+            </MaterialButton>
+            <MaterialButton variant="outlined" icon="edit" on:click={openEditHymn} disabled={!selectedHymn} white>
+                <T id="hymns.edit_title" />
             </MaterialButton>
             <MaterialButton variant="outlined" icon="reset" on:click={resetHymns} disabled={resetting} title="hymns.reset_confirm" white red>
                 {#if confirmingReset}<T id="popup.continue" />?{:else}<T id="hymns.reset_original" />{/if}

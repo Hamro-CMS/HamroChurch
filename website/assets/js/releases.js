@@ -1,6 +1,7 @@
 (function () {
     const apiUrl = "https://api.github.com/repos/Hamro-CMS/HamroChurch/releases/latest"
     const fallbackUrl = "https://github.com/Hamro-CMS/HamroChurch/releases"
+    const downloadTrackBase = "https://hamrocms.com/api/v1/software/download/"
 
     const pageLinks = document.querySelectorAll("[data-release-page]")
     const windowsLinks = document.querySelectorAll("[data-release-windows]")
@@ -10,6 +11,10 @@
     const summaryNodes = document.querySelectorAll("[data-release-summary]")
 
     if (!pageLinks.length && !windowsLinks.length && !macLinks.length && !linuxLinks.length) return
+
+    function trackedDownloadUrl(platform, versionTag) {
+        return downloadTrackBase + platform + "?source=hamrochurch-website&version=" + encodeURIComponent(versionTag || "latest")
+    }
 
     function setLinkGroup(nodes, href) {
         nodes.forEach((node) => node.setAttribute("href", href))
@@ -26,9 +31,9 @@
     }
 
     setLinkGroup(pageLinks, fallbackUrl)
-    setLinkGroup(windowsLinks, fallbackUrl)
-    setLinkGroup(macLinks, fallbackUrl)
-    setLinkGroup(linuxLinks, fallbackUrl)
+    setLinkGroup(windowsLinks, trackedDownloadUrl("windows", "latest"))
+    setLinkGroup(macLinks, trackedDownloadUrl("mac", "latest"))
+    setLinkGroup(linuxLinks, trackedDownloadUrl("linux", "latest"))
 
     fetch(apiUrl, { headers: { Accept: "application/vnd.github+json" } })
         .then((response) => {
@@ -48,11 +53,11 @@
             setTextGroup(versionNodes, version)
             setTextGroup(summaryNodes, "Latest stable release is " + version + ".")
 
-            setLinkGroup(windowsLinks, windowsAsset ? windowsAsset.browser_download_url : releaseUrl)
-            setLinkGroup(macLinks, macAsset ? macAsset.browser_download_url : releaseUrl)
-            setLinkGroup(linuxLinks, linuxAsset ? linuxAsset.browser_download_url : releaseUrl)
+            setLinkGroup(windowsLinks, windowsAsset ? trackedDownloadUrl("windows", version) : releaseUrl)
+            setLinkGroup(macLinks, macAsset ? trackedDownloadUrl("mac", version) : releaseUrl)
+            setLinkGroup(linuxLinks, linuxAsset ? trackedDownloadUrl("linux", version) : releaseUrl)
         })
         .catch(() => {
-            setTextGroup(summaryNodes, "Failed to fetch latest release metadata. Use the GitHub release page directly if needed.")
+            setTextGroup(summaryNodes, "Failed to fetch latest release metadata. Direct download links remain active.")
         })
 })()

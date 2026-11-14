@@ -42,6 +42,8 @@ export const isWindows: boolean = process.platform === "win32"
 export const isMac: boolean = process.platform === "darwin"
 export const isLinux: boolean = process.platform === "linux"
 
+if (isWindows) app.setAppUserModelId("app.hamrochurch")
+
 let autoProfile = ""
 export function setAutoProfile(profile: string) {
     if (profile) autoProfile = profile

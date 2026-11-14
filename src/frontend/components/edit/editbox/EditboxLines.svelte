@@ -5,7 +5,6 @@
     import { VIRTUAL_BREAK_CHAR } from "../../../show/slides"
     import { activeEdit, activeShow, activeStage, activeTriggerFunction, overlays, redoHistory, refreshListBoxes, showsCache, stageShows, templates } from "../../../stores"
     import { newToast } from "../../../utils/common"
-    import { transformEditableTextNode } from "../../../utils/nepaliTyping"
     import { getNormalizedKey, isFormattingKey } from "../../../utils/shortcuts"
     import T from "../../helpers/T.svelte"
     import { clone } from "../../helpers/array"
@@ -664,23 +663,6 @@
         }
     }
 
-    function textElemInput(event: Event) {
-        const inputEvent = event as InputEvent
-        const selection = window.getSelection()
-        const anchorNode = selection?.anchorNode
-        if (!(anchorNode instanceof Text) || !textElem?.contains(anchorNode)) return
-
-        const result = transformEditableTextNode(anchorNode, selection?.anchorOffset ?? anchorNode.textContent?.length ?? 0, { data: inputEvent.data, inputType: inputEvent.inputType })
-        if (!result) return
-
-        const range = document.createRange()
-        const safeOffset = Math.min(result.newCursor, anchorNode.textContent?.length || 0)
-        range.setStart(anchorNode, safeOffset)
-        range.collapse(true)
-        selection?.removeAllRanges()
-        selection?.addRange(range)
-    }
-
     $: if ($activeTriggerFunction === "insert_virtual_break") paste({}, VIRTUAL_BREAK_CHAR)
 
     // paste
@@ -815,7 +797,6 @@
                 class:autoSize={item.auto && autoSize}
                 contenteditable
                 data-nepali-typing="true"
-                on:input={textElemInput}
                 on:keydown={textElemKeydown}
                 bind:innerHTML={html}
                 style="{plain || !item.auto ? '' : `--auto-size: ${autoSize}px;`}{!plain ? lineStyleBox : ''}{plain ? '' : item.align ? item.align.replace('align-items', 'justify-content') : ''}"

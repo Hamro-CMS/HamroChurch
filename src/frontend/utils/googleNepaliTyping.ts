@@ -1,6 +1,6 @@
-// Google Input Tools style Nepali typing ("Google suggestions" mode).
+// Google Input Tools style Nepali typing.
 // Type a roman word -> a popup under the caret shows Nepali candidates -> Space/Enter/Tab/1-5/click commits.
-// Only active when Nepali typing ("ने") is ON and the mode is "google"; the existing instant phonetic mode is untouched.
+// Active whenever Nepali typing ("G") is ON; old instant phonetic typing has been removed.
 
 import { get, writable } from "svelte/store"
 import { dictionaryCandidates, generateLocalCandidates, uniqueCandidates } from "../../lib/googleNepaliTyping"
@@ -8,37 +8,18 @@ import { Main } from "../../types/IPC/Main"
 import { requestMain } from "../IPC/main"
 import { nepaliTypingEnabled } from "../stores"
 
-export type NepaliTypingMode = "phonetic" | "google"
+export type NepaliTypingMode = "google"
 
-const MODE_STORAGE_KEY = "hamrochurch.nepaliTyping.mode"
 const MAX_NEPALI_CANDIDATES = 5
 
-function getStorageSafe() {
-    try {
-        return window.localStorage
-    } catch {
-        return null
-    }
-}
+export const nepaliTypingMode = writable<NepaliTypingMode>("google")
 
-function readStoredMode(): NepaliTypingMode {
-    return getStorageSafe()?.getItem(MODE_STORAGE_KEY) === "google" ? "google" : "phonetic"
-}
-
-export const nepaliTypingMode = writable<NepaliTypingMode>(readStoredMode())
-
-export function setNepaliTypingMode(mode: NepaliTypingMode) {
-    nepaliTypingMode.set(mode)
-    getStorageSafe()?.setItem(MODE_STORAGE_KEY, mode)
-    if (mode !== "google") hidePopup()
-}
-
-export function toggleNepaliTypingMode() {
-    setNepaliTypingMode(get(nepaliTypingMode) === "google" ? "phonetic" : "google")
+export function setNepaliTypingMode(_mode: NepaliTypingMode) {
+    nepaliTypingMode.set("google")
 }
 
 export function isGoogleTypingActive() {
-    return get(nepaliTypingEnabled) && get(nepaliTypingMode) === "google"
+    return get(nepaliTypingEnabled)
 }
 
 // ---------------- popup state ----------------

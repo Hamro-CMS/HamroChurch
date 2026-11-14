@@ -43,7 +43,7 @@ extraResources:
 
 win:
     target: NSIS
-    icon: build/public/icon.png
+    icon: build/public/icon.ico
     asarUnpack:
         - "**/node_modules/macadam/**/*.node"
         - "**/node_modules/libspotifyctl/**/*"
@@ -53,6 +53,10 @@ nsis:
     perMachine: true
     allowElevation: true
     allowToChangeInstallationDirectory: true
+    installerIcon: build/public/icon.ico
+    uninstallerIcon: build/public/icon.ico
+    installerHeaderIcon: build/public/icon.ico
+    createDesktopShortcut: always
 
 # linux
 

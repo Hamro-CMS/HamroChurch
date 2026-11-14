@@ -1,8 +1,7 @@
 import { get } from "svelte/store"
 import { shouldUseNepaliLocale } from "../../common/nepali"
-import { handleKeyPress, nepaliTypingTips, romanizeNepali, toUnicode, type NepaliTypingEventLike } from "../../lib/nepaliTyping"
+import { nepaliTypingTips, romanizeNepali, toUnicode, type NepaliTypingEventLike } from "../../lib/nepaliTyping"
 import { language, nepaliTypingEnabled } from "../stores"
-import { nepaliTypingMode } from "./googleNepaliTyping"
 
 const STORAGE_KEY = "hamrochurch.nepaliTyping.enabled"
 
@@ -45,49 +44,12 @@ export function toggleNepaliTyping() {
     return nextValue
 }
 
-function shouldTransformTextInput(target: HTMLInputElement | HTMLTextAreaElement) {
-    if (!get(nepaliTypingEnabled)) return false
-    if (get(nepaliTypingMode) === "google") return false
-    if ((target as HTMLElement).dataset.disableNepaliTyping === "true") return false
-    if (target instanceof HTMLInputElement) return ["text", "search"].includes(target.type || "text")
-    return true
-}
-
-export function transformTextInputTarget(target: HTMLInputElement | HTMLTextAreaElement, event: Event) {
-    if (!shouldTransformTextInput(target)) return target.value
-
-    const inputEvent = event as InputEvent
-    const inputType = inputEvent.inputType || ""
-    const cursorPosition = target.selectionStart ?? target.value.length
-
-    if (inputType === "insertFromPaste" || inputType === "insertReplacementText") {
-        const transformed = toUnicode(target.value)
-        if (transformed !== target.value) {
-            target.value = transformed
-            const newCursor = Math.min(transformed.length, cursorPosition)
-            target.setSelectionRange?.(newCursor, newCursor)
-        }
-        return target.value
-    }
-
-    const result = handleKeyPress({ data: inputEvent.data, inputType } as NepaliTypingEventLike, target.value, cursorPosition)
-    if (!result || result.newValue === target.value) return target.value
-
-    target.value = result.newValue
-    target.setSelectionRange?.(result.newCursor, result.newCursor)
+export function transformTextInputTarget(target: HTMLInputElement | HTMLTextAreaElement, _event: Event) {
     return target.value
 }
 
-export function transformEditableTextNode(textNode: Text, cursorPosition: number, eventLike: NepaliTypingEventLike) {
-    if (!get(nepaliTypingEnabled)) return null
-    // "Google suggestions" mode handles typing itself (see googleNepaliTyping.ts)
-    if (get(nepaliTypingMode) === "google") return null
-    const currentValue = textNode.textContent || ""
-    const result = handleKeyPress(eventLike, currentValue, cursorPosition)
-    if (!result || result.newValue === currentValue) return null
-
-    textNode.textContent = result.newValue
-    return result
+export function transformEditableTextNode(_textNode: Text, _cursorPosition: number, _eventLike: NepaliTypingEventLike) {
+    return null
 }
 
 export { nepaliTypingTips, romanizeNepali, toUnicode }
