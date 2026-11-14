@@ -1,12 +1,10 @@
 import { get } from "svelte/store"
 import { uid } from "uid"
-import { Main } from "../../types/IPC/Main"
 import type { Output } from "../../types/Output"
 import type { Metadata, Themes } from "../../types/Settings"
 import { clone, keysToID } from "../components/helpers/array"
 import { checkWindowCapture, setOutput, toggleOutputs } from "../components/helpers/output"
 import { defaultThemes } from "../components/settings/tabs/defaultThemes"
-import { sendMain } from "../IPC/main"
 import {
     actionTags,
     actions,
