@@ -96,6 +96,10 @@ async function startupMain() {
 }
 
 async function maybePromptAnalyticsConsent() {
+    // Wait until SETTINGS store has arrived so first-run "initialize" popup (if any) opens first rather than clobbering analytics_consent
+    await waitUntilValueIsDefined(() => get(loadedState).includes("settings"), 100, 6000)
+    await wait(200)
+
     const privacy = await requestMain(Main.GET_PRIVACY_SETTINGS)
     if (!privacy || privacy.consent !== null) return
 
@@ -173,8 +177,11 @@ export function contentProviderSync() {
         sendMain(Main.PROVIDER_STARTUP_LOAD, { providerId, scope, data, cloudOnly })
     })
 
-    setTimeout(() => {
+    setTimeout(async () => {
         if (get(cloudSyncData).id) return
+
+        const privacy = await requestMain(Main.GET_PRIVACY_SETTINGS)
+        if (!privacy || privacy.consent === null) return
 
         const hasDriveSync = typeof get(driveKeys) === "object" && Object.keys(get(driveKeys)).length
         if (!Object.keys(get(providerConnections)).length && !get(activePopup) && Math.random() < (hasDriveSync ? 0.2 : 0.001)) {

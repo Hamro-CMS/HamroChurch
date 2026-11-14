@@ -11,6 +11,7 @@ const DELETE_DEVICE_BASE_URL = process.env.HAMRO_ANALYTICS_DELETE_BASE_URL || "h
 const HEARTBEAT_INTERVAL_MS = 60 * 1000
 const INITIAL_START_DELAY_MS = 2500
 const LEGACY_MACHINE_ID_FILE = ".hamro-machine-id"
+const ANALYTICS_CONSENT_VERSION = 2
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 let initialStartTimer: NodeJS.Timeout | null = null
@@ -47,6 +48,9 @@ function resolveArch(): string {
 
 export function getAnalyticsConsent(): boolean | null {
     try {
+        const consentVersion = config.get("analytics_consent_version")
+        if (consentVersion !== ANALYTICS_CONSENT_VERSION) return null
+
         const stored = config.get("analytics_consent")
         if (stored === true) return true
         if (stored === false) return false
@@ -192,6 +196,7 @@ export function setAnalyticsConsent(consent: boolean): PrivacySettings {
 
     try {
         config.set("analytics_consent", normalized)
+        config.set("analytics_consent_version", ANALYTICS_CONSENT_VERSION)
         config.set("analytics_consent_updated_at", nowIso)
     } catch (err) {
         console.warn("Failed to persist analytics_consent:", err)

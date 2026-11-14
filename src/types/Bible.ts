@@ -12,6 +12,7 @@ export interface Bible {
             number: number
             verses: {
                 number: number
+                endNumber?: number
                 value?: string
                 text: string
             }[]

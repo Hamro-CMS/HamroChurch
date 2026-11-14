@@ -28,17 +28,19 @@
     $: modeTitle =
         $language === "ne"
             ? $nepaliTypingEnabled
-                ? "नेपाली टाइपिङ सक्रिय छ (शब्द टाइप गरी Space थिच्नुहोस्)। बन्द गर्न क्लिक वा Ctrl+Alt+N थिच्नुहोस्।"
-                : "नेपाली टाइपिङ खोल्न क्लिक गर्नुहोस् (Ctrl+Alt+N)।"
+                ? "नेपाली टाइपिङ (NE) सक्रिय छ — शब्द टाइप गरी Space थिच्नुहोस्। अंग्रेजी (EN) मा बदल्न क्लिक वा Ctrl+Alt+N थिच्नुहोस्।"
+                : "अंग्रेजी टाइपिङ (EN) सक्रिय छ। नेपाली (NE) टाइपिङ खोल्न क्लिक वा Ctrl+Alt+N थिच्नुहोस्।"
             : $nepaliTypingEnabled
-              ? "Nepali typing is ON (type a word, press Space). Click or press Ctrl+Alt+N to turn off."
-              : "Click to enable Nepali typing (Ctrl+Alt+N)."
+              ? "Nepali typing (NE) is ON — type a word and press Space. Click or press Ctrl+Alt+N to switch to EN."
+              : "English typing (EN) is ON. Click or press Ctrl+Alt+N to switch to Nepali (NE)."
 </script>
 
 {#if !$currentWindow}
     <div class="typingControls">
-        <button class="typingMode" class:google={$nepaliTypingEnabled} class:dim={!$nepaliTypingEnabled} on:click={() => toggleNepaliTyping()} title={modeTitle} aria-label={modeTitle}>
-            G
+        <button class="typingMode" class:nepali={$nepaliTypingEnabled} on:click={() => toggleNepaliTyping()} title={modeTitle} aria-label={modeTitle}>
+            <span class="langOption" class:active={!$nepaliTypingEnabled}>EN</span>
+            <span class="divider">/</span>
+            <span class="langOption" class:active={$nepaliTypingEnabled}>NE</span>
         </button>
     </div>
 {/if}
@@ -54,27 +56,45 @@
     }
 
     .typingMode {
-        width: 42px;
-        height: 42px;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        height: 36px;
+        padding: 3px 5px;
         border: 1px solid color-mix(in srgb, var(--secondary) 45%, var(--primary-lighter) 55%);
-        background: color-mix(in srgb, var(--primary-darkest) 88%, black 12%);
+        background: color-mix(in srgb, var(--primary-darkest) 90%, black 10%);
         color: var(--text);
         border-radius: 999px;
         box-shadow: 0 8px 24px rgb(0 0 0 / 0.28);
         cursor: pointer;
         font: inherit;
         font-weight: 700;
-        font-size: 1rem;
-        transition: border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+        font-size: 0.78rem;
+        letter-spacing: 0.03em;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
-    .typingMode.google {
-        border-color: #4285f4;
-        color: #8ab4f8;
+    .typingMode.nepali {
+        border-color: var(--secondary);
     }
 
-    .typingMode.dim {
+    .langOption {
+        padding: 4px 8px;
+        border-radius: 999px;
         opacity: 0.55;
+        transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+    }
+
+    .langOption.active {
+        opacity: 1;
+        background: var(--secondary);
+        color: var(--secondary-text);
+    }
+
+    .divider {
+        opacity: 0.35;
+        font-weight: 500;
+        font-size: 0.75rem;
     }
 
     .typingMode:hover {

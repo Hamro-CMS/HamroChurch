@@ -13,7 +13,7 @@ import { ContentProviderRegistry } from "../contentProviders"
 import { ChurchAppsChat } from "../contentProviders/churchApps/ChurchAppsChat"
 import { deleteBackup, getBackups, restoreFiles } from "../data/backup"
 import { getLocalIPs } from "../data/bonjour"
-import { ensureNepaliBiblePresent, reseedHamroChurchData } from "../data/hamroMigration"
+import { ensureNepaliBiblePresent, ensureNepaliBiblePresentSync, reseedHamroChurchData } from "../data/hamroMigration"
 import { checkIfMediaDownloaded, downloadLessonsMedia, downloadMedia } from "../data/downloadMedia"
 import { importShow } from "../data/import"
 import { save } from "../data/save"
@@ -271,6 +271,10 @@ function importFiles(data: { id: string; paths: string[] }) {
 
 // BIBLE
 export function loadScripture(msg: { id: string; name: string }) {
+    if (msg?.name === "Nepali Bible") {
+        ensureNepaliBiblePresentSync()
+    }
+
     const bibleFolder: string = getDataFolderPath("scriptures")
     let filePath: string = path.join(bibleFolder, msg.name + ".fsb")
 
