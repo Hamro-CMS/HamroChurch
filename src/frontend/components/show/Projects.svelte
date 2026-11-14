@@ -364,10 +364,6 @@
                                         <T id="actions.export" />
                                     </MaterialButton>
 
-                                    <MaterialButton title="export.data_link" icon="bind" on:click={() => shareProjectLink(currentProject, $activeProject || "")} white>
-                                        <T id="export.data_link" />
-                                    </MaterialButton>
-
                                     <div class="DIVIDER"></div>
 
                                     <MaterialButton title="timeline.toggle_timeline" on:click={() => special.update((a) => ({ ...a, projectTimelineActive: !a.projectTimelineActive }))}>

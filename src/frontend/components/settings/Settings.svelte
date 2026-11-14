@@ -3,7 +3,6 @@
     import { translateText } from "../../utils/language"
     import Icon from "../helpers/Icon.svelte"
     import MaterialButton from "../inputs/MaterialButton.svelte"
-    import Connection from "./tabs/Connection.svelte"
     import Files from "./tabs/Files.svelte"
     import FilesButtons from "./tabs/FilesButtons.svelte"
     import General from "./tabs/General.svelte"
@@ -21,6 +20,7 @@
     import ThemeButtons from "./tabs/ThemeButtons.svelte"
     import ThemeTabs from "./tabs/ThemeTabs.svelte"
 
+    $: if ($settingsTab === "connection") settingsTab.set("general")
     $: tabId = $settingsTab
 
     let scrolled = false
@@ -68,8 +68,6 @@
             {/if}
         {:else if tabId === "styles"}
             <Styles />
-        {:else if tabId === "connection"}
-            <Connection />
         {:else if tabId === "files"}
             <Files />
         {:else if tabId === "profiles"}

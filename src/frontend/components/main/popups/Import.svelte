@@ -55,7 +55,6 @@
     ]
 
     const media_formats = [
-        { name: "Lessons.church", title: "ChurchApps\nhttps://lessons.church", extensions: ["json", "olp", "olf"], id: "lessons" },
         { name: "PDF", title: "Added to your project", extensions: ["pdf"], id: "pdf" },
         { name: "PowerPoint", extensions: [], id: "powerpoint" }
     ]
@@ -148,7 +147,7 @@
                 <p>{translateText(format.name)}</p>
 
                 <div class="freeshow">
-                    <img style="height: 18px;padding: 0;" src="./import-logos/freeshow.webp" alt="FreeShow-logo" draggable={false} />
+                    <img style="height: 18px;padding: 0;" src="./logo.png" alt="Hamro Church logo" draggable={false} />
                 </div>
             </MaterialButton>
         {/each}
@@ -244,7 +243,7 @@
                 <p>{translateText(format.name)}</p>
 
                 <div class="freeshow">
-                    <img style="height: 18px;padding: 0;" src="./import-logos/freeshow.webp" alt="FreeShow-logo" draggable={false} />
+                    <img style="height: 18px;padding: 0;" src="./logo.png" alt="Hamro Church logo" draggable={false} />
                 </div>
             </MaterialButton>
         {/each}

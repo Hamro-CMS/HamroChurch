@@ -24,8 +24,6 @@
     import Screens from "../live/Screens.svelte"
     import Windows from "../live/Windows.svelte"
     import PlayerVideos from "../player/PlayerVideos.svelte"
-    import CLogo from "./CLogo.svelte"
-    import Canva from "./Canva.svelte"
     import ContentLibraryBrowser from "./ContentLibraryBrowser.svelte"
     import Folder from "./Folder.svelte"
     import Media from "./MediaCard.svelte"
@@ -80,25 +78,11 @@
         else if (activeTab === "online") onlineTab = id
     }
 
-    // Content providers with libraries, and are currently connected
+    // External content providers are disabled in Hamro Church
     let contentProviders: { providerId: ContentProviderId; displayName: string; hasContentLibrary: boolean }[] = []
-    $: if ($providerConnections) getProviders()
 
     function getFolderPreviewPaths(filePaths: string[]) {
         return filePaths.map((filePath) => (allRelevantFiles.find((a) => a.path === filePath) as any)?.thumbnailPath).filter(Boolean).slice(0, 4)
-    }
-    function getProviders() {
-        requestMain(Main.GET_CONTENT_PROVIDERS).then((allProviders) => {
-            if (!allProviders) return
-            contentProviders = allProviders.filter((p) => p.hasContentLibrary && $providerConnections[p.providerId])
-        })
-    }
-
-    $: if ($providerConnections) {
-        requestMain(Main.GET_CONTENT_PROVIDERS).then((allProviders) => {
-            if (!allProviders) return
-            contentProviders = allProviders.filter((p) => p.hasContentLibrary && $providerConnections[p.providerId])
-        })
     }
 
     $: activeProviderId = (isProviderSection && active ? active : null) as ContentProviderId | null
@@ -525,14 +509,6 @@
             <Icon style={onlineTab === "unsplash" ? "fill: #bbbbbb" : ""} size={1.2} id="unsplash" white />
             <p>Unsplash</p>
         </MaterialButton>
-        <MaterialButton style="flex: 1;" isActive={onlineTab === "canva"} on:click={() => setSubSubTab("canva")}>
-            {#if onlineTab === "canva"}
-                <CLogo />
-            {:else}
-                <Icon size={1.2} id="canva" white />
-            {/if}
-            <p>Canva</p>
-        </MaterialButton>
     </div>
 {/if}
 
@@ -546,8 +522,6 @@
             <div class="gridgap context #player">
                 <PlayerVideos active={onlineTab} {searchValue} />
             </div>
-        {:else if active === "online" && onlineTab === "canva"}
-            <Canva />
         {:else if active === "inputs"}
             <div class="gridgap">
                 {#if inputsTab === "cameras"}

@@ -11,33 +11,9 @@ import { confirmCustom } from "./popup"
 import { getSyncedSettings, save } from "./save"
 import { SocketHelper } from "./SocketHelper"
 
-export async function setupCloudSync(auto: boolean = false) {
-    if (get(cloudSyncData).enabled === false) return
-    if (auto && get(cloudSyncData).id) {
-        syncWithCloud()
-        return
-    }
-    if (!(await requestMain(Main.CAN_SYNC))) return
-
-    const teams = (await requestMain(Main.GET_TEAMS)) || []
-    if (!teams.length) {
-        const addTeam = "Get added to a team, or create one in B1.church>Serving>Plans>Ministry>Teams!"
-        const msg = auto ? "You can setup cloud sync with ChurchApps, but no teams were found in your account. " + addTeam : "No teams were found in your account. " + addTeam
-        alertMessage.set(msg + "<br><br>If you already did, try disconnecting and connecting again!")
-        activePopup.set("alert")
-        return
-    }
-
-    if (auto && !(await confirmCustom("You can sync your data with Hamro Church Cloud! Do you want to enable cloud sync now?"))) return
-
-    if (teams.length === 1) {
-        chooseTeam({ id: teams[0].id, churchId: teams[0].churchId, name: teams[0].name, count: 1 })
-        return
-    }
-
-    const teamsOptions = teams.map((a) => ({ id: a.id, churchId: a.churchId, name: a.name, icon: "people" }))
-    popupData.set({ type: "choose_team", teams: teamsOptions })
-    activePopup.set("cloud_sync")
+export async function setupCloudSync(_auto: boolean = false) {
+    // Cloud sync is disabled in Hamro Church.
+    return
 }
 
 export async function changeTeam() {
@@ -72,7 +48,8 @@ export async function chooseTeam(team: { id: string; churchId: string; name: str
 
 let isSyncing = false
 // let lastSync = 0
-export async function syncWithCloud(initialize: boolean = false, isClosing: boolean = false) {
+export async function syncWithCloud(_initialize: boolean = false, _isClosing: boolean = false) {
+    return false
     if (!get(providerConnections).churchApps) return false
 
     if (isSyncing) return false
@@ -262,13 +239,8 @@ export function isActiveShowInUseByCloudUser(_updater: any = null) {
     return users.some((user) => user.activeShow?.id === activeShowId)
 }
 
-export async function cloudSyncMessage(id: string = "", data: { [key: string]: any } = {}) {
-    const socket = getCloudSocket() || (await createCloudSocket())
-    if (!socket) return
-
-    if (!(await socket.waitUntilConnected())) return
-
-    socket.sendMessage(id, data)
+export async function cloudSyncMessage(_id: string = "", _data: { [key: string]: any } = {}) {
+    return
 }
 
 // RECEIVERS

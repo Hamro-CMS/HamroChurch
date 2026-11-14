@@ -141,12 +141,12 @@ export function updateSettings(data: any) {
         )
     }
 
-    // remote
-    const disabled = data.disabledServers || {}
-    if (disabled.remote === undefined) disabled.remote = false
-    if (disabled.stage === undefined) disabled.stage = false
-    const customPorts: { [key: string]: number } = data.ports || { remote: 5510, stage: 5511 }
-    sendMain(Main.START, { ports: customPorts, max: data.maxConnections === undefined ? 10 : data.maxConnections, disabled, data: get(serverData) })
+    // remote connections disabled for now
+    if (data.disabledServers) {
+        disabledServers.set({ ...data.disabledServers, remote: true, stage: true, controller: true, output_stream: true })
+    } else {
+        disabledServers.set({ remote: true, stage: true, controller: true, output_stream: true })
+    }
 
     // theme
     let currentTheme = get(themes)[data.theme]
@@ -380,13 +380,7 @@ const updateList: { [key in SaveListSettings | SaveListSyncedSettings]: any } = 
     globalRegexes: (v: any) => globalRegexes.set(v),
     customMetadata: (v: any) => customMetadata.set(v),
     companion: (v: any) => {
-        companion.set(v)
-
-        if (v.enabled) {
-            setTimeout(() => {
-                sendMain(Main.WEBSOCKET_START, get(ports).companion)
-            }, 3000)
-        }
+        companion.set({ ...v, enabled: false })
     },
     special: (v: any) => {
         if (v.capitalize_words === undefined) v.capitalize_words = "Jesus, Lord" // God

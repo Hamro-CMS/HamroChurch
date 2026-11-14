@@ -14,9 +14,7 @@ import {
     audioFolders,
     audioPlaylists,
     categories,
-    companion,
     currentOutputSettings,
-    disabledServers,
     drawerTabsData,
     focusMode,
     folders,
@@ -162,9 +160,6 @@ export async function quicksearch(searchValue: string, categoryFilter: null | Se
 
         // settings
         addValues(trimValues(sort(getSettings()), 3), "settings")
-
-        // connections
-        addValues(sort(connectionsList), "settings_connection", "connection")
     }
 
     // --- FAQ ---
@@ -393,16 +388,6 @@ const triggerActions = {
         settingsTab.set(id as any)
         activePage.set("settings")
     },
-    settings_connection: (id: string) => {
-        enableConnection(id)
-
-        settingsTab.set("connection")
-        activePage.set("settings")
-
-        activePopup.set(null)
-        // let popup close first
-        setTimeout(() => triggerFunction("open_connection_" + id), 110)
-    },
     faq: (id: string) => {
         sendMain(Main.URL, id)
     },
@@ -477,27 +462,6 @@ const translateNames = (array: any[]) => array.map((a) => ({ ...a, name: transla
 function translateAliases(options: any) {
     options.aliases = (options.aliases || []).map(translateText)
     return options
-}
-
-const connectionsList = [
-    { id: "remote", name: "RemoteShow", aliases: ["-Remote"] },
-    { id: "stage", name: "StageShow", aliases: ["-Remote"] },
-    { id: "controller", name: "ControlShow", aliases: ["-Remote"] },
-    { id: "output_stream", name: "OutputShow", aliases: ["-Remote"] },
-    { id: "companion", name: "API", aliases: ["Companion", "WebSocket", "REST", "OSC"] }
-]
-
-function enableConnection(id: string) {
-    if (id === "companion") {
-        companion.set({ enabled: true })
-        return
-    }
-
-    const enabledByDefault = ["remote", "stage"].includes(id)
-    const isEnabled = enabledByDefault ? get(disabledServers)[id] !== true : get(disabledServers)[id] === false
-    if (isEnabled) return
-
-    disabledServers.set({ ...get(disabledServers), [id]: false })
 }
 
 /// //
@@ -614,12 +578,11 @@ const settings = [
         icon: "styles",
         aliases: ["-Looks", "edit.background_color", "edit.background_media", "popup.transition", "edit.media_fit", "settings.aspect_ratio", "settings.active_layers", "settings.lines", "settings.override_with_template", "settings.override_scripture_with_template", "meta.display_metadata"]
     },
-    { id: "connection", name: "settings.connection", icon: "connection", aliases: ["Planning Center", "ChurchApps", "-Network", "-LAN"] },
     {
         id: "files",
         name: "settings.files",
         icon: "files",
-        aliases: ["settings.autosave", "settings.auto_backup", "settings.data_location", "settings.cloud", "-Cloud sync", "-Sync", "settings.backup_all", "settings.restore"]
+        aliases: ["settings.autosave", "settings.auto_backup", "settings.data_location", "settings.backup_all", "settings.restore"]
     },
     { id: "profiles", name: "settings.profiles", icon: "profiles" },
     { id: "theme", name: "settings.theme", icon: "theme" },
@@ -633,44 +596,34 @@ function getSettings() {
 
 const faq = [
     // Docs About
-    { id: "https://hamrocms.com/docs/interface/#projects", name: "About Projects", icon: "help" },
-    { id: "https://hamrocms.com/docs/interface/#shows", name: "About Shows", icon: "help" },
-    { id: "https://hamrocms.com/docs/interface/#overlays", name: "About Overlays", icon: "help" },
-    { id: "https://hamrocms.com/docs/interface/#templates", name: "About Templates", icon: "help" },
-    { id: "https://hamrocms.com/docs/stage-display/#outputs", name: "Multiple Outputs", icon: "help", aliases: ["-Livestream", "-OBS"] },
-    { id: "https://hamrocms.com/faq#cloud-sync", name: "Cloud Sync", icon: "help" },
-    // Docs Help
-    { id: "https://hamrocms.com/docs/bible/#multi-version", name: "Multiple Scripture Versions", icon: "help", aliases: ["-Multilingual", "-Multiple translations", "-Multiple Bibles", "-Multiple languages"] },
-    { id: "https://hamrocms.com/docs/hymns/#bilingual-hymns", name: "Multilingual Song Lyrics", icon: "help", aliases: ["-Multilingual", "-translations", "-lyrics", "-languages", "-translated"] },
-    { id: "https://hamrocms.com/docs/stage-display/#lower-third", name: "Lower Third Display", icon: "help", aliases: ["-Lower thirds", "-Livestream"] },
-    { id: "https://hamrocms.com/docs/getting-started/#system-requirements", name: "System Requirements", icon: "help", aliases: ["-Specs"] },
-    { id: "https://hamrocms.com/faq#powerpoint-import", name: "How to import a PowerPoint presentation", icon: "help", aliases: ["-PowerPoint", "-Keynote", "-slides", "-presentation"] },
-    { id: "https://hamrocms.com/docs/interface/#importing", name: "How to import PowerPoint as text", icon: "help", aliases: ["-PowerPoint", "-slides", "-presentation"] },
-    { id: "https://hamrocms.com/docs/interface/#importing", name: "How to import a PDF file", icon: "help", aliases: ["-PDF"] },
-    { id: "https://hamrocms.com/faq#videos-muted", name: "Videos are muted", icon: "help", aliases: ["-No audio"] },
-    { id: "https://hamrocms.com/faq#ccli", name: "CCLI Integration", icon: "help", aliases: ["-SongSelect"] },
-    { id: "https://hamrocms.com/faq#cloud-sync", name: "Cloud Sync Between Multiple Computers", icon: "help" },
-    { id: "https://hamrocms.com/faq#transfer-files", name: "Transfer Files Between Computers", icon: "help" },
-    { id: "https://hamrocms.com/faq#slow-performance", name: "The App is Slow", icon: "help", aliases: ["-Lagging", "-Performance"] },
-    { id: "https://hamrocms.com/faq#app-freezing", name: "App freezes unexpectedly", icon: "help", aliases: ["-Freezing", "-Crash"] },
-    { id: "https://hamrocms.com/docs/interface/#line-by-line-reveal", name: "Line by line reveal", icon: "help" },
-    { id: "https://hamrocms.com/docs/interface/#click-reveal", name: "Click reveal", icon: "help" },
-    { id: "https://hamrocms.com/docs/interface/#virtual-breaks", name: "Virtual breaks", icon: "help", aliases: ["-Line breaks"] },
-    // GitHub
-    { id: "https://hamrocms.com/faq#delete-vs-remove", name: "Delete Slide vs Remove Group", icon: "help", aliases: ["-Delete group vs remove slide"] },
-    { id: "https://hamrocms.com/docs/bible/#custom-bibles", name: "Custom Bible Version", icon: "help", aliases: ["-Missing scripture", "-Missing Bible"] },
-    { id: "https://hamrocms.com/faq#video-loop", name: "Video Loop Behaviour", icon: "help", aliases: ["-Video looping"] },
-    { id: "https://hamrocms.com/faq#video-codec", name: "Unsupported Video Codec", icon: "help", aliases: ["-Video dont play", "-Video not playing", "-MOV", "-MP4"] },
-    { id: "https://hamrocms.com/faq#embedded-presentations", name: "Embed PowerPoint or Google Slides", icon: "help", aliases: ["-PowerPoint online", "-Google Presentations"] },
+    { id: "https://hamrocms.com/docs", name: "Hamro Church Documentation (English & नेपाली)", icon: "help", aliases: ["-docs", "-help", "-manual", "-guide"] },
+    { id: "https://hamrocms.com/docs/getting-started", name: "Getting Started Guide", icon: "help", aliases: ["-setup", "-install"] },
+    { id: "https://hamrocms.com/docs/getting-started#system-requirements", name: "System Requirements", icon: "help", aliases: ["-Specs"] },
+    { id: "https://hamrocms.com/docs/nepali-typing", name: "Nepali Typing Guide (EN / NE)", icon: "help", aliases: ["-Roman", "-Unicode", "-Ctrl+Alt+N"] },
+    { id: "https://hamrocms.com/docs/hymns", name: "Bhajan & Hymns Guide", icon: "help", aliases: ["-lyrics", "-songs", "-hymns", "-bhajan", "-chorus"] },
+    { id: "https://hamrocms.com/docs/hymns#bilingual-hymns", name: "Multilingual Song Lyrics", icon: "help", aliases: ["-Multilingual", "-translations", "-lyrics", "-languages", "-translated"] },
+    { id: "https://hamrocms.com/docs/bible", name: "Nepali Bible Guide", icon: "help", aliases: ["-scripture", "-bible"] },
+    { id: "https://hamrocms.com/docs/bible#multi-version", name: "Multiple Scripture Versions", icon: "help", aliases: ["-Multilingual", "-Multiple translations", "-Multiple Bibles", "-Multiple languages"] },
+    { id: "https://hamrocms.com/docs/bible#custom-bibles", name: "Custom Bible Version", icon: "help", aliases: ["-Missing scripture", "-Missing Bible"] },
+    { id: "https://hamrocms.com/docs/interface", name: "Interface Overview", icon: "help" },
+    { id: "https://hamrocms.com/docs/interface#projects", name: "About Projects", icon: "help" },
+    { id: "https://hamrocms.com/docs/interface#shows", name: "About Shows", icon: "help" },
+    { id: "https://hamrocms.com/docs/interface#overlays", name: "About Overlays", icon: "help" },
+    { id: "https://hamrocms.com/docs/interface#templates", name: "About Templates", icon: "help" },
+    { id: "https://hamrocms.com/docs/interface#importing", name: "How to import PowerPoint or PDF files", icon: "help", aliases: ["-PowerPoint", "-Keynote", "-PDF", "-slides", "-presentation"] },
+    { id: "https://hamrocms.com/docs/interface#line-by-line-reveal", name: "Line by line reveal", icon: "help" },
+    { id: "https://hamrocms.com/docs/interface#click-reveal", name: "Click reveal", icon: "help" },
+    { id: "https://hamrocms.com/docs/interface#virtual-breaks", name: "Virtual breaks", icon: "help", aliases: ["-Line breaks"] },
+    { id: "https://hamrocms.com/docs/stage-display", name: "Projector Outputs & Stage Display Guide", icon: "help", aliases: ["-obs", "-livestream", "-outputs", "-projector"] },
+    { id: "https://hamrocms.com/docs/stage-display#outputs", name: "Multiple Outputs", icon: "help", aliases: ["-Livestream", "-OBS"] },
+    { id: "https://hamrocms.com/docs/stage-display#lower-third", name: "Lower Third Display", icon: "help", aliases: ["-Lower thirds", "-Livestream"] },
+    { id: "https://hamrocms.com/docs/backup-restore", name: "Backup, Restore & Transfer Files", icon: "help", aliases: ["-backup", "-restore", "-transfer"] },
+    { id: "https://hamrocms.com/docs/shortcuts", name: "Keyboard Shortcuts Guide", icon: "help", aliases: ["-shortcuts", "-hotkeys"] },
+    { id: "https://hamrocms.com/docs/privacy", name: "Offline Data & Privacy Guide", icon: "help", aliases: ["-privacy", "-offline"] },
+    { id: "https://hamrocms.com/docs/troubleshooting", name: "Troubleshooting & FAQ", icon: "help", aliases: ["-slow", "-freezing", "-video", "-muted", "-codec"] },
     // Hamro Church resources
     { id: "https://hamrocms.com", name: "Hamro Church Home", icon: "help" },
     { id: "https://hamrocms.com/download", name: "Download Hamro Church", icon: "help" },
-    { id: "https://hamrocms.com/docs/getting-started/", name: "Getting Started Guide", icon: "help" },
-    { id: "https://hamrocms.com/docs/interface/", name: "Interface Overview", icon: "help" },
-    { id: "https://hamrocms.com/docs/bible/", name: "Nepali Bible Guide", icon: "help", aliases: ["-scripture", "-bible"] },
-    { id: "https://hamrocms.com/docs/hymns/", name: "Hymns Guide", icon: "help", aliases: ["-lyrics", "-songs", "-hymns"] },
-    { id: "https://hamrocms.com/docs/stage-display/", name: "Stage Display Guide", icon: "help", aliases: ["-obs", "-livestream", "-outputs"] },
-    { id: "https://hamrocms.com/docs/remote-control/", name: "Remote Control Guide", icon: "help", aliases: ["-remote", "-controller", "-companion"] },
     { id: "https://hamrocms.com/faq", name: "Hamro Church FAQ", icon: "help" },
     { id: "https://github.com/Hamro-CMS/HamroChurch/releases", name: "Release Notes", icon: "help" }
 ]

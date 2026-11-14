@@ -5,7 +5,7 @@
     import { Main } from "../../../../types/IPC/Main"
     import { ToMain } from "../../../../types/IPC/ToMain"
     import { destroyMain, receiveToMain, requestMain, sendMain } from "../../../IPC/main"
-    import { drawerTabsData, labelsDisabled, media, mediaFolders, providerConnections, special } from "../../../stores"
+    import { drawerTabsData, labelsDisabled, media, mediaFolders, special } from "../../../stores"
     import { getAccess } from "../../../utils/profile"
     import { keysToID, sortObject } from "../../helpers/array"
     import { addDrawerFolder } from "../../helpers/dropActions"
@@ -41,23 +41,8 @@
         folderLengths = newFolderLengths
     }
 
-    // Content providers with libraries, and are currently connected
+    // External content providers are disabled in Hamro Church
     let contentProviders: { providerId: ContentProviderId; displayName: string; hasContentLibrary: boolean }[] = []
-    $: if ($providerConnections) getProviders()
-    function getProviders() {
-        requestMain(Main.GET_CONTENT_PROVIDERS).then((allProviders) => {
-            if (!allProviders) return
-            contentProviders = allProviders.filter((p) => p.hasContentLibrary && $providerConnections[p.providerId])
-        })
-    }
-
-    $: if ($providerConnections) {
-        requestMain(Main.GET_CONTENT_PROVIDERS).then((allProviders) => {
-            if (!allProviders) return
-            contentProviders = allProviders.filter((p) => p.hasContentLibrary && $providerConnections[p.providerId])
-        })
-    }
-
     $: curriculumProviders = contentProviders.filter((a) => (a.providerId !== "churchApps" || $special.churchAppsCloudOnly !== true) && a.providerId !== "canva")
 
     let sections: any[] = []

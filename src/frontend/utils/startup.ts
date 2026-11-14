@@ -1,20 +1,19 @@
 import { get } from "svelte/store"
 import { uid } from "uid"
-import type { ContentProviderId } from "../../electron/contentProviders/base/types"
 import { OUTPUT, STARTUP } from "../../types/Channels"
 import { Main } from "../../types/IPC/Main"
 import { checkStartupActions } from "../components/actions/actions"
 import { getTimeFromInterval } from "../components/helpers/time"
-import { requestMain, requestMainMultiple, sendMain, sendMainMultiple } from "../IPC/main"
+import { requestMain, requestMainMultiple, sendMainMultiple } from "../IPC/main"
 import { cameraManager } from "../media/cameraManager"
-import { activePopup, alertMessage, cachePath, cloudSyncData, contentProviderData, currentWindow, deviceId, drawerTabsData, driveKeys, isDev, loaded, loadedState, os, providerConnections, scriptures, shows, special, version, windowState } from "../stores"
+import { activePopup, cachePath, currentWindow, deviceId, drawerTabsData, isDev, loaded, loadedState, os, scriptures, special, version, windowState } from "../stores"
 import { startTracking } from "./analytics"
 import { wait, waitUntilValueIsDefined } from "./common"
 import { getDefaultElements } from "./createData"
 import { setLanguage } from "./language"
 import { storeSubscriber } from "./listeners"
 import { autoOpenLastUsedProfile, openProfileByName } from "./profile"
-import { receiveOUTPUTasOUTPUT, remoteListen, setupMainReceivers } from "./receivers"
+import { receiveOUTPUTasOUTPUT, setupMainReceivers } from "./receivers"
 import { destroy, receive, send } from "./request"
 import { save, unsavedUpdater } from "./save"
 
@@ -69,11 +68,9 @@ async function startupMain() {
 
     storeSubscriber()
     await ensureBundledNepaliBibleRegistered()
-    remoteListen()
     checkStartupActions()
     startTracking()
     void maybePromptAnalyticsConsent()
-    contentProviderSync()
 
     // custom alert
     // if (Math.random() < 0.01) {
@@ -166,29 +163,7 @@ function autoBackup() {
 }
 
 export function contentProviderSync() {
-    const providers = [
-        { providerId: "planningcenter" as ContentProviderId, scope: "services" },
-        { providerId: "churchApps" as ContentProviderId, scope: "plans", data: { shows: get(shows), categories: get(contentProviderData).churchApps?.syncCategories || [] } },
-        { providerId: "amazinglife" as ContentProviderId, scope: "openid profile email" }
-    ]
-
-    providers.forEach(({ providerId, scope, data }) => {
-        const cloudOnly = providerId === "churchApps" && get(special).churchAppsCloudOnly
-        sendMain(Main.PROVIDER_STARTUP_LOAD, { providerId, scope, data, cloudOnly })
-    })
-
-    setTimeout(async () => {
-        if (get(cloudSyncData).id) return
-
-        const privacy = await requestMain(Main.GET_PRIVACY_SETTINGS)
-        if (!privacy || privacy.consent === null) return
-
-        const hasDriveSync = typeof get(driveKeys) === "object" && Object.keys(get(driveKeys)).length
-        if (!Object.keys(get(providerConnections)).length && !get(activePopup) && Math.random() < (hasDriveSync ? 0.2 : 0.001)) {
-            alertMessage.set("You can now set up free cloud sync with ChurchApps! Go to Settings>Files to log in." + (hasDriveSync ? "<br>It's recommended to switch over from your current Google Sync!" : ""))
-            activePopup.set("alert")
-        }
-    }, 2000)
+    // External content providers and cloud sync are disabled in Hamro Church.
 }
 
 function getMainData() {

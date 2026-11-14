@@ -44,7 +44,7 @@
     }
 
     function donate() {
-        sendMain(Main.URL, "https://churchapps.org/partner#give")
+        sendMain(Main.URL, "https://hamrocms.com/contact")
         interact()
     }
 

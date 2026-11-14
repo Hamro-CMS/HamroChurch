@@ -136,7 +136,7 @@ const clickActions = {
     import_more: () => activePopup.set("import"),
     export_more: () => activePopup.set("export"),
     settings: () => {
-        if (get(activePage) === "stage") settingsTab.set("connection")
+        if (get(activePage) === "stage") settingsTab.set("display_settings")
         else if (get(activePage) === "settings") settingsTab.set("general")
         activePage.set("settings")
     },
@@ -213,7 +213,7 @@ const clickActions = {
     paste: (obj: ObjData) => paste(null, {}, obj.contextElem),
     // view
     // help
-    docs: () => sendMain(Main.URL, "https://hamrocms.com/docs/"),
+    docs: () => sendMain(Main.URL, "https://hamrocms.com/docs"),
     check_updates: () => activePopup.set("update_manager"),
     shortcuts: () => activePopup.set("shortcuts"),
     about: () => activePopup.set("about"),
