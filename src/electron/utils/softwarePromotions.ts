@@ -108,15 +108,61 @@ function isCampaignDismissed(promo: SoftwarePromotionPayload, storedMap?: { [key
     return false
 }
 
+function sanitizePlainText(raw: unknown, maxLength: number): string {
+    if (typeof raw !== "string") return ""
+
+    // Strictly enforce plain text only: strip <script>/<style> blocks, all HTML tags, dangerous protocol tokens, and control chars
+    const cleaned = raw
+        .replace(/<\s*(script|style|iframe|object|embed|svg|math)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, " ")
+        .replace(/<[^>]*>/g, "")
+        .replace(/(?:javascript|vbscript|data\s*:\s*text\/html)\s*:/gi, "")
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+        .replace(/[<>]/g, "")
+        .trim()
+
+    return cleaned.slice(0, maxLength)
+}
+
+function detectSafeRasterImageMime(buf: Buffer): "image/png" | "image/jpeg" | "image/gif" | "image/webp" | null {
+    if (!buf || buf.length < 12) return null
+
+    // PNG: 89 50 4E 47 0D 0A 1A 0A
+    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47 && buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a) {
+        return "image/png"
+    }
+
+    // JPEG: FF D8 FF
+    if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
+        return "image/jpeg"
+    }
+
+    // GIF87a or GIF89a
+    const header6 = buf.subarray(0, 6).toString("ascii")
+    if (header6 === "GIF87a" || header6 === "GIF89a") {
+        return "image/gif"
+    }
+
+    // WebP: RIFF....WEBP
+    if (buf.subarray(0, 4).toString("ascii") === "RIFF" && buf.subarray(8, 12).toString("ascii") === "WEBP") {
+        return "image/webp"
+    }
+
+    return null
+}
+
 function sanitizePromotion(raw: any): SoftwarePromotionPayload | null {
     if (!raw || typeof raw !== "object") return null
 
     const id = Number(raw.id)
-    const title = typeof raw.title === "string" ? raw.title.trim() : ""
+    const title = sanitizePlainText(raw.title, 180)
     if (!Number.isFinite(id) || id <= 0 || !title) return null
 
+    const bodyText = sanitizePlainText(raw.body, 1200)
+    const ctaLabelText = sanitizePlainText(raw.cta_label, 80)
+
     const version = Math.max(1, Number(raw.campaign_version) || 1)
-    const campaignKey = typeof raw.campaign_key === "string" && raw.campaign_key.trim() ? raw.campaign_key.trim() : `promo-${id}-v${version}`
+    const rawCampaignKey = sanitizePlainText(raw.campaign_key, 80).replace(/[^a-zA-Z0-9_-]/g, "")
+    const campaignKey = rawCampaignKey || `promo-${id}-v${version}`
     const position = raw.position === "bottom_left" ? "bottom_left" : "clock_area"
     const dismissMode = raw.dismiss_mode === "once_per_campaign" || raw.dismiss_mode === "every_launch" ? raw.dismiss_mode : "once_per_day"
 
@@ -139,11 +185,11 @@ function sanitizePromotion(raw: any): SoftwarePromotionPayload | null {
         campaign_key: campaignKey,
         campaign_version: version,
         title,
-        body: typeof raw.body === "string" && raw.body.trim() ? raw.body.trim() : null,
+        body: bodyText || null,
         image_url: imageUrl,
-        image_mime: typeof raw.image_mime === "string" && raw.image_mime.trim() ? raw.image_mime.trim() : null,
-        resolved_image_src: imageUrl,
-        cta_label: typeof raw.cta_label === "string" && raw.cta_label.trim() ? raw.cta_label.trim() : null,
+        image_mime: typeof raw.image_mime === "string" && ["image/png", "image/jpeg", "image/gif", "image/webp"].includes(raw.image_mime.trim().toLowerCase()) ? raw.image_mime.trim().toLowerCase() : null,
+        resolved_image_src: null,
+        cta_label: ctaLabelText || null,
         cta_url: ctaUrl,
         position,
         dismiss_mode: dismissMode,
@@ -152,10 +198,10 @@ function sanitizePromotion(raw: any): SoftwarePromotionPayload | null {
         transition_style: transitionStyle,
         sort_order: sortOrder,
         draggable: raw.draggable !== false,
-        starts_at: typeof raw.starts_at === "string" ? raw.starts_at : null,
-        ends_at: typeof raw.ends_at === "string" ? raw.ends_at : null,
+        starts_at: typeof raw.starts_at === "string" ? sanitizePlainText(raw.starts_at, 40) : null,
+        ends_at: typeof raw.ends_at === "string" ? sanitizePlainText(raw.ends_at, 40) : null,
         event_url: eventUrl,
-        updated_at: typeof raw.updated_at === "string" ? raw.updated_at : null
+        updated_at: typeof raw.updated_at === "string" ? sanitizePlainText(raw.updated_at, 40) : null
     }
 }
 
@@ -171,22 +217,23 @@ async function resolveMediaSource(promo: SoftwarePromotionPayload): Promise<stri
             timeout: 10000,
             maxContentLength: MAX_MEDIA_BYTES,
             headers: {
-                Accept: "image/gif,image/webp,image/png,image/jpeg,image/*;q=0.8",
+                Accept: "image/gif,image/webp,image/png,image/jpeg",
                 "User-Agent": `HamroChurch/${app.getVersion()}`
             }
         })
 
         const buf = Buffer.from(res.data)
         if (!buf.length || buf.length > MAX_MEDIA_BYTES) {
-            return promo.image_url
+            return null
         }
 
-        const headerMime = String(res.headers?.["content-type"] || promo.image_mime || "image/png")
-            .split(";")[0]
-            .trim()
-            .toLowerCase()
-        const safeMime = ["image/gif", "image/jpeg", "image/png", "image/webp"].includes(headerMime) ? headerMime : "image/png"
-        const dataUri = `data:${safeMime};base64,${buf.toString("base64")}`
+        // Verify real binary raster magic bytes (strictly blocks SVG, HTML, or script disguised as image)
+        const verifiedMime = detectSafeRasterImageMime(buf)
+        if (!verifiedMime) {
+            return null
+        }
+
+        const dataUri = `data:${verifiedMime};base64,${buf.toString("base64")}`
 
         if (mediaDataUriCache.size > 16) {
             mediaDataUriCache.clear()
@@ -194,7 +241,7 @@ async function resolveMediaSource(promo: SoftwarePromotionPayload): Promise<stri
         mediaDataUriCache.set(promo.image_url, dataUri)
         return dataUri
     } catch {
-        return promo.image_url
+        return null
     }
 }
 

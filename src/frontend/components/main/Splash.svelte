@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte"
-    import { activePopup, activeProject, projects, projectView, quickSearchActive, showRecentlyUsedProjects, shows, special, version } from "../../stores"
+    import { activePopup, activeProject, language, projects, projectView, quickSearchActive, showRecentlyUsedProjects, shows, special, version } from "../../stores"
     import { history } from "../helpers/history"
     import Icon from "../helpers/Icon.svelte"
     import T from "../helpers/T.svelte"
@@ -106,12 +106,28 @@
             <T id="new.show" />
         </MaterialButton>
     </span>
+
+    <div class="securityNotice">
+        <span class="shieldBadge">🛡</span>
+        <span>
+            {#if $language === "ne"}
+                सुरक्षा सूचना: मालवेयर वा नक्कली सफ्टवेयरबाट बच्न सधैं आधिकारिक साइट
+                <Link url="https://hamrocms.com/download">hamrocms.com/download</Link>
+                बाट मात्र डाउनलोड र अपडेट गर्नुहोस्।
+            {:else}
+                Security Notice: Download &amp; update only from official site
+                <Link url="https://hamrocms.com/download">hamrocms.com/download</Link>
+                to avoid fake or malware copies.
+            {/if}
+        </span>
+    </div>
 </Center>
 
 <style>
     .splashLogoWrap {
-        width: min(400px, 82vw);
-        aspect-ratio: 2.02 / 1;
+        width: min(370px, 80vw);
+        aspect-ratio: 2.15 / 1;
+        flex-shrink: 0;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -121,12 +137,41 @@
     }
 
     .splashLogoWrap img {
-        width: 155%;
+        width: 142%;
         max-width: none;
         height: auto;
         flex-shrink: 0;
         object-fit: contain;
+        transform: translateX(-2.2%);
         filter: drop-shadow(0 8px 22px rgb(0 0 0 / 0.45));
+    }
+
+    .securityNotice {
+        margin-top: 16px;
+        padding: 6px 12px;
+        max-width: min(560px, 90vw);
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        border-radius: 9px;
+        border: 1px solid color-mix(in srgb, #10b981 38%, var(--primary-lighter) 62%);
+        background: color-mix(in srgb, #064e3b 28%, var(--primary-darkest) 72%);
+        color: color-mix(in srgb, var(--text) 90%, #a7f3d0 10%);
+        font-size: 0.77rem;
+        line-height: 1.4;
+        text-align: left;
+        white-space: normal;
+    }
+
+    .shieldBadge {
+        flex-shrink: 0;
+        font-size: 0.9rem;
+    }
+
+    @media screen and (max-height: 540px) {
+        .securityNotice {
+            display: none;
+        }
     }
 
     .versionText {

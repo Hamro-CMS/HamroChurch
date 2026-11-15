@@ -28,13 +28,29 @@ export type GoogleTypingPopupState = {
     visible: boolean
     x: number
     y: number
+    anchorTop: number
+    anchorBottom: number
+    anchorLeft: number
+    anchorRight: number
     roman: string
     candidates: string[] // nepali candidates + roman word as the last option
     selected: number
     online: boolean | null // null = still loading
 }
 
-const hiddenState: GoogleTypingPopupState = { visible: false, x: 0, y: 0, roman: "", candidates: [], selected: 0, online: null }
+const hiddenState: GoogleTypingPopupState = {
+    visible: false,
+    x: 0,
+    y: 0,
+    anchorTop: 0,
+    anchorBottom: 0,
+    anchorLeft: 0,
+    anchorRight: 0,
+    roman: "",
+    candidates: [],
+    selected: 0,
+    online: null
+}
 export const googleTypingPopup = writable<GoogleTypingPopupState>({ ...hiddenState })
 
 type InputContext = { kind: "input"; el: HTMLInputElement | HTMLTextAreaElement; start: number; end: number; roman: string }
@@ -47,7 +63,7 @@ let requestCounter = 0
 let fetchTimeout: ReturnType<typeof setTimeout> | null = null
 const candidateCache = new Map<string, string[]>()
 
-function hidePopup() {
+export function hidePopup() {
     context = null
     requestCounter++
     if (fetchTimeout) clearTimeout(fetchTimeout)
@@ -143,8 +159,17 @@ function getFieldCaretPosition(el: HTMLInputElement | HTMLTextAreaElement, posit
     document.body.removeChild(mirror)
 
     const x = Math.max(rect.left + 2, Math.min(rect.right - 20, markerRect.left - el.scrollLeft))
-    const y = isInput ? rect.bottom + 2 : Math.max(rect.top + 18, Math.min(rect.bottom + 2, markerRect.top - el.scrollTop + lineHeight + 2))
-    return { x, y }
+    const caretTop = isInput ? rect.top : Math.max(rect.top, Math.min(rect.bottom - lineHeight, markerRect.top - el.scrollTop))
+    const caretBottom = isInput ? rect.bottom : Math.max(rect.top + 18, Math.min(rect.bottom, markerRect.top - el.scrollTop + lineHeight))
+    const y = caretBottom + 2
+    return {
+        x,
+        y,
+        anchorTop: caretTop,
+        anchorBottom: caretBottom,
+        anchorLeft: isInput ? rect.left : x,
+        anchorRight: rect.right
+    }
 }
 
 function getContextPosition(ctx: WordContext) {
@@ -156,9 +181,23 @@ function getContextPosition(ctx: WordContext) {
     const rect = range.getBoundingClientRect()
     if (!rect.width && !rect.height) {
         const rootRect = ctx.root.getBoundingClientRect()
-        return { x: rootRect.left, y: rootRect.bottom + 4 }
+        return {
+            x: rootRect.left,
+            y: rootRect.bottom + 4,
+            anchorTop: rootRect.top,
+            anchorBottom: rootRect.bottom,
+            anchorLeft: rootRect.left,
+            anchorRight: rootRect.right
+        }
     }
-    return { x: rect.left, y: rect.bottom + 4 }
+    return {
+        x: rect.left,
+        y: rect.bottom + 4,
+        anchorTop: rect.top,
+        anchorBottom: rect.bottom,
+        anchorLeft: rect.left,
+        anchorRight: rect.right
+    }
 }
 
 // ---------------- candidates ----------------
@@ -176,6 +215,10 @@ function updateForContext(ctx: WordContext) {
         visible: true,
         x: position.x,
         y: position.y,
+        anchorTop: position.anchorTop,
+        anchorBottom: position.anchorBottom,
+        anchorLeft: position.anchorLeft,
+        anchorRight: position.anchorRight,
         roman: ctx.roman,
         candidates: [...nepali, ctx.roman],
         selected: sameWord ? Math.min(state.selected, nepali.length) : 0,
@@ -315,7 +358,7 @@ function onInput(event: Event) {
     else hidePopup()
 }
 
-const NAVIGATION_KEYS = ["ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"]
+const NAVIGATION_KEYS = ["Home", "End", "PageUp", "PageDown"]
 
 function onKeydown(event: KeyboardEvent) {
     const state = get(googleTypingPopup)
@@ -333,12 +376,12 @@ function onKeydown(event: KeyboardEvent) {
     }
 
     const count = state.candidates.length
-    if (event.key === "ArrowDown") {
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
         stop()
         selectCandidate((state.selected + 1) % count)
         return
     }
-    if (event.key === "ArrowUp") {
+    if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
         stop()
         selectCandidate((state.selected - 1 + count) % count)
         return
@@ -396,7 +439,15 @@ function onScrollOrResize() {
         return
     }
     const position = getContextPosition(context)
-    googleTypingPopup.update((state) => ({ ...state, x: position.x, y: position.y }))
+    googleTypingPopup.update((state) => ({
+        ...state,
+        x: position.x,
+        y: position.y,
+        anchorTop: position.anchorTop,
+        anchorBottom: position.anchorBottom,
+        anchorLeft: position.anchorLeft,
+        anchorRight: position.anchorRight
+    }))
 }
 
 let initialized = false

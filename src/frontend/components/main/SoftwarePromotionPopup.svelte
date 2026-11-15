@@ -16,11 +16,14 @@
     const failedImagesByKey = new Set<string>()
     const recordedImpressions = new Set<string>()
 
+    const SAFE_RASTER_DATA_URI = /^data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/i
+
     let asideEl: HTMLElement | null = null
     let nowTick = Date.now()
     let delayTimer: ReturnType<typeof setInterval> | null = null
     let rotateTimer: ReturnType<typeof setInterval> | null = null
     let flipStepTimerA: ReturnType<typeof setTimeout> | null = null
+    let flipStepTimerPrep: ReturnType<typeof setTimeout> | null = null
     let flipStepTimerB: ReturnType<typeof setTimeout> | null = null
 
     let activeIndex = 0
@@ -28,7 +31,7 @@
     let currentAngle: FlipAngle = "flip-y"
     let flipPhase: FlipPhase = "idle"
     let isFlipping = false
-    let isHovered = false
+    let flipStartedAt = 0
     let rotateElapsedMs = 0
     let imageErrorVersion = 0
 
@@ -105,7 +108,21 @@
         })
     }
 
-    $: imageSrc = promo && imageErrorVersion >= 0 && !failedImagesByKey.has(promo.campaign_key) ? promo.resolved_image_src || promo.image_url || "" : ""
+    function stripPlainText(input: unknown): string {
+        if (typeof input !== "string") return ""
+        return input
+            .replace(/<[^>]*>/g, "")
+            .replace(/[<>]/g, "")
+            .trim()
+    }
+
+    $: safeTitle = stripPlainText(promo?.title)
+    $: safeBody = stripPlainText(promo?.body)
+    $: safeCtaLabel = stripPlainText(promo?.cta_label)
+    $: rawResolvedSrc = promo && imageErrorVersion >= 0 && !failedImagesByKey.has(promo.campaign_key) ? promo.resolved_image_src || "" : ""
+    $: imageSrc = SAFE_RASTER_DATA_URI.test(rawResolvedSrc) ? rawResolvedSrc : ""
+    $: currentIntervalMs = Math.max(3, Number(promo?.rotate_interval_seconds) || 8) * 1000
+    $: slideProgressPct = eligiblePromos.length > 1 ? Math.min(100, Math.round((rotateElapsedMs / currentIntervalMs) * 100)) : 0
 
     $: isBottomLeft = promo?.position === "bottom_left"
     $: closeLabel = $language === "ne" ? "बन्द गर्नुहोस् (Close)" : "Close advertisement"
@@ -132,6 +149,10 @@
             clearTimeout(flipStepTimerA)
             flipStepTimerA = null
         }
+        if (flipStepTimerPrep) {
+            clearTimeout(flipStepTimerPrep)
+            flipStepTimerPrep = null
+        }
         if (flipStepTimerB) {
             clearTimeout(flipStepTimerB)
             flipStepTimerB = null
@@ -139,13 +160,16 @@
     }
 
     function flipToIndex(targetIndex: number) {
-        if (isFlipping || eligiblePromos.length <= 1) return
+        if (eligiblePromos.length <= 1) return
+        if (isFlipping && Date.now() - flipStartedAt < 1000) return
+
         const total = eligiblePromos.length
         const normalized = ((targetIndex % total) + total) % total
         if (normalized === activeIndex) return
 
         clearFlipTimers()
         isFlipping = true
+        flipStartedAt = Date.now()
         rotateElapsedMs = 0
         currentAngle = pickNextAngle(promo?.transition_style || "auto_mix")
         flipPhase = "out"
@@ -155,16 +179,15 @@
             activeIndex = normalized
             flipPhase = "in-prep"
 
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    flipPhase = "in"
-                    flipStepTimerB = setTimeout(() => {
-                        flipStepTimerB = null
-                        flipPhase = "idle"
-                        isFlipping = false
-                    }, 330)
-                })
-            })
+            flipStepTimerPrep = setTimeout(() => {
+                flipStepTimerPrep = null
+                flipPhase = "in"
+                flipStepTimerB = setTimeout(() => {
+                    flipStepTimerB = null
+                    flipPhase = "idle"
+                    isFlipping = false
+                }, 330)
+            }, 30)
         }, 250)
     }
 
@@ -176,15 +199,24 @@
                 rotateElapsedMs = 0
                 return
             }
-            if (isHovered || isDragging || isFlipping) return
+            if (isDragging) return
+
+            if (isFlipping) {
+                if (Date.now() - flipStartedAt > 1200) {
+                    clearFlipTimers()
+                    flipPhase = "idle"
+                    isFlipping = false
+                }
+                return
+            }
 
             const intervalMs = Math.max(3, Number(promo?.rotate_interval_seconds) || 8) * 1000
-            rotateElapsedMs += 500
+            rotateElapsedMs += 250
             if (rotateElapsedMs >= intervalMs) {
                 rotateElapsedMs = 0
                 flipToIndex(activeIndex + 1)
             }
-        }, 500)
+        }, 250)
     }
 
     onMount(() => {
@@ -309,10 +341,10 @@
 
 <svelte:window on:resize={handleWindowResize} />
 
-{#if !$currentWindow && !$activePopup && promo}
-    <aside bind:this={asideEl} class="promoStage" class:bottomLeft={!customPos && isBottomLeft} class:dragging={isDragging} style={positionStyle} aria-label="HamroCMS Promotion" on:pointerdown={startPointerDrag} on:mouseenter={() => (isHovered = true)} on:mouseleave={() => (isHovered = false)} in:fly={{ y: 16, duration: 220 }} out:fade={{ duration: 150 }}>
+{#if !$currentWindow && !$activePopup && promo && safeTitle}
+    <aside bind:this={asideEl} class="promoStage" class:bottomLeft={!customPos && isBottomLeft} class:dragging={isDragging} style={positionStyle} aria-label="HamroCMS Promotion" on:pointerdown={startPointerDrag} in:fly={{ y: 16, duration: 220 }} out:fade={{ duration: 150 }}>
         <div class="promoCard {currentAngle} phase-{flipPhase}">
-            <!-- Top Drag Handle + Counter + Close (×) -->
+            <!-- Top Drag Handle + Auto-Slide Counter + Close (×) -->
             <div class="dragHeader" title={dragHint} on:dblclick={resetDraggedPosition}>
                 <div class="brandGrip">
                     <span class="gripDots" aria-hidden="true">⋮⋮</span>
@@ -321,31 +353,35 @@
 
                 <div class="headerControls noDragControl">
                     {#if eligiblePromos.length > 1}
-                        <button type="button" class="miniFlipBtn" title="Previous" on:click|stopPropagation={() => flipToIndex(activeIndex - 1)}>‹</button>
-                        <span class="counterText">{activeIndex + 1}/{eligiblePromos.length}</span>
-                        <button type="button" class="miniFlipBtn" title="Next" on:click|stopPropagation={() => flipToIndex(activeIndex + 1)}>›</button>
+                        <span class="counterText" title="Auto-rotating advertisements">{activeIndex + 1}/{eligiblePromos.length}</span>
                     {/if}
 
                     <button type="button" class="closeBtn" title={closeLabel} aria-label={closeLabel} on:click|stopPropagation={dismissAllVisiblePromos}> × </button>
                 </div>
             </div>
 
+            {#if eligiblePromos.length > 1}
+                <div class="autoProgressTrack" aria-hidden="true">
+                    <div class="autoProgressFill" style="width: {slideProgressPct}%;" />
+                </div>
+            {/if}
+
             {#if imageSrc}
-                <button type="button" class="mediaWrap" on:click={openCta} title={promo.title}>
-                    <img src={imageSrc} alt={promo.title} draggable={false} on:error={handleImageError} />
+                <button type="button" class="mediaWrap" on:click={openCta} title={safeTitle}>
+                    <img src={imageSrc} alt={safeTitle} draggable={false} on:error={handleImageError} />
                 </button>
             {/if}
 
             <div class="content">
-                <h4 class="title">{promo.title}</h4>
+                <h4 class="title">{safeTitle}</h4>
 
-                {#if promo.body}
-                    <p class="body">{promo.body}</p>
+                {#if safeBody}
+                    <p class="body">{safeBody}</p>
                 {/if}
 
                 <div class="actions">
                     <button type="button" class="ctaBtn" on:click={openCta}>
-                        <span>{promo.cta_label || ($language === "ne" ? "HamroCMS हेर्नुहोस्" : "Explore HamroCMS.com")}</span>
+                        <span>{safeCtaLabel || ($language === "ne" ? "HamroCMS हेर्नुहोस्" : "Explore HamroCMS.com")}</span>
                         <span aria-hidden="true">↗</span>
                     </button>
 
@@ -509,34 +545,24 @@
         cursor: default;
     }
 
-    .miniFlipBtn {
-        width: 20px;
-        height: 20px;
-        border-radius: 6px;
-        border: 1px solid rgb(255 255 255 / 0.14);
-        background: rgb(255 255 255 / 0.06);
-        color: var(--text);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 13px;
-        font-weight: 700;
-        line-height: 1;
-        cursor: pointer;
-        padding: 0;
-        transition: background-color 0.15s ease;
+    .autoProgressTrack {
+        width: 100%;
+        height: 2px;
+        background: rgb(255 255 255 / 0.08);
+        overflow: hidden;
     }
 
-    .miniFlipBtn:hover {
-        background: color-mix(in srgb, var(--secondary) 55%, transparent);
-        color: #ffffff;
+    .autoProgressFill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--secondary), #6366f1);
+        transition: width 240ms linear;
     }
 
     .counterText {
         font-size: 0.64rem;
         font-weight: 700;
-        opacity: 0.72;
-        padding: 0 2px;
+        opacity: 0.78;
+        padding: 0 4px;
         font-variant-numeric: tabular-nums;
     }
 

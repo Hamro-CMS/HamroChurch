@@ -1,10 +1,11 @@
 <script lang="ts">
     import { onMount } from "svelte"
     import type { AppUpdateInfo } from "../../../../types/Main"
-    import { alertUpdates, special, version } from "../../../stores"
+    import { alertUpdates, language, special, version } from "../../../stores"
     import { downloadAndInstallUpdate, getUpdateData, notifyManualUpdateResult, openReleasePage } from "../../../utils/checkForUpdates"
     import Loader from "../Loader.svelte"
     import T from "../../helpers/T.svelte"
+    import Link from "../../inputs/Link.svelte"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import MaterialToggleSwitch from "../../inputs/MaterialToggleSwitch.svelte"
     import InputRow from "../../input/InputRow.svelte"
@@ -86,6 +87,18 @@
     </MaterialButton>
 </div>
 
+<div class="officialNotice">
+    {#if $language === "ne"}
+        🛡 <strong>सुरक्षा सूचना:</strong> मालवेयर र नक्कली सफ्टवेयरबाट बच्न सधैं आधिकारिक साइट
+        <Link url="https://hamrocms.com/download">hamrocms.com/download</Link>
+        वा यही बिल्ट-इन अपडेटरबाट मात्र डाउनलोड र अपडेट गर्नुहोस्।
+    {:else}
+        🛡 <strong>Official Security Notice:</strong> Always download and update Hamro Church only from
+        <Link url="https://hamrocms.com/download">hamrocms.com/download</Link>
+        or this built-in updater to protect your computer from malware copies.
+    {/if}
+</div>
+
 {#if !loading}
     <div class="versions">
         <div class="version-block">
@@ -119,7 +132,9 @@
     </div>
 {:else}
     <div class="changelog">
-        <h3>{#if hasUpdate}<T id="about.changes" />{:else}<T id="updates.latest" />{/if}</h3>
+        <h3>
+            {#if hasUpdate}<T id="about.changes" />{:else}<T id="updates.latest" />{/if}
+        </h3>
 
         {#if errorMessage}
             <p><T id="updates.unable_to_check" /></p>
@@ -145,6 +160,17 @@
         display: flex;
         flex-direction: column;
         margin-bottom: 10px;
+    }
+
+    .officialNotice {
+        margin: 8px 0 12px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid color-mix(in srgb, #10b981 42%, var(--primary-lighter) 58%);
+        background: color-mix(in srgb, #064e3b 28%, var(--primary-darker) 72%);
+        font-size: 0.84rem;
+        line-height: 1.45;
+        white-space: normal;
     }
 
     .versions {

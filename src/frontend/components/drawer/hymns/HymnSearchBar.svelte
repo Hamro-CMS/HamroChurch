@@ -65,40 +65,50 @@
 
 <style>
     .searchbar {
-        position: relative;
         flex: 1 1 200px;
         min-width: 175px;
+        height: 36px;
         display: flex;
         align-items: center;
+        gap: 0.45rem;
+        padding: 0 0.5rem 0 0.68rem;
+        border: 1px solid color-mix(in srgb, var(--secondary) 30%, var(--primary-lighter) 70%);
+        border-radius: 9px;
+        background: var(--primary-darkest);
+        transition:
+            border-color 0.15s ease,
+            box-shadow 0.15s ease;
+    }
+
+    .searchbar:focus-within {
+        border-color: var(--secondary);
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--secondary) 55%, transparent 45%);
     }
 
     .searchIcon {
-        position: absolute;
-        left: 0.68rem;
-        top: 50%;
-        transform: translateY(-50%);
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        opacity: 0.65;
+        flex-shrink: 0;
+        opacity: 0.68;
         pointer-events: none;
     }
 
     .searchInput {
+        flex: 1;
+        min-width: 0;
         width: 100%;
-        height: 36px;
-        border: 1px solid color-mix(in srgb, var(--secondary) 30%, var(--primary-lighter) 70%);
-        border-radius: 9px;
-        background: var(--primary-darkest);
+        height: 100%;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
         color: var(--text);
-        padding: 0 2.05rem 0 2.15rem;
+        padding: 0 !important;
+        margin: 0;
         font: inherit;
         font-size: 0.91rem;
         line-height: 1.2;
         outline: none;
-        transition:
-            border-color 0.15s ease,
-            box-shadow 0.15s ease;
     }
 
     .searchInput::placeholder {
@@ -106,23 +116,15 @@
         font-size: 0.84rem;
     }
 
-    .searchInput:focus {
-        border-color: var(--secondary);
-        box-shadow: 0 0 0 1px color-mix(in srgb, var(--secondary) 55%, transparent 45%);
-    }
-
     .clear {
-        position: absolute;
-        right: 0.45rem;
-        top: 50%;
-        transform: translateY(-50%);
+        flex-shrink: 0;
         border: none;
         background: transparent;
         color: var(--text);
         opacity: 0.72;
-        font-size: 1.25rem;
+        font-size: 1.2rem;
         line-height: 1;
-        padding: 0.15rem 0.25rem;
+        padding: 0.15rem 0.22rem;
         cursor: pointer;
     }
 

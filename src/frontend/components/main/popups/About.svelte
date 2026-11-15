@@ -45,6 +45,10 @@
 
     <div class="text">
         <div>
+            • Official Download &amp; Updates (Anti-Malware Protected):
+            <Link url="https://hamrocms.com/download">hamrocms.com/download</Link>
+        </div>
+        <div>
             • Website
             <Link url="https://hamrocms.com">hamrocms.com</Link>
         </div>
@@ -97,14 +101,19 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 10px;
-        width: 100%;
+        margin: 0 auto;
+        width: min(300px, 82vw);
+        aspect-ratio: 2.15 / 1;
+        overflow: hidden;
     }
 
     .logo img {
-        height: 90px;
-        max-width: min(100%, 320px);
+        width: 142%;
+        max-width: none;
+        height: auto;
+        flex-shrink: 0;
         object-fit: contain;
+        transform: translateX(-2.2%);
     }
 
     .church-cta {
