@@ -71,6 +71,7 @@ import {
     shows,
     showsCache,
     softwarePromotion,
+    softwarePromotions,
     spellcheck,
     stageShows,
     templates,
@@ -387,7 +388,10 @@ export const mainResponses: MainResponses = {
                 // set modified to now, so it will update properly in history
                 if (show.timestamps) show.timestamps.modified = Date.now()
 
-                tempShows.push({ id: linkedShow.id, show: { ...show, origin, name: checkName(show.name, linkedShow.id) } })
+                tempShows.push({
+                    id: linkedShow.id,
+                    show: { ...show, origin, name: checkName(show.name, linkedShow.id) }
+                })
                 continue
             }
 
@@ -421,7 +425,10 @@ export const mainResponses: MainResponses = {
             })
 
             delete show.id
-            tempShows.push({ id, show: { ...show, origin, name: checkName(show.name, id) } })
+            tempShows.push({
+                id,
+                show: { ...show, origin, name: checkName(show.name, id) }
+            })
         }
         setTempShows(tempShows)
 
@@ -450,7 +457,14 @@ export const mainResponses: MainResponses = {
             // CREATE PROJECT FOLDER
             const folderId = currentProject.folderId
             if (folderId && (!get(folders)[folderId] || get(folders)[folderId].deleted)) {
-                history({ id: "UPDATE", newData: { replace: { parent: "/", name: currentProject.folderName } }, oldData: { id: folderId }, location: { page: "show", id: "project_folder" } })
+                history({
+                    id: "UPDATE",
+                    newData: {
+                        replace: { parent: "/", name: currentProject.folderName }
+                    },
+                    oldData: { id: folderId },
+                    location: { page: "show", id: "project_folder" }
+                })
             }
 
             // CREATE PROJECT
@@ -464,10 +478,18 @@ export const mainResponses: MainResponses = {
             const project = createProviderProject(data.providerId, projectBase)
 
             // REPLACE IDS
-            project.shows = project.shows.map((a) => ({ ...a, id: replaceIds[a.id] || a.id }))
+            project.shows = project.shows.map((a) => ({
+                ...a,
+                id: replaceIds[a.id] || a.id
+            }))
 
             const projectId = currentProject.id
-            history({ id: "UPDATE", newData: { data: project }, oldData: { id: projectId }, location: { page: "show", id: "project" } })
+            history({
+                id: "UPDATE",
+                newData: { data: project },
+                oldData: { id: projectId },
+                location: { page: "show", id: "project" }
+            })
         })
 
         // open closest to today
@@ -501,7 +523,11 @@ export const mainResponses: MainResponses = {
             return
         }
 
-        const data = mainData as { content: string; name?: string; extension?: string }[]
+        const data = mainData as {
+            content: string
+            name?: string
+            extension?: string
+        }[]
 
         const receiveIMPORT = {
             // FreeShow
@@ -544,5 +570,9 @@ export const mainResponses: MainResponses = {
     [Main.TIMECODE_STATUS]: (data) => updateTimelineStatus(data!),
     [Main.TIMECODE_AUDIO_DATA]: (data) => processTimecodeFrame(data!),
     // Software Promotions / Announcements
-    [ToMain.SOFTWARE_PROMOTION]: (data) => softwarePromotion.set(data ?? null)
+    [ToMain.SOFTWARE_PROMOTION]: (data) => {
+        const list = Array.isArray(data) ? data : []
+        softwarePromotions.set(list)
+        softwarePromotion.set(list[0] ?? null)
+    }
 }

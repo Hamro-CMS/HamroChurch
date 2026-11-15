@@ -178,14 +178,19 @@ export enum Main {
     // Software Promotions / Announcements
     GET_SOFTWARE_PROMOTION = "GET_SOFTWARE_PROMOTION",
     DISMISS_SOFTWARE_PROMOTION = "DISMISS_SOFTWARE_PROMOTION",
-    OPEN_SOFTWARE_PROMOTION = "OPEN_SOFTWARE_PROMOTION"
+    OPEN_SOFTWARE_PROMOTION = "OPEN_SOFTWARE_PROMOTION",
+    RECORD_SOFTWARE_PROMOTION_IMPRESSION = "RECORD_SOFTWARE_PROMOTION_IMPRESSION"
 }
 
 export interface MainSendPayloads {
     // DEV
     [Main.LOG]: any
     /////
-    [Main.IMPORT]: { channel: string; format: { name: string; extensions: string[] }; settings?: any }
+    [Main.IMPORT]: {
+        channel: string
+        format: { name: string; extensions: string[] }
+        settings?: any
+    }
     [Main.IMPORT_FILES]: { id: string; paths: string[] }
     [Main.BIBLE]: { id: string; name: string }
     [Main.SHOW]: { id: string; name: string }
@@ -199,16 +204,32 @@ export interface MainSendPayloads {
     [Main.LOG_ERROR]: ErrorLog
     [Main.OPEN_FOLDER_PATH]: string
     [Main.GET_STORE_VALUE]: { file: "config" | keyof typeof _store; key: string }
-    [Main.SET_STORE_VALUE]: { file: "config" | keyof typeof _store; key: string; value: any }
+    [Main.SET_STORE_VALUE]: {
+        file: "config" | keyof typeof _store
+        key: string
+        value: any
+    }
     [Main.DELETE_SHOWS]: { shows: { id: string; name: string }[] }
     [Main.DELETE_SHOWS_NI]: { shows: TrimmedShows }
     [Main.GET_EMPTY_SHOWS]: { cached: Shows }
     [Main.CHECK_FOR_UPDATES]?: { manual?: boolean; includeBeta?: boolean }
     [Main.DOWNLOAD_UPDATE]?: { includeBeta?: boolean }
     [Main.OUTPUT]: "true" | "false"
-    [Main.DOES_MEDIA_EXIST]: { path: string; creationTime?: number; noCache?: boolean }
+    [Main.DOES_MEDIA_EXIST]: {
+        path: string
+        creationTime?: number
+        noCache?: boolean
+    }
     [Main.GET_THUMBNAIL]: { input: string; size: number }
-    [Main.SAVE_IMAGE]: { id?: string; path?: string; base64?: string; buffer?: ArrayBuffer; filePath?: string[]; format?: "png" | "jpg"; openFolder?: boolean }
+    [Main.SAVE_IMAGE]: {
+        id?: string
+        path?: string
+        base64?: string
+        buffer?: ArrayBuffer
+        filePath?: string[]
+        format?: "png" | "jpg"
+        openFolder?: boolean
+    }
     [Main.PDF_TO_IMAGE]: { filePath: string }
     [Main.READ_EXIF]: { id: string }
     [Main.MEDIA_CODEC]: { path: string }
@@ -216,14 +237,28 @@ export interface MainSendPayloads {
     [Main.DOWNLOAD_LESSONS_MEDIA]: LessonsData[]
     [Main.MEDIA_DOWNLOAD]: { url: string; contentFile?: any }
     [Main.MEDIA_IS_DOWNLOADED]: { url: string; contentFile?: any }
-    [Main.NOW_PLAYING]: { filePath: string; name: string; unknownLang: string[]; format: string; duration: number }
+    [Main.NOW_PLAYING]: {
+        filePath: string
+        name: string
+        unknownLang: string[]
+        format: string
+        duration: number
+    }
     // [Main.MEDIA_BASE64]: { id: string; path: string }[]
     [Main.READ_AUDIO_METADATA]: { filePath: string }
-    [Main.CAPTURE_SLIDE]: { output: { [key: string]: Output }; resolution: Resolution }
+    [Main.CAPTURE_SLIDE]: {
+        output: { [key: string]: Output }
+        resolution: Resolution
+    }
     [Main.LIBREOFFICE_CONVERT]: { type: string }
     [Main.START_SLIDESHOW]: { path: string; program: string }
     [Main.PRESENTATION_CONTROL]: { action: string }
-    [Main.START]: { ports: { [key: string]: number }; max: number; disabled: { [key: string]: boolean }; data: { [key: string]: ServerData } }
+    [Main.START]: {
+        ports: { [key: string]: number }
+        max: number
+        disabled: { [key: string]: boolean }
+        data: { [key: string]: ServerData }
+    }
     [Main.SERVER_DATA]: { [key: string]: any }
     [Main.WEBSOCKET_START]: number
     [Main.API_TRIGGER]: { action: string; returnId: string; data: any }
@@ -245,48 +280,130 @@ export interface MainSendPayloads {
     [Main.BUNDLE_MEDIA_FILES]: { openFolder?: boolean }
     [Main.MEDIA_FOLDER_COPY]: { paths: string[] }
     [Main.READ_HYMNS]?: undefined
-    [Main.SAVE_HYMN]: { id?: string; title: string; titleEn?: string; lyrics: string; categoryId: "bhajan" | "chorus" | "children" | "new"; number?: string; authors?: string }
-    [Main.SYNC_HYMN_SHOWS]: { id?: string; title: string; titleEn?: string; lyrics: string; categoryId: "bhajan" | "chorus" | "children" | "new"; number?: string; authors?: string }[]
+    [Main.SAVE_HYMN]: {
+        id?: string
+        title: string
+        titleEn?: string
+        lyrics: string
+        categoryId: "bhajan" | "chorus" | "children" | "new"
+        number?: string
+        authors?: string
+    }
+    [Main.SYNC_HYMN_SHOWS]: {
+        id?: string
+        title: string
+        titleEn?: string
+        lyrics: string
+        categoryId: "bhajan" | "chorus" | "children" | "new"
+        number?: string
+        authors?: string
+    }[]
     [Main.NEPALI_TRANSLITERATE]: { text: string; num?: number }
     [Main.RESET_HYMNS]?: undefined
     [Main.FILE_INFO]: string
-    [Main.READ_FOLDER]: { path: string | string[]; depth?: number; generateThumbnails?: boolean; captureFolderContent?: boolean }
+    [Main.READ_FOLDER]: {
+        path: string | string[]
+        depth?: number
+        generateThumbnails?: boolean
+        captureFolderContent?: boolean
+    }
     [Main.READ_FILE]: { path: string }
     [Main.OPEN_FOLDER]: { channel: string; title?: string; path?: string }
-    [Main.OPEN_FILE]: { id: string; channel: string; title?: string; filter: any; multiple: boolean; read?: boolean }
+    [Main.OPEN_FILE]: {
+        id: string
+        channel: string
+        title?: string
+        filter: any
+        multiple: boolean
+        read?: boolean
+    }
     // SYNC
     [Main.CAN_SYNC]?: { id: SyncProviderId }
     [Main.GET_TEAMS]?: { id: SyncProviderId }
     [Main.CLOUD_DATA]: { id: SyncProviderId; churchId: string; teamId: string }
-    [Main.CLOUD_CHANGED]: { id: SyncProviderId; churchId: string; teamId: string }
-    [Main.CLOUD_SYNC]: { id: SyncProviderId; churchId: string; teamId: string; method: "merge" | "read_only" | "upload" | "replace" }
-    [Main.RESTORE_CLOUD_BACKUP]: { id: SyncProviderId; churchId: string; teamId: string }
+    [Main.CLOUD_CHANGED]: {
+        id: SyncProviderId
+        churchId: string
+        teamId: string
+    }
+    [Main.CLOUD_SYNC]: {
+        id: SyncProviderId
+        churchId: string
+        teamId: string
+        method: "merge" | "read_only" | "upload" | "replace"
+    }
+    [Main.RESTORE_CLOUD_BACKUP]: {
+        id: SyncProviderId
+        churchId: string
+        teamId: string
+    }
     [Main.GET_CONVERSATION_ID]: { teamId: string }
-    [Main.SEND_SOCKET_MESSAGE]: { churchId: string; teamId: string; displayName: string; content: string }
+    [Main.SEND_SOCKET_MESSAGE]: {
+        churchId: string
+        teamId: string
+        displayName: string
+        content: string
+    }
     // Provider-based routing
-    [Main.PROVIDER_LOAD_SERVICES]: { providerId: ContentProviderId; cloudOnly?: boolean; data?: any }
+    [Main.PROVIDER_LOAD_SERVICES]: {
+        providerId: ContentProviderId
+        cloudOnly?: boolean
+        data?: any
+    }
     [Main.PROVIDER_DISCONNECT]: { providerId: ContentProviderId; scope?: string }
-    [Main.PROVIDER_STARTUP_LOAD]: { providerId: ContentProviderId; scope?: string; data?: any; cloudOnly?: boolean }
+    [Main.PROVIDER_STARTUP_LOAD]: {
+        providerId: ContentProviderId
+        scope?: string
+        data?: any
+        cloudOnly?: boolean
+    }
     // Content Library
     [Main.GET_CONTENT_LIBRARY]: { providerId: ContentProviderId }
     [Main.GET_PROVIDER_CONTENT]: { providerId: ContentProviderId; key: string }
-    [Main.CHECK_MEDIA_LICENSE]: { providerId: ContentProviderId; mediaId: string }
+    [Main.CHECK_MEDIA_LICENSE]: {
+        providerId: ContentProviderId
+        mediaId: string
+    }
     // Timecode
-    [Main.TIMECODE_START]: { type: "send" | "receive"; mode: TimecodeMode; framerate?: number; data?: any }
+    [Main.TIMECODE_START]: {
+        type: "send" | "receive"
+        mode: TimecodeMode
+        framerate?: number
+        data?: any
+    }
     [Main.TIMECODE_VALUE]: number
     [Main.TIMECODE_STATUS]: "play" | "pause" | "stop"
     [Main.TIMECODE_AUDIO_DATA]: { mode: TimecodeMode; buffer: Uint8Array }
     // Spotify
     [Main.SPOTIFY_GET_STATE]: undefined
-    [Main.SPOTIFY_COMMAND]: { command: "playpause" | "next" | "prev" | "seek" | "setVolume" | "pause"; value?: number }
+    [Main.SPOTIFY_COMMAND]: {
+        command: "playpause" | "next" | "prev" | "seek" | "setVolume" | "pause"
+        value?: number
+    }
     // Privacy & Anonymous Telemetry
     [Main.GET_PRIVACY_SETTINGS]?: undefined
     [Main.SET_ANALYTICS_CONSENT]: { consent: boolean }
     [Main.DELETE_ANALYTICS_DATA]?: undefined
     // Software Promotions / Announcements
     [Main.GET_SOFTWARE_PROMOTION]?: undefined
-    [Main.DISMISS_SOFTWARE_PROMOTION]: { campaignKey: string; dismissMode: "once_per_campaign" | "once_per_day" | "every_launch" }
-    [Main.OPEN_SOFTWARE_PROMOTION]: { id: number; url: string; eventUrl?: string | null }
+    [Main.DISMISS_SOFTWARE_PROMOTION]: {
+        campaignKey?: string
+        dismissMode?: "once_per_campaign" | "once_per_day" | "every_launch"
+        items?: {
+            campaignKey: string
+            dismissMode: "once_per_campaign" | "once_per_day" | "every_launch"
+        }[]
+    }
+    [Main.OPEN_SOFTWARE_PROMOTION]: {
+        id: number
+        url: string
+        eventUrl?: string | null
+    }
+    [Main.RECORD_SOFTWARE_PROMOTION_IMPRESSION]: {
+        id: number
+        campaignKey: string
+        eventUrl?: string | null
+    }
 }
 
 export interface MainReturnPayloads {
@@ -299,7 +416,11 @@ export interface MainReturnPayloads {
     [Main.DEVICE_ID]: string
     [Main.GET_DEVICE_NAME]: string
     [Main.IP]: string[]
-    [Main.CHECK_RAM_USAGE]: { total: number; free: number; performanceMode: boolean }
+    [Main.CHECK_RAM_USAGE]: {
+        total: number
+        free: number
+        performanceMode: boolean
+    }
     ///
     // [Main.SAVE]: { closeWhenFinished: boolean; customTriggers: any } | Promise<void>
     [Main.BACKUPS]: { path: string; name: string; date: number; size: number }[]
@@ -307,7 +428,11 @@ export interface MainReturnPayloads {
     // STORES
     [Main.SYNCED_SETTINGS]: { [key in SaveListSyncedSettings]: any }
     [Main.STAGE]: StageLayouts
-    [Main.PROJECTS]: { projects: Projects; folders: Folders; projectTemplates: Projects }
+    [Main.PROJECTS]: {
+        projects: Projects
+        folders: Folders
+        projectTemplates: Projects
+    }
     [Main.OVERLAYS]: Overlays
     [Main.TEMPLATES]: Templates
     [Main.EVENTS]: { [key: string]: Event }
@@ -336,33 +461,69 @@ export interface MainReturnPayloads {
     [Main.FULL_SHOWS_LIST]: string[]
     [Main.GET_SCREENS]: Promise<{ name: string; id: string }[]>
     [Main.GET_WINDOWS]: Promise<{ name: string; id: string }[]>
-    [Main.DOES_MEDIA_EXIST]: Promise<{ path: string; exists: boolean; creationTime?: number }>
-    [Main.GET_THUMBNAIL]: Promise<{ output: string; input: string; size: number }>
+    [Main.DOES_MEDIA_EXIST]: Promise<{
+        path: string
+        exists: boolean
+        creationTime?: number
+    }>
+    [Main.GET_THUMBNAIL]: Promise<{
+        output: string
+        input: string
+        size: number
+    }>
     // [Main.PDF_TO_IMAGE]: Promise<string[]>
     [Main.READ_EXIF]: Promise<{ id: string; exif: ExifData }>
-    [Main.MEDIA_CODEC]: Promise<{ path: string; codecs: string[]; mimeType: string; mimeCodec: string }>
+    [Main.MEDIA_CODEC]: Promise<{
+        path: string
+        codecs: string[]
+        mimeType: string
+        mimeCodec: string
+    }>
     [Main.MEDIA_TRACKS]: Promise<{ path: string; tracks: Subtitle[] }>
-    [Main.MEDIA_IS_DOWNLOADED]: Promise<{ path: string; buffer: Buffer | null; protectedUrl?: string | null; isDownloading?: boolean } | null>
+    [Main.MEDIA_IS_DOWNLOADED]: Promise<{
+        path: string
+        buffer: Buffer | null
+        protectedUrl?: string | null
+        isDownloading?: boolean
+    } | null>
     // [Main.MEDIA_BASE64]: { id: string; content: string }[]
     [Main.READ_AUDIO_METADATA]: Promise<any>
     [Main.CAPTURE_SLIDE]: Promise<{ base64: string } | null>
     [Main.SLIDESHOW_GET_APPS]: string[]
     [Main.GET_MIDI_OUTPUTS]: { name: string }[]
     [Main.GET_MIDI_INPUTS]: { name: string }[]
-    [Main.GET_LYRICS]: Promise<{ lyrics: string; source: string; title: string; artist: string }>
+    [Main.GET_LYRICS]: Promise<{
+        lyrics: string
+        source: string
+        title: string
+        artist: string
+    }>
     [Main.SEARCH_LYRICS]: Promise<LyricSearchResult[]>
     [Main.GET_SIMILAR]: { path: string; name: string }[]
     [Main.RESTORE_CLOUD_BACKUP]: Promise<{ success: boolean; error?: string }>
     [Main.MEDIA_FOLDER_COPY]: Promise<boolean>
-    [Main.LOCATE_MEDIA_FILE]: Promise<{ path: string; hasChanged: boolean } | null>
+    [Main.LOCATE_MEDIA_FILE]: Promise<{
+        path: string
+        hasChanged: boolean
+    } | null>
     [Main.GET_MEDIA_FOLDER_PATH]: string
     [Main.READ_BIBLES_FOLDER]: Promise<{ path: string; name: string }[]>
     [Main.READ_HYMNS]: { path: string | null; content: string | null }
-    [Main.SAVE_HYMN]: { success: boolean; path?: string; id?: string; error?: string }
+    [Main.SAVE_HYMN]: {
+        success: boolean
+        path?: string
+        id?: string
+        error?: string
+    }
     [Main.SYNC_HYMN_SHOWS]: void
     [Main.RESET_HYMNS]: Promise<{ success: boolean; error?: string }>
     [Main.NEPALI_TRANSLITERATE]: Promise<string[]>
-    [Main.FILE_INFO]: { path: string; stat: Stats; extension: string; folder: boolean } | null
+    [Main.FILE_INFO]: {
+        path: string
+        stat: Stats
+        extension: string
+        folder: boolean
+    } | null
     [Main.READ_FOLDER]: Promise<{ [key: string]: FileFolder }>
     [Main.READ_FILE]: { content: string }
     // SYNC
@@ -370,13 +531,21 @@ export interface MainReturnPayloads {
     [Main.GET_TEAMS]: Promise<{ id: string; churchId: string; name: string }[]>
     [Main.CLOUD_DATA]: Promise<boolean>
     [Main.CLOUD_CHANGED]: Promise<boolean>
-    [Main.CLOUD_SYNC]: Promise<{ success?: boolean; error?: string; changedFiles: any[] }>
+    [Main.CLOUD_SYNC]: Promise<{
+        success?: boolean
+        error?: string
+        changedFiles: any[]
+    }>
     [Main.GET_CONVERSATION_ID]: Promise<string | null>
     [Main.SEND_SOCKET_MESSAGE]: Promise<boolean>
     // Provider-based routing
     [Main.PROVIDER_DISCONNECT]: { success: boolean }
     // Content Library
-    [Main.GET_CONTENT_PROVIDERS]: { providerId: ContentProviderId; displayName: string; hasContentLibrary: boolean }[]
+    [Main.GET_CONTENT_PROVIDERS]: {
+        providerId: ContentProviderId
+        displayName: string
+        hasContentLibrary: boolean
+    }[]
     [Main.GET_CONTENT_LIBRARY]: Promise<ContentLibraryCategory[]>
     [Main.GET_PROVIDER_CONTENT]: Promise<ContentFile[]>
     [Main.CHECK_MEDIA_LICENSE]: Promise<MediaLicense | null>
@@ -392,9 +561,10 @@ export interface MainReturnPayloads {
     [Main.SET_ANALYTICS_CONSENT]: PrivacySettings
     [Main.DELETE_ANALYTICS_DATA]: Promise<DeleteAnalyticsResult>
     // Software Promotions / Announcements
-    [Main.GET_SOFTWARE_PROMOTION]: Promise<SoftwarePromotionPayload | null>
+    [Main.GET_SOFTWARE_PROMOTION]: Promise<SoftwarePromotionPayload[]>
     [Main.DISMISS_SOFTWARE_PROMOTION]: boolean
     [Main.OPEN_SOFTWARE_PROMOTION]: Promise<boolean>
+    [Main.RECORD_SOFTWARE_PROMOTION_IMPRESSION]: boolean
 }
 
 ///////////

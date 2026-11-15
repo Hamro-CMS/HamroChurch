@@ -9,6 +9,8 @@
     import Center from "../system/Center.svelte"
     import { getVOTD } from "./votd"
 
+    let logoFailed = false
+
     function createProject() {
         // if opened project is empty go to project list (to reduce confusion)
         if ($projects[$activeProject || ""]?.shows?.length === 0) {
@@ -47,10 +49,18 @@
 </script>
 
 <Center class="context #splash">
-    <h1>Hamro Church</h1>
-    <p style="opacity: 0.7;">v{$version}</p>
+    {#if !logoFailed}
+        <div class="splashLogoWrap">
+            <img src="./logo.png" alt="Hamro Church" draggable={false} on:error={() => (logoFailed = true)} />
+        </div>
+    {:else}
+        <h1>Hamro Church</h1>
+    {/if}
+
+    <p class="versionText">v{$version}</p>
+
     {#if $special.splashText}
-        <p style="padding-top: 30px">
+        <p style="padding-top: 18px">
             {@html extractLinksAndCleanText($special.splashText)}
             <span class="links" style="display: flex;flex-direction: column;align-items: center;">
                 {#each links as link}
@@ -63,21 +73,21 @@
         </p>
     {:else if Object.keys($shows).length < 20}
         <!-- shows up for new users (can be found in "About" menu) -->
-        <p style="padding-top: 30px">
+        <p style="padding-top: 18px">
             <Link url="https://hamrocms.com/docs">
                 <T id="main.docs" />
                 <Icon id="launch" white />
             </Link>
         </p>
     {:else if votd}
-        <p class="votd" style="padding-top: 30px" data-title="Verse of the Day [votd.org]">
+        <p class="votd" style="padding-top: 18px" data-title="Verse of the Day [votd.org]">
             <Link url="https://votd.org/">
                 {votd}
             </Link>
         </p>
     {/if}
 
-    <span style="padding-top: 30px" class="buttons">
+    <span style="padding-top: 22px" class="buttons">
         <MaterialButton icon="search" title="main.quick_search" on:click={() => quickSearchActive.set(true)}>
             <T id="main.quick_search" />
         </MaterialButton>
@@ -99,6 +109,32 @@
 </Center>
 
 <style>
+    .splashLogoWrap {
+        width: min(400px, 82vw);
+        aspect-ratio: 2.02 / 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        user-select: none;
+        pointer-events: none;
+    }
+
+    .splashLogoWrap img {
+        width: 155%;
+        max-width: none;
+        height: auto;
+        flex-shrink: 0;
+        object-fit: contain;
+        filter: drop-shadow(0 8px 22px rgb(0 0 0 / 0.45));
+    }
+
+    .versionText {
+        opacity: 0.72;
+        margin-top: 2px;
+        font-size: 0.92em;
+    }
+
     h1 {
         font-size: 4em;
         overflow: initial;
@@ -131,17 +167,31 @@
         text-decoration: none;
     }
 
+    @media screen and (max-height: 640px) {
+        .splashLogoWrap {
+            width: min(300px, 75vw);
+        }
+    }
     @media screen and (max-height: 500px) {
+        .splashLogoWrap {
+            width: min(230px, 68vw);
+        }
         h1 {
             font-size: 3em;
         }
     }
     @media screen and (max-height: 400px) {
+        .splashLogoWrap {
+            width: min(180px, 60vw);
+        }
         h1 {
             font-size: 2em;
         }
     }
     @media screen and (max-width: 800px) {
+        .splashLogoWrap {
+            width: min(280px, 78vw);
+        }
         h1 {
             font-size: 2em;
         }

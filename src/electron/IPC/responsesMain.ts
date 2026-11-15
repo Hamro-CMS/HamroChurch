@@ -30,7 +30,7 @@ import { addToMediaFolder, bundleMediaFiles, createFolder, getDataFolderPath, ge
 import { getMachineId } from "../utils/helpers"
 import { fetchNepaliTransliteration } from "../utils/nepaliTransliteration"
 import { deleteAnalyticsServerData, getPrivacySettings, setAnalyticsConsent } from "../utils/softwareHeartbeat"
-import { dismissSoftwarePromotion, getActiveSoftwarePromotion, openSoftwarePromotionLink } from "../utils/softwarePromotions"
+import { dismissSoftwarePromotion, getActiveSoftwarePromotions, openSoftwarePromotionLink, recordSoftwarePromotionImpression } from "../utils/softwarePromotions"
 import { LyricSearch } from "../utils/LyricSearch"
 import { closeMidiInPorts, getMidiInputs, getMidiOutputs, receiveMidi, sendMidi } from "../utils/midi"
 import { deleteShows, deleteShowsNotIndexed, getAllShows, getEmptyShows, refreshAllShows } from "../utils/shows"
@@ -253,9 +253,10 @@ export const mainResponses: MainResponses = {
     [Main.SET_ANALYTICS_CONSENT]: (data) => setAnalyticsConsent(!!data?.consent),
     [Main.DELETE_ANALYTICS_DATA]: () => deleteAnalyticsServerData(),
     // Software Promotions / Announcements
-    [Main.GET_SOFTWARE_PROMOTION]: () => getActiveSoftwarePromotion(),
+    [Main.GET_SOFTWARE_PROMOTION]: () => getActiveSoftwarePromotions(),
     [Main.DISMISS_SOFTWARE_PROMOTION]: (data) => dismissSoftwarePromotion(data),
-    [Main.OPEN_SOFTWARE_PROMOTION]: (data) => openSoftwarePromotionLink(data)
+    [Main.OPEN_SOFTWARE_PROMOTION]: (data) => openSoftwarePromotionLink(data),
+    [Main.RECORD_SOFTWARE_PROMOTION_IMPRESSION]: (data) => recordSoftwarePromotionImpression(data)
 }
 
 /// ///////
@@ -356,7 +357,11 @@ function readHamroHymns() {
     const root = getDataFolderRoot()
     const primaryPath = path.join(root, "data", "nepali_hymns.json")
     const primaryContent = readFile(primaryPath)
-    if (primaryContent) return { path: primaryPath, content: normalizePayload(primaryContent, primaryPath) }
+    if (primaryContent)
+        return {
+            path: primaryPath,
+            content: normalizePayload(primaryContent, primaryPath)
+        }
 
     const candidates = [path.join(root, "nepali_hymns.json"), path.join(root, "imports", "nepali_hymns.json"), path.join(root, "imports", "Hymns", "nepali_hymns.json"), path.join(root, "imports", "Hamro Church", "nepali_hymns.json"), path.join(root, "import", "nepali_hymns.json"), path.join("C:\\Mandali Show", "church-presentation-app", "data", "nepali_hymns.json")]
 
@@ -379,7 +384,14 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
             payload = JSON.parse(existingContent)
         } else {
             const fallback = readHamroHymns()
-            payload = fallback.content ? JSON.parse(fallback.content) : { version: 2, source: { name: "Hamro Church" }, language: "ne", categories: [] }
+            payload = fallback.content
+                ? JSON.parse(fallback.content)
+                : {
+                      version: 2,
+                      source: { name: "Hamro Church" },
+                      language: "ne",
+                      categories: []
+                  }
         }
 
         if (!Array.isArray(payload.categories)) payload.categories = []
@@ -429,7 +441,12 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
                 }
             }
         }
-        const kbPatterns = { bhajan: /^(?:[a-z]+)?s\d+$/i, chorus: /^(?:[a-z]+)?c\d+$/i, children: /^(?:[a-z]+)?ch\d+$/i, new: /^(?:[a-z]+)?(?:nw|np|ms)\d+$/i } as const
+        const kbPatterns = {
+            bhajan: /^(?:[a-z]+)?s\d+$/i,
+            chorus: /^(?:[a-z]+)?c\d+$/i,
+            children: /^(?:[a-z]+)?ch\d+$/i,
+            new: /^(?:[a-z]+)?(?:nw|np|ms)\d+$/i
+        } as const
         const keptRefs: string[] = (Array.isArray(previousSong?.sourceRefs) ? previousSong.sourceRefs : []).filter((ref: any) => {
             const [prefix = "", code = ""] = String(ref || "").split(":")
             if (prefix.toLowerCase() === "manual") return false
@@ -467,11 +484,24 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
         writeFile(targetPath, JSON.stringify(payload, null, 2))
         return { success: true, path: targetPath, id: hymnId }
     } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : String(error) }
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+        }
     }
 }
 
-function syncHamroHymnShows(updates: { id?: string; title: string; titleEn?: string; lyrics: string; categoryId: "bhajan" | "chorus" | "children" | "new"; number?: string; authors?: string }[] = []) {
+function syncHamroHymnShows(
+    updates: {
+        id?: string
+        title: string
+        titleEn?: string
+        lyrics: string
+        categoryId: "bhajan" | "chorus" | "children" | "new"
+        number?: string
+        authors?: string
+    }[] = []
+) {
     const normalize = (value: any) =>
         String(value || "")
             .replace(/\r\n/g, "\n")
@@ -509,7 +539,10 @@ function syncHamroHymnShows(updates: { id?: string; title: string; titleEn?: str
         const editId = normalize(data.id)
         const title = normalize(data.title)
         const number = normalizeNumber(data.number)
-        const matches: { song: any; categoryId: "bhajan" | "chorus" | "children" | "new" }[] = []
+        const matches: {
+            song: any
+            categoryId: "bhajan" | "chorus" | "children" | "new"
+        }[] = []
 
         for (const category of payload?.categories || []) {
             const categoryId = normalizeCategory(category?.name)
@@ -561,7 +594,10 @@ function syncHamroHymnShows(updates: { id?: string; title: string; titleEn?: str
 
         return { success: true, updated }
     } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : String(error) }
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+        }
     }
 }
 
@@ -570,7 +606,10 @@ async function resetHamroData() {
         await reseedHamroChurchData()
         return { success: true }
     } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : String(error) }
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+        }
     }
 }
 
@@ -599,7 +638,12 @@ async function getConversationId(teamId: string): Promise<string | null> {
 async function sendSocketMessage(data: { churchId: string; teamId: string; displayName: string; content: string }): Promise<boolean> {
     const conversationId = await ChurchAppsChat.getOrCreateConversation(data.teamId)
     if (!conversationId) return false
-    return ChurchAppsChat.sendMessage({ churchId: data.churchId, conversationId, displayName: data.displayName, content: data.content })
+    return ChurchAppsChat.sendMessage({
+        churchId: data.churchId,
+        conversationId,
+        displayName: data.displayName,
+        content: data.content
+    })
 }
 
 function getOS() {
@@ -640,7 +684,12 @@ async function searchLyrics({ artist, title }: { artist: string; title: string }
 
 async function getLyrics({ song }: { song: LyricSearchResult }) {
     const lyrics = await LyricSearch.get(song)
-    return { lyrics, source: song.source, title: song.title, artist: song.artist }
+    return {
+        lyrics,
+        source: song.source,
+        title: song.title,
+        artist: song.artist
+    }
 }
 
 // GET DEVICE MEDIA PERMISSION

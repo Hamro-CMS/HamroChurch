@@ -1,18 +1,20 @@
 import { app, shell } from "electron"
 import axios from "axios"
 import { ToMain } from "../../types/IPC/ToMain"
-import type { SoftwarePromotionPayload } from "../../types/Main"
+import type { SoftwarePromotionPayload, SoftwarePromotionTransitionStyle } from "../../types/Main"
 import { config } from "../data/store"
 import { sendToMain } from "../IPC/main"
 
 const PROMOTION_URL = process.env.HAMRO_SOFTWARE_PROMOTION_URL || "https://hamrocms.com/api/v1/software/promotion"
-const INITIAL_DELAY_MS = 3500
+const INITIAL_DELAY_MS = 2800
 const POLL_INTERVAL_MS = 45 * 1000
 const MAX_MEDIA_BYTES = 4 * 1024 * 1024
 
+const VALID_TRANSITION_STYLES: SoftwarePromotionTransitionStyle[] = ["auto_mix", "flip_y", "flip_x", "flip_diagonal", "swing_3d"]
+
 let initialTimer: NodeJS.Timeout | null = null
 let pollTimer: NodeJS.Timeout | null = null
-let currentPromotion: SoftwarePromotionPayload | null = null
+let currentPromotions: SoftwarePromotionPayload[] = []
 let lastEmittedSignature = "__uninitialized__"
 
 const sessionDismissedKeys = new Set<string>()
@@ -42,9 +44,9 @@ function readDismissedMap(): { [key: string]: string } {
 function writeDismissedMap(map: { [key: string]: string }) {
     try {
         const keys = Object.keys(map)
-        if (keys.length > 100) {
+        if (keys.length > 120) {
             const trimmed: { [key: string]: string } = {}
-            for (const key of keys.slice(-80)) {
+            for (const key of keys.slice(-90)) {
                 trimmed[key] = map[key]
             }
             config.set("dismissed_promotions", trimmed)
@@ -56,7 +58,7 @@ function writeDismissedMap(map: { [key: string]: string }) {
     }
 }
 
-function isCampaignDismissed(promo: SoftwarePromotionPayload): boolean {
+function isCampaignDismissed(promo: SoftwarePromotionPayload, storedMap?: { [key: string]: string }): boolean {
     const key = promo.campaign_key
     if (!key) return false
 
@@ -64,7 +66,8 @@ function isCampaignDismissed(promo: SoftwarePromotionPayload): boolean {
         return true
     }
 
-    const stored = readDismissedMap()[key]
+    const map = storedMap || readDismissedMap()
+    const stored = map[key]
     if (!stored) return false
 
     if (promo.dismiss_mode === "once_per_campaign") {
@@ -90,6 +93,16 @@ function sanitizePromotion(raw: any): SoftwarePromotionPayload | null {
     const position = raw.position === "bottom_left" ? "bottom_left" : "clock_area"
     const dismissMode = raw.dismiss_mode === "once_per_campaign" || raw.dismiss_mode === "every_launch" ? raw.dismiss_mode : "once_per_day"
 
+    const rawDelay = Number(raw.delay_seconds)
+    const delaySeconds = Number.isFinite(rawDelay) && rawDelay >= 0 ? Math.min(86400, Math.floor(rawDelay)) : 0
+
+    const rawRotate = Number(raw.rotate_interval_seconds)
+    const rotateIntervalSeconds = Number.isFinite(rawRotate) && rawRotate >= 3 ? Math.min(300, Math.floor(rawRotate)) : 8
+
+    const transitionStyle: SoftwarePromotionTransitionStyle = VALID_TRANSITION_STYLES.includes(raw.transition_style) ? raw.transition_style : "auto_mix"
+
+    const sortOrder = Number.isFinite(Number(raw.sort_order)) ? Math.floor(Number(raw.sort_order)) : 0
+
     const imageUrl = typeof raw.image_url === "string" && /^https?:\/\//i.test(raw.image_url.trim()) ? raw.image_url.trim() : null
     const ctaUrl = typeof raw.cta_url === "string" && /^https?:\/\//i.test(raw.cta_url.trim()) ? raw.cta_url.trim() : "https://hamrocms.com"
     const eventUrl = typeof raw.event_url === "string" && /^https?:\/\//i.test(raw.event_url.trim()) ? raw.event_url.trim() : null
@@ -107,6 +120,11 @@ function sanitizePromotion(raw: any): SoftwarePromotionPayload | null {
         cta_url: ctaUrl,
         position,
         dismiss_mode: dismissMode,
+        delay_seconds: delaySeconds,
+        rotate_interval_seconds: rotateIntervalSeconds,
+        transition_style: transitionStyle,
+        sort_order: sortOrder,
+        draggable: raw.draggable !== false,
         starts_at: typeof raw.starts_at === "string" ? raw.starts_at : null,
         ends_at: typeof raw.ends_at === "string" ? raw.ends_at : null,
         event_url: eventUrl,
@@ -143,7 +161,7 @@ async function resolveMediaSource(promo: SoftwarePromotionPayload): Promise<stri
         const safeMime = ["image/gif", "image/jpeg", "image/png", "image/webp"].includes(headerMime) ? headerMime : "image/png"
         const dataUri = `data:${safeMime};base64,${buf.toString("base64")}`
 
-        if (mediaDataUriCache.size > 8) {
+        if (mediaDataUriCache.size > 16) {
             mediaDataUriCache.clear()
         }
         mediaDataUriCache.set(promo.image_url, dataUri)
@@ -175,40 +193,58 @@ async function recordPromotionMetric(promoId: number, event: "impression" | "cli
     }
 }
 
-function computeSignature(promo: SoftwarePromotionPayload | null): string {
-    if (!promo) return "none"
-    return [promo.id, promo.campaign_key, promo.title, promo.body || "", promo.image_url || "", promo.cta_label || "", promo.cta_url || "", promo.position, promo.dismiss_mode, promo.updated_at || ""].join("|")
+function computeListSignature(promos: SoftwarePromotionPayload[]): string {
+    if (!promos.length) return "none"
+    return promos.map((p) => [p.id, p.campaign_key, p.title, p.body || "", p.image_url || "", p.cta_label || "", p.cta_url || "", p.position, p.dismiss_mode, p.delay_seconds, p.rotate_interval_seconds, p.transition_style, p.sort_order, p.updated_at || ""].join("|")).join("||")
 }
 
-function emitPromotionToMainRenderer(promo: SoftwarePromotionPayload | null, force = false) {
-    const signature = computeSignature(promo)
+function emitPromotionsToMainRenderer(promos: SoftwarePromotionPayload[], force = false) {
+    const signature = computeListSignature(promos)
     if (!force && signature === lastEmittedSignature) return
     lastEmittedSignature = signature
-    sendToMain(ToMain.SOFTWARE_PROMOTION, promo)
+    sendToMain(ToMain.SOFTWARE_PROMOTION, promos)
 }
 
-export async function ingestPromotionFromServer(rawPromotion: any, forceEmit = false): Promise<SoftwarePromotionPayload | null> {
-    const parsed = sanitizePromotion(rawPromotion)
-
-    if (!parsed || isCampaignDismissed(parsed)) {
-        currentPromotion = null
-        emitPromotionToMainRenderer(null, forceEmit)
-        return null
+export async function ingestPromotionsFromServer(rawInput: any, forceEmit = false): Promise<SoftwarePromotionPayload[]> {
+    let rawList: any[] = []
+    if (Array.isArray(rawInput)) {
+        rawList = rawInput
+    } else if (rawInput && typeof rawInput === "object") {
+        if (Array.isArray(rawInput.promotions)) {
+            rawList = rawInput.promotions
+        } else if (rawInput.promotion && typeof rawInput.promotion === "object") {
+            rawList = [rawInput.promotion]
+        } else if ("id" in rawInput && "title" in rawInput) {
+            rawList = [rawInput]
+        }
     }
 
-    parsed.resolved_image_src = await resolveMediaSource(parsed)
-    currentPromotion = parsed
-    emitPromotionToMainRenderer(parsed, forceEmit)
+    const storedDismissed = readDismissedMap()
+    const seenKeys = new Set<string>()
+    const activeList: SoftwarePromotionPayload[] = []
 
-    if (!recordedImpressions.has(parsed.campaign_key)) {
-        recordedImpressions.add(parsed.campaign_key)
-        void recordPromotionMetric(parsed.id, "impression", parsed.event_url)
+    for (const item of rawList) {
+        const parsed = sanitizePromotion(item)
+        if (!parsed) continue
+        if (seenKeys.has(parsed.campaign_key)) continue
+        if (isCampaignDismissed(parsed, storedDismissed)) continue
+        seenKeys.add(parsed.campaign_key)
+        activeList.push(parsed)
     }
 
-    return parsed
+    await Promise.all(
+        activeList.map(async (promo) => {
+            promo.resolved_image_src = await resolveMediaSource(promo)
+        })
+    )
+
+    currentPromotions = activeList
+    emitPromotionsToMainRenderer(activeList, forceEmit)
+
+    return activeList
 }
 
-export async function fetchActiveSoftwarePromotion(forceEmit = false): Promise<SoftwarePromotionPayload | null> {
+export async function fetchActiveSoftwarePromotions(forceEmit = false): Promise<SoftwarePromotionPayload[]> {
     try {
         const response = await axios.get(PROMOTION_URL, {
             timeout: 8000,
@@ -219,39 +255,92 @@ export async function fetchActiveSoftwarePromotion(forceEmit = false): Promise<S
             }
         })
 
-        return await ingestPromotionFromServer(response.data?.promotion ?? null, forceEmit)
+        return await ingestPromotionsFromServer(response.data, forceEmit)
     } catch {
         // Remain silent when user has no internet connection during worship service
         if (forceEmit) {
-            emitPromotionToMainRenderer(currentPromotion, true)
+            emitPromotionsToMainRenderer(currentPromotions, true)
         }
-        return currentPromotion
+        return currentPromotions
     }
 }
 
-export async function getActiveSoftwarePromotion(): Promise<SoftwarePromotionPayload | null> {
-    if (currentPromotion && !isCampaignDismissed(currentPromotion)) {
-        return currentPromotion
+export async function getActiveSoftwarePromotions(): Promise<SoftwarePromotionPayload[]> {
+    const storedDismissed = readDismissedMap()
+    const filtered = currentPromotions.filter((p) => !isCampaignDismissed(p, storedDismissed))
+    if (filtered.length > 0) {
+        currentPromotions = filtered
+        return filtered
     }
-    return await fetchActiveSoftwarePromotion(true)
+    return await fetchActiveSoftwarePromotions(true)
 }
 
-export function dismissSoftwarePromotion(data: { campaignKey: string; dismissMode: "once_per_campaign" | "once_per_day" | "every_launch" }): boolean {
+export function recordSoftwarePromotionImpression(data: { id: number; campaignKey: string; eventUrl?: string | null }): boolean {
     const key = String(data?.campaignKey || "").trim()
-    if (!key) return false
+    const id = Number(data?.id)
+    if (!key || !Number.isFinite(id) || id <= 0) return false
+    if (recordedImpressions.has(key)) return false
 
-    sessionDismissedKeys.add(key)
+    recordedImpressions.add(key)
+    void recordPromotionMetric(id, "impression", data?.eventUrl)
+    return true
+}
 
-    if (data.dismissMode === "once_per_campaign" || data.dismissMode === "once_per_day") {
-        const map = readDismissedMap()
-        map[key] = data.dismissMode === "once_per_campaign" ? "forever" : todayLocalStamp()
+export function dismissSoftwarePromotion(data: {
+    campaignKey?: string
+    dismissMode?: "once_per_campaign" | "once_per_day" | "every_launch"
+    items?: {
+        campaignKey: string
+        dismissMode: "once_per_campaign" | "once_per_day" | "every_launch"
+    }[]
+}): boolean {
+    const targets: {
+        campaignKey: string
+        dismissMode: "once_per_campaign" | "once_per_day" | "every_launch"
+    }[] = []
+
+    if (Array.isArray(data?.items) && data.items.length > 0) {
+        for (const item of data.items) {
+            const key = String(item?.campaignKey || "").trim()
+            if (key) {
+                targets.push({
+                    campaignKey: key,
+                    dismissMode: item.dismissMode || "once_per_day"
+                })
+            }
+        }
+    } else if (data?.campaignKey) {
+        const key = String(data.campaignKey).trim()
+        if (key) {
+            targets.push({
+                campaignKey: key,
+                dismissMode: data.dismissMode || "once_per_day"
+            })
+        }
+    }
+
+    if (!targets.length) return false
+
+    const map = readDismissedMap()
+    let shouldPersist = false
+    const dismissedSet = new Set<string>()
+
+    for (const target of targets) {
+        sessionDismissedKeys.add(target.campaignKey)
+        dismissedSet.add(target.campaignKey)
+
+        if (target.dismissMode === "once_per_campaign" || target.dismissMode === "once_per_day") {
+            map[target.campaignKey] = target.dismissMode === "once_per_campaign" ? "forever" : todayLocalStamp()
+            shouldPersist = true
+        }
+    }
+
+    if (shouldPersist) {
         writeDismissedMap(map)
     }
 
-    if (currentPromotion?.campaign_key === key) {
-        currentPromotion = null
-        emitPromotionToMainRenderer(null, true)
-    }
+    currentPromotions = currentPromotions.filter((p) => !dismissedSet.has(p.campaign_key))
+    emitPromotionsToMainRenderer(currentPromotions, true)
 
     return true
 }
@@ -277,11 +366,11 @@ export function startSoftwarePromotions() {
 
     initialTimer = setTimeout(() => {
         initialTimer = null
-        void fetchActiveSoftwarePromotion(true)
+        void fetchActiveSoftwarePromotions(true)
     }, INITIAL_DELAY_MS)
 
     pollTimer = setInterval(() => {
-        void fetchActiveSoftwarePromotion(false)
+        void fetchActiveSoftwarePromotions(false)
     }, POLL_INTERVAL_MS)
 }
 

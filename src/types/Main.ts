@@ -21,6 +21,8 @@ export interface Config {
     dismissed_promotions?: { [campaignKey: string]: string }
 }
 
+export type SoftwarePromotionTransitionStyle = "auto_mix" | "flip_y" | "flip_x" | "flip_diagonal" | "swing_3d"
+
 export interface SoftwarePromotionPayload {
     id: number
     campaign_key: string
@@ -34,6 +36,11 @@ export interface SoftwarePromotionPayload {
     cta_url: string | null
     position: "clock_area" | "bottom_left"
     dismiss_mode: "once_per_campaign" | "once_per_day" | "every_launch"
+    delay_seconds: number
+    rotate_interval_seconds: number
+    transition_style: SoftwarePromotionTransitionStyle
+    sort_order: number
+    draggable?: boolean
     starts_at: string | null
     ends_at: string | null
     event_url: string | null
@@ -233,7 +240,15 @@ export interface ActiveEdit {
     data?: any // camera data
 }
 
-export type FileFolder = { isFolder: false; path: string; name: string; thumbnailPath?: string; stats: Stats } | { isFolder: true; path: string; name: string; files: string[] }
+export type FileFolder =
+    | {
+          isFolder: false
+          path: string
+          name: string
+          thumbnailPath?: string
+          stats: Stats
+      }
+    | { isFolder: true; path: string; name: string; files: string[] }
 
 export type MediaFit = "contain" | "cover" | "fill" | "blur"
 export interface Media {

@@ -5,7 +5,7 @@ import { app } from "electron"
 import axios from "axios"
 import type { DeleteAnalyticsResult, PrivacySettings } from "../../types/Main"
 import { config } from "../data/store"
-import { ingestPromotionFromServer } from "./softwarePromotions"
+import { ingestPromotionsFromServer } from "./softwarePromotions"
 
 const HEARTBEAT_URL = process.env.HAMRO_SOFTWARE_HEARTBEAT_URL || "https://hamrocms.com/api/v1/software/heartbeat"
 const DELETE_DEVICE_BASE_URL = process.env.HAMRO_ANALYTICS_DELETE_BASE_URL || "https://hamrocms.com/api/analytics/device"
@@ -143,8 +143,8 @@ async function sendHeartbeat(event: HeartbeatEvent = "heartbeat", timeout = 8000
             }
         })
 
-        if (event !== "stop" && response.data && "promotion" in response.data) {
-            void ingestPromotionFromServer(response.data.promotion)
+        if (event !== "stop" && response.data && ("promotions" in response.data || "promotion" in response.data)) {
+            void ingestPromotionsFromServer(response.data)
         }
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
