@@ -5,6 +5,7 @@
     import { VIRTUAL_BREAK_CHAR } from "../../../show/slides"
     import { activeEdit, activeShow, activeStage, activeTriggerFunction, overlays, redoHistory, refreshListBoxes, showsCache, stageShows, templates } from "../../../stores"
     import { newToast } from "../../../utils/common"
+    import { sanitizeHtml } from "../../../utils/sanitizeHtml"
     import { getNormalizedKey, isFormattingKey } from "../../../utils/shortcuts"
     import T from "../../helpers/T.svelte"
     import { clone } from "../../helpers/array"
@@ -96,7 +97,7 @@
     function getStyle() {
         if (!plain && $activeEdit.slide === null) return
         let result = EditboxHelper.getStyleHtml(item, plain, currentStyle, ref.origin === "powerpoint")
-        html = result.html
+        html = sanitizeHtml(result.html)
         currentStyle = result.currentStyle
         previousHTML = html
     }
@@ -784,7 +785,7 @@
             </span>
         {/if}
         {#if isLocked}
-            <div class="edit">{@html html}</div>
+            <div class="edit">{@html sanitizeHtml(html)}</div>
         {:else}
             {#if chordsMode && textElem}
                 <EditboxChords {item} {autoSize} {index} {ref} {chordsMode} {chordsAction} />

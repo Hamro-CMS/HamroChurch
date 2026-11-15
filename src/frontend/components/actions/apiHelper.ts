@@ -9,6 +9,7 @@ import { AudioPlaylist } from "../../audio/audioPlaylist"
 import { activeDrawerTab, activeEdit, activePage, activeProject, activeShow, activeTimers, audioPlaylists, draw, drawSettings, drawTool, folders, groupNumbers, groups, media, openScripture, outLocked, outputs, overlays, pdfImports, playingAudio, playingMetronome, projects, refreshEditSlide, selected, shows, showsCache, sortedShowsList, special, styles, timers, variables, volume } from "../../stores"
 import { newToast } from "../../utils/common"
 import { send } from "../../utils/request"
+import { evaluateSafeExpression } from "../../utils/safeExpression"
 import { getDynamicValue } from "../edit/scripts/itemHelpers"
 import { keysToID, removeDeleted, sortByName } from "../helpers/array"
 import { ondrop } from "../helpers/drop"
@@ -359,9 +360,13 @@ export function changeVariable(data: API_variable) {
     if (key === "expression") {
         const stringValue = (data.value || "").toString()
         const replacedValues = stringValue.includes("{") ? getDynamicValue(stringValue) : stringValue
-        // eslint-disable-next-line
-        const calculated = new Function(`return ${replacedValues}`)()
-        value = Number(calculated)
+        try {
+            const calculated = evaluateSafeExpression(replacedValues)
+            value = Number(calculated)
+        } catch {
+            return
+        }
+        if (isNaN(value)) return
         key = "number"
     } else if (data.variableAction || variable.type === "number") {
         value = Number(variable.number || variable.default || 0)

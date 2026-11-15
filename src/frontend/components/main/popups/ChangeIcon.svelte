@@ -1,5 +1,6 @@
 <script lang="ts">
     import { activePopup, categories, customizedIcons, mediaFolders, overlayCategories, popupData, selected, templateCategories } from "../../../stores"
+    import { sanitizeSvg } from "../../../utils/sanitizeHtml"
     import { customIcons, customIconsColors } from "../../../values/customIcons"
     import { addItem } from "../../edit/scripts/itemHelpers"
     import Icon from "../../helpers/Icon.svelte"
@@ -56,7 +57,7 @@
     <div class="custom grid">
         {#each $customizedIcons.svg as icon}
             <MaterialButton style="padding: 12px;" on:click={() => click(icon.id, icon.path)}>
-                {@html icon.path}
+                {@html sanitizeSvg(icon.path)}
             </MaterialButton>
         {/each}
     </div>

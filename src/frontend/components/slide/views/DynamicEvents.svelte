@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte"
     import { activeDrawerTab, drawer, events } from "../../../stores"
+    import { escapeHtml, sanitizeHtml } from "../../../utils/sanitizeHtml"
     import { getTime } from "../../drawer/calendar/calendar"
     import { keysToID, sortByTime } from "../../helpers/array"
     import { setDrawerTabData } from "../../helpers/historyHelpers"
@@ -57,18 +58,18 @@
 
         if (event.time) {
             let time = getTime(new Date(event.from))
-            html += `<span style="font-weight: bold;font-size:${textSize * 0.8}px;font-family:Arial;">${time} </span>`
+            html += `<span style="font-weight: bold;font-size:${textSize * 0.8}px;font-family:Arial;">${escapeHtml(time)} </span>`
         }
-        html += `<span style="font-size:${textSize}px;">${event.name}`
-        if (event.location) html += `<span style="font-size:${textSize * 0.9}px;font-style:italic;"> - ${event.location}`
+        html += `<span style="font-size:${textSize}px;">${escapeHtml(event.name)}`
+        if (event.location) html += `<span style="font-size:${textSize * 0.9}px;font-style:italic;"> - ${escapeHtml(event.location)}`
         if (event.notes) html += ":"
         html += `</span>`
         if (event.location) html += `</span>`
 
         html += "</p>"
-        if (event.notes) html += `<p><span style="font-size:${textSize * 0.8}px;">&nbsp;&nbsp;&nbsp;&nbsp;${event.notes}</span></p>`
+        if (event.notes) html += `<p><span style="font-size:${textSize * 0.8}px;">&nbsp;&nbsp;&nbsp;&nbsp;${escapeHtml(event.notes)}</span></p>`
 
-        return html
+        return sanitizeHtml(html)
     }
 
     function openInDrawer() {

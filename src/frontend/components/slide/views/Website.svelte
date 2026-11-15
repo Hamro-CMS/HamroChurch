@@ -23,8 +23,8 @@
         if (!src.includes("://")) src = "http://" + src
 
         try {
-            new URL(src)
-            valid = true
+            const parsed = new URL(src)
+            valid = parsed.protocol === "https:" || parsed.protocol === "http:"
         } catch (err) {
             console.error(err)
         }

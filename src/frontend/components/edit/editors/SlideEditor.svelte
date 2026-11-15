@@ -7,6 +7,7 @@
     import { DEFAULT_WIDTH, triggerFunction } from "../../../utils/common"
     import { translateText } from "../../../utils/language"
     import { getAccess } from "../../../utils/profile"
+    import { sanitizeHtml } from "../../../utils/sanitizeHtml"
     import { slideHasAction } from "../../actions/actions"
     import MediaLoader from "../../drawer/media/MediaLoader.svelte"
     import Icon from "../../helpers/Icon.svelte"
@@ -405,7 +406,7 @@
     {:else if notesVisible}
         <div class="notes" role="none" data-title={translateText("tools.notes")} on:click={() => slideNotesActive.set(true)}>
             <Icon id="notes" right white />
-            <p>{@html notes}</p>
+            <p>{@html sanitizeHtml(notes)}</p>
         </div>
     {/if}
 

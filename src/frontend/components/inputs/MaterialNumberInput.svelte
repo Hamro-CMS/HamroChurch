@@ -1,6 +1,7 @@
 <script lang="ts">
     import { createEventDispatcher, onMount } from "svelte"
     import { translateText } from "../../utils/language"
+    import { evaluateSafeExpression } from "../../utils/safeExpression"
     import Icon from "../helpers/Icon.svelte"
     import MaterialButton from "./MaterialButton.svelte"
 
@@ -47,7 +48,7 @@
         let calcVal: number
         if (!padLength) {
             try {
-                calcVal = typeof normalizedVal === "string" ? new Function(`return ${normalizedVal}`)() : normalizedVal
+                calcVal = typeof normalizedVal === "string" ? Number(evaluateSafeExpression(normalizedVal)) : normalizedVal
             } catch {
                 // invalid expression
                 return

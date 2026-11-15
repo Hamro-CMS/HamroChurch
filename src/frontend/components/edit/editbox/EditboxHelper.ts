@@ -1,6 +1,7 @@
 import { get } from "svelte/store"
 import type { Item, Line } from "../../../../types/Show"
 import { styles } from "../../../stores"
+import { escapeHtml, sanitizeCssStyle, sanitizeHtml } from "../../../utils/sanitizeHtml"
 import { clone } from "../../helpers/array"
 import { getFirstActiveOutput } from "../../helpers/output"
 import { getStyles } from "../../helpers/style"
@@ -173,7 +174,8 @@ export class EditboxHelper {
         item?.lines?.forEach((line, i) => {
             const align = (line.align || "").replaceAll(lineStyleBg, "").replaceAll(lineStyleRadius, "") + ";"
             currentStyle += align + lineStyleBg + lineStyleRadius // + line.chords?.map((a) => a.key)
-            const style = align || lineStyleBg || lineStyleRadius || listStyle ? 'style="' + align + lineStyleBg + lineStyleRadius + listStyle + '"' : ""
+            const safeLineStyle = sanitizeCssStyle(align + lineStyleBg + lineStyleRadius + listStyle)
+            const style = safeLineStyle ? 'style="' + escapeHtml(safeLineStyle) + '"' : ""
 
             const normalWrap = useNormalWrap || align.includes("justify") || align.includes("left") || JSON.stringify(line).includes("nowrap")
 
@@ -195,12 +197,13 @@ export class EditboxHelper {
                 const textChords = currentChords.filter((chord) => chord.pos >= textIndex && (chord.pos <= textEnd || line.text.length - 1 >= tIndex))
                 textIndex = textEnd
 
-                const textStyle = a.style || listStyle ? 'style="' + this.getCustomTextStyle(a.style) + listStyle + '"' : ""
-                let value = a.value?.replaceAll("\n", "<br>") || "<br>"
+                const safeSpanStyle = sanitizeCssStyle(this.getCustomTextStyle(a.style) + listStyle)
+                const textStyle = (a.style || listStyle) && safeSpanStyle ? 'style="' + escapeHtml(safeSpanStyle) + '"' : ""
+                const value = sanitizeHtml(a.value?.replaceAll("\n", "<br>") || "<br>")
                 // if (value === " ") value = "&nbsp;"
 
                 // this will "hide" any HTML tags if any in the actual text content (not chords or text editor)
-                html += `<span class="${a.customType && !a.customType.includes("jw") ? "custom" : ""}" ${plain ? "" : textStyle} data-customtype='${a.customType || ""}' data-sourcedynamickey='${a.sourceDynamicKey || ""}' data-chords='${JSON.stringify(textChords)}'>` + value + "</span>"
+                html += `<span class="${a.customType && !a.customType.includes("jw") ? "custom" : ""}" ${plain ? "" : textStyle} data-customtype='${escapeHtml(a.customType || "")}' data-sourcedynamickey='${escapeHtml(a.sourceDynamicKey || "")}' data-chords='${escapeHtml(JSON.stringify(textChords))}'>` + value + "</span>"
             })
             html += "</div>"
         })

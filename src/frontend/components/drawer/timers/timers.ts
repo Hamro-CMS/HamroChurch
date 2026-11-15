@@ -8,6 +8,7 @@ import { showsCache } from "./../../../stores"
 import { customActionActivation } from "../../actions/actions"
 import { joinTimeBig } from "../../helpers/time"
 import { getDynamicValue } from "../../edit/scripts/itemHelpers"
+import { evaluateSafeExpression } from "../../../utils/safeExpression"
 
 const typeOrder = { counter: 1, clock: 2, event: 3 }
 export function getSortedTimers(updater = get(timers), options: { showHours?: boolean; firstActive?: boolean }) {
@@ -129,13 +130,13 @@ export function getTimerDynamicValue(val: string | undefined, _updater: any = nu
     if (val.startsWith("{")) return 0
 
     try {
-        val = new Function(`return ${val}`)()
+        const evaluated = evaluateSafeExpression(val)
+        const num = Number(evaluated)
+        return isNaN(num) ? 0 : num
     } catch {
         // invalid expression
         return isNaN(Number(val)) ? 0 : Number(val)
     }
-
-    return isNaN(Number(val)) ? 0 : Number(val)
 }
 
 function getClosestUpcommingEvent(eventGroup: string) {

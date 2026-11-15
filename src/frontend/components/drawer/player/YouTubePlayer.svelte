@@ -13,18 +13,47 @@
     // load new video if URL changes
     $: play(videoId)
 
-    function createPlayer() {
-        player = YoutubePlayer(playerElem, options)
+    function ensureHttpsYouTubeApi(): Promise<void> {
+        if (typeof window === "undefined" || window.location.protocol !== "http:" || (window as any).YT?.Player) {
+            return Promise.resolve()
+        }
 
-        // EVENTS
-        player.on("ready", onPlayerReady)
-        player.on("error", onPlayerError)
-        player.on("stateChange", onPlayerStateChange)
-        // player.on("playbackRateChange", onPlayerPlaybackRateChange)
-        // player.on("playbackQualityChange", onPlayerPlaybackQualityChange)
+        return new Promise((resolve) => {
+            const existing = document.querySelector('script[src="https://www.youtube.com/iframe_api"]')
+            const prevReady = (window as any).onYouTubeIframeAPIReady
+            ;(window as any).onYouTubeIframeAPIReady = () => {
+                if (typeof prevReady === "function") prevReady()
+                resolve()
+            }
+            if (!existing) {
+                const script = document.createElement("script")
+                script.src = "https://www.youtube.com/iframe_api"
+                script.async = true
+                script.onerror = () => resolve()
+                document.head.appendChild(script)
+            }
+        })
+    }
+
+    function createPlayer() {
+        let destroyed = false
+        void ensureHttpsYouTubeApi().then(() => {
+            if (destroyed || !playerElem) return
+            player = YoutubePlayer(playerElem, options)
+
+            // EVENTS
+            player.on("ready", onPlayerReady)
+            player.on("error", onPlayerError)
+            player.on("stateChange", onPlayerStateChange)
+            // player.on("playbackRateChange", onPlayerPlaybackRateChange)
+            // player.on("playbackQualityChange", onPlayerPlaybackQualityChange)
+        })
 
         // destroy on unmount
-        return () => player.destroy()
+        return () => {
+            destroyed = true
+            if (player) player.destroy()
+        }
     }
 
     function play(videoId: string) {

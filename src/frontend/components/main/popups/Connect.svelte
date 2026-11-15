@@ -4,7 +4,7 @@
     import { Main } from "../../../../types/IPC/Main"
     import { AudioAnalyser } from "../../../audio/audioAnalyser"
     import { sendMain } from "../../../IPC/main"
-    import { activePopup, maxConnections, os, outputs, popupData, ports, remotePassword, serverData, special } from "../../../stores"
+    import { activePopup, companion, maxConnections, os, outputs, popupData, ports, remotePassword, serverData, special } from "../../../stores"
     import { clone, keysToID, sortByName } from "../../helpers/array"
     import Icon from "../../helpers/Icon.svelte"
     import T from "../../helpers/T.svelte"
@@ -68,6 +68,18 @@
             a[id] = port
             return a
         })
+
+        if (id === "companion" && $companion?.enabled) {
+            sendMain(Main.WEBSOCKET_START, { port, allowLan: $companion?.allowLan === true, token: $companion?.token || "" })
+        }
+    }
+
+    function updateCompanionConfig(key: "allowLan" | "token", value: any) {
+        let next = { ...($companion || {}), [key]: value }
+        companion.set(next)
+        if (next.enabled) {
+            sendMain(Main.WEBSOCKET_START, { port: $ports.companion, allowLan: next.allowLan === true, token: next.token || "" })
+        }
     }
 
     const setRemotePassword = (e: any) => remotePassword.set(e.detail)
@@ -119,6 +131,9 @@
 
     {#if id === "remote"}
         <MaterialTextInput label="remote.password" value={$remotePassword} on:change={setRemotePassword} />
+    {:else if id === "companion"}
+        <MaterialTextInput label="API Token" type="password" disableNepaliTyping value={$companion?.token || ""} placeholder="Required for LAN access" on:change={(e) => updateCompanionConfig("token", e.detail)} />
+        <MaterialToggleSwitch label="Allow LAN Access" checked={$companion?.allowLan === true} defaultValue={false} on:change={(e) => updateCompanionConfig("allowLan", e.detail)} />
     {:else if id === "output_stream"}
         <!-- {#if enableOutputSelector} -->
         <MaterialDropdown label="midi.output" options={outputsList} value={$serverData?.output_stream?.outputId || ""} on:change={(e) => updateData(e.detail, "outputId")} allowEmpty />

@@ -1,5 +1,5 @@
 import { spawn } from "child_process"
-import { createHash } from "crypto"
+import { createHash, timingSafeEqual } from "crypto"
 import { app, shell } from "electron"
 import axios from "axios"
 import fs from "fs"
@@ -12,9 +12,10 @@ import { config } from "./data/store"
 
 const RELEASES_LATEST_URL = "https://api.github.com/repos/Hamro-CMS/HamroChurch/releases/latest"
 const RELEASES_PAGE_URL = "https://github.com/Hamro-CMS/HamroChurch/releases"
+const RELEASE_DOWNLOAD_BASE_URL = "https://github.com/Hamro-CMS/HamroChurch/releases/download"
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
-const UPDATE_TEMP_DIR = path.join(os.tmpdir(), "Hamro Church Updates")
 const ALLOWED_UPDATE_EXTENSIONS = new Set([".exe", ".dmg", ".zip", ".appimage", ".deb", ".rpm"])
+const SAFE_TAG_RE = /^[A-Za-z0-9._+-]+$/
 
 function isTrustedGitHubAssetUrl(rawUrl: unknown): boolean {
     if (typeof rawUrl !== "string" || !rawUrl.trim()) return false
@@ -70,7 +71,7 @@ type GitHubRelease = {
 let cachedUpdateInfo: AppUpdateInfo | null = null
 
 export function initializeUpdater() {
-    fs.mkdirSync(UPDATE_TEMP_DIR, { recursive: true })
+    // Updates download into isolated per-run temporary directories via fs.mkdtempSync
 }
 
 function normalizeVersion(value: string) {
@@ -149,7 +150,8 @@ function selectAsset(release: GitHubRelease): AppUpdateAsset | null {
         name: path.basename(asset.name),
         url: asset.browser_download_url,
         contentType: asset.content_type,
-        digest: asset.digest || null
+        digest: asset.digest || null,
+        tagName: typeof release.tag_name === "string" ? release.tag_name.trim() : undefined
     }
 }
 
@@ -222,10 +224,162 @@ export async function checkForUpdates(options: { manual?: boolean; includeBeta?:
     }
 }
 
-function getExpectedHash(asset: AppUpdateAsset | null | undefined) {
-    const digest = String(asset?.digest || "")
-    if (!digest.startsWith("sha256:")) return null
-    return digest.slice("sha256:".length)
+function getExpectedSha256Buffer(asset: AppUpdateAsset | null | undefined): Buffer | null {
+    const digest = String(asset?.digest || "").trim()
+    if (!/^sha256:[0-9a-fA-F]{64}$/.test(digest)) return null
+    return Buffer.from(digest.slice("sha256:".length), "hex")
+}
+
+function parseSha512ToBuffer(rawSha512: string): Buffer | null {
+    const cleaned = rawSha512.trim().replace(/^['"]|['"]$/g, "")
+    if (!cleaned) return null
+
+    if (/^[0-9a-fA-F]{128}$/.test(cleaned)) {
+        return Buffer.from(cleaned, "hex")
+    }
+
+    if (/^[A-Za-z0-9+/=]{86,90}$/.test(cleaned)) {
+        const buf = Buffer.from(cleaned, "base64")
+        if (buf.length === 64) return buf
+    }
+
+    return null
+}
+
+function normalizeAssetKey(fileName: string): string {
+    try {
+        fileName = decodeURIComponent(fileName)
+    } catch {
+        // ignore decode error
+    }
+    return path
+        .basename(fileName.trim())
+        .toLowerCase()
+        .replace(/[\s._-]+/g, "-")
+}
+
+function extractSha512FromLatestYml(ymlContent: string, expectedFileName: string): Buffer | null {
+    if (!ymlContent || typeof ymlContent !== "string") return null
+
+    const targetExact = expectedFileName.toLowerCase()
+    const targetNormalized = normalizeAssetKey(expectedFileName)
+
+    const entries: Array<{ name: string; sha512: string }> = []
+    let currentEntryName = ""
+    let topLevelPath = ""
+    let topLevelSha512 = ""
+
+    for (const rawLine of ymlContent.split(/\r?\n/)) {
+        const trimmed = rawLine.trim()
+        if (!trimmed || trimmed.startsWith("#")) continue
+
+        const urlMatch = trimmed.match(/^-?\s*url\s*:\s*(.+)$/)
+        if (urlMatch) {
+            currentEntryName = urlMatch[1].trim().replace(/^['"]|['"]$/g, "")
+            continue
+        }
+
+        const entryShaMatch = rawLine.match(/^\s+sha512\s*:\s*(.+)$/)
+        if (entryShaMatch && currentEntryName) {
+            entries.push({
+                name: currentEntryName,
+                sha512: entryShaMatch[1].trim().replace(/^['"]|['"]$/g, "")
+            })
+            currentEntryName = ""
+            continue
+        }
+
+        const topPathMatch = rawLine.match(/^path\s*:\s*(.+)$/)
+        if (topPathMatch) {
+            topLevelPath = topPathMatch[1].trim().replace(/^['"]|['"]$/g, "")
+            continue
+        }
+
+        const topShaMatch = rawLine.match(/^sha512\s*:\s*(.+)$/)
+        if (topShaMatch) {
+            topLevelSha512 = topShaMatch[1].trim().replace(/^['"]|['"]$/g, "")
+        }
+    }
+
+    if (topLevelPath && topLevelSha512) {
+        entries.push({ name: topLevelPath, sha512: topLevelSha512 })
+    }
+
+    const matched =
+        entries.find((e) => path.basename(e.name).toLowerCase() === targetExact) ||
+        entries.find((e) => normalizeAssetKey(e.name) === targetNormalized)
+
+    if (!matched) return null
+    return parseSha512ToBuffer(matched.sha512)
+}
+
+function resolveReleaseTag(asset: AppUpdateAsset): string | null {
+    if (asset.tagName && SAFE_TAG_RE.test(asset.tagName) && asset.tagName !== "." && asset.tagName !== "..") {
+        return asset.tagName
+    }
+
+    // Fallback: extract tag from official GitHub release download URL if present
+    try {
+        const parsed = new URL(asset.url)
+        if (parsed.protocol === "https:" && parsed.hostname.toLowerCase() === "github.com") {
+            const parts = parsed.pathname.split("/").filter(Boolean)
+            // /Hamro-CMS/HamroChurch/releases/download/<tag>/<file>
+            if (parts.length >= 6 && parts[0].toLowerCase() === "hamro-cms" && parts[1].toLowerCase() === "hamrochurch" && parts[2] === "releases" && parts[3] === "download") {
+                const decodedTag = decodeURIComponent(parts[4])
+                if (SAFE_TAG_RE.test(decodedTag) && decodedTag !== "." && decodedTag !== "..") {
+                    return decodedTag
+                }
+            }
+        }
+    } catch {
+        // ignore
+    }
+
+    return null
+}
+
+async function fetchExpectedSha512FromReleaseYml(asset: AppUpdateAsset, safeFileName: string): Promise<Buffer | null> {
+    const tag = resolveReleaseTag(asset)
+    if (!tag) return null
+
+    const ymlCandidates = process.platform === "darwin" ? ["latest-mac.yml", "latest.yml"] : process.platform === "linux" ? ["latest-linux.yml", "latest.yml"] : ["latest.yml"]
+
+    for (const ymlName of ymlCandidates) {
+        const ymlUrl = `${RELEASE_DOWNLOAD_BASE_URL}/${encodeURIComponent(tag)}/${ymlName}`
+        if (!isTrustedGitHubAssetUrl(ymlUrl)) continue
+
+        try {
+            const response = await axios.get<string>(ymlUrl, {
+                responseType: "text",
+                timeout: 15000,
+                headers: {
+                    "User-Agent": `Hamro Church/${app.getVersion()}`
+                },
+                validateStatus: (status) => status >= 200 && status < 300
+            })
+
+            const finalUrl = response.request?.res?.responseUrl
+            if (finalUrl && !isTrustedGitHubAssetUrl(finalUrl)) {
+                throw new Error("Blocked untrusted redirect while fetching release checksum manifest.")
+            }
+
+            const parsedSha512 = extractSha512FromLatestYml(String(response.data || ""), safeFileName)
+            if (parsedSha512) return parsedSha512
+        } catch {
+            // Try next candidate if available; fail-closed caller rejects if none succeed
+        }
+    }
+
+    return null
+}
+
+async function cleanupUpdateTempDir(tempDir: string) {
+    if (!tempDir) return
+    try {
+        await fs.promises.rm(tempDir, { recursive: true, force: true })
+    } catch {
+        // ignore cleanup failure
+    }
 }
 
 async function downloadAsset(asset: AppUpdateAsset) {
@@ -239,37 +393,62 @@ async function downloadAsset(asset: AppUpdateAsset) {
         throw new Error("Blocked invalid update installer filename.")
     }
 
-    await fs.promises.mkdir(UPDATE_TEMP_DIR, { recursive: true })
-    const resolvedTempRoot = path.resolve(UPDATE_TEMP_DIR)
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "hamro-church-update-"))
+    const resolvedTempRoot = path.resolve(tempDir)
     const targetPath = path.resolve(resolvedTempRoot, safeFileName)
     if (!targetPath.startsWith(resolvedTempRoot + path.sep)) {
+        await cleanupUpdateTempDir(tempDir)
         throw new Error("Blocked unsafe update destination path.")
     }
 
-    const response = await axios.get(asset.url, {
-        responseType: "stream",
-        timeout: 120000,
-        headers: githubHeaders(),
-        validateStatus: (status) => status >= 200 && status < 300
-    })
+    try {
+        const response = await axios.get(asset.url, {
+            responseType: "stream",
+            timeout: 120000,
+            headers: githubHeaders(),
+            validateStatus: (status) => status >= 200 && status < 300
+        })
 
-    const hash = createHash("sha256")
-    const hashStream = new Transform({
-        transform(chunk, _encoding, callback) {
-            hash.update(chunk)
-            callback(null, chunk)
+        const finalAssetUrl = response.request?.res?.responseUrl
+        if (finalAssetUrl && !isTrustedGitHubAssetUrl(finalAssetUrl)) {
+            throw new Error("Blocked untrusted redirect during update download.")
         }
-    })
 
-    await pipeline(response.data, hashStream, fs.createWriteStream(targetPath))
+        const sha256Hash = createHash("sha256")
+        const sha512Hash = createHash("sha512")
+        const hashStream = new Transform({
+            transform(chunk, _encoding, callback) {
+                sha256Hash.update(chunk)
+                sha512Hash.update(chunk)
+                callback(null, chunk)
+            }
+        })
 
-    const expectedHash = getExpectedHash(asset)
-    if (expectedHash) {
-        const actualHash = hash.digest("hex")
-        if (actualHash !== expectedHash) throw new Error("Downloaded update file failed integrity validation")
+        await pipeline(response.data, hashStream, fs.createWriteStream(targetPath, { mode: 0o600 }))
+
+        const actualSha256Buf = sha256Hash.digest()
+        const actualSha512Buf = sha512Hash.digest()
+
+        const expectedSha256Buf = getExpectedSha256Buffer(asset)
+        if (expectedSha256Buf) {
+            if (actualSha256Buf.length !== expectedSha256Buf.length || !timingSafeEqual(actualSha256Buf, expectedSha256Buf)) {
+                throw new Error("Downloaded update file failed SHA-256 integrity validation.")
+            }
+        } else {
+            const expectedSha512Buf = await fetchExpectedSha512FromReleaseYml(asset, safeFileName)
+            if (!expectedSha512Buf) {
+                throw new Error("Update integrity verification failed: neither GitHub asset digest nor official release latest.yml SHA-512 checksum could be verified.")
+            }
+            if (actualSha512Buf.length !== expectedSha512Buf.length || !timingSafeEqual(actualSha512Buf, expectedSha512Buf)) {
+                throw new Error("Downloaded update file failed SHA-512 integrity validation against latest.yml.")
+            }
+        }
+
+        return targetPath
+    } catch (error) {
+        await cleanupUpdateTempDir(tempDir)
+        throw error
     }
-
-    return targetPath
 }
 
 async function launchDetachedExecutable(command: string, args: string[] = []) {

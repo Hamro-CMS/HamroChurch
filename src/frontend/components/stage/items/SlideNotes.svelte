@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { OutSlide } from "../../../../types/Show"
     import { showsCache } from "../../../stores"
+    import { sanitizeHtml } from "../../../utils/sanitizeHtml"
     import { getLayoutRef } from "../../helpers/show"
     import { getStageTextLayoutOffset } from "../stage"
 
@@ -20,7 +21,7 @@
 
 {#if slide}
     <div class="autoFontSize" style="font-size: {autoSize}px;">
-        {@html notes}
+        {@html sanitizeHtml(notes)}
     </div>
 {/if}
 

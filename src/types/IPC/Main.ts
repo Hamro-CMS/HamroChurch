@@ -260,7 +260,7 @@ export interface MainSendPayloads {
         data: { [key: string]: ServerData }
     }
     [Main.SERVER_DATA]: { [key: string]: any }
-    [Main.WEBSOCKET_START]: number
+    [Main.WEBSOCKET_START]: number | undefined | { port?: number; allowLan?: boolean; token?: string }
     [Main.API_TRIGGER]: { action: string; returnId: string; data: any }
     [Main.EMIT_OSC]: { signal: any; data: any }
     [Main.GET_MIDI_OUTPUTS]: string[]

@@ -2,6 +2,7 @@
     import type { Item } from "../../../../types/Show"
     import { activePopup, selected, storedChordsData } from "../../../stores"
     import { waitForPopupData } from "../../../utils/popup"
+    import { escapeHtml, sanitizeHtml } from "../../../utils/sanitizeHtml"
     import { clone } from "../../helpers/array"
     import { deleteAction } from "../../helpers/clipboard"
     import { addChords } from "./../scripts/chords"
@@ -84,7 +85,7 @@
                         let chord = chords[chordIndex]
                         chordButtons.push({ item, showRef: ref, itemIndex: index, chord, lineIndex: i })
                         let buttonIndex = chordButtons.length - 1
-                        html += `<span id="${buttonIndex}" class="context #chord chord button">${chord.key}</span>`
+                        html += `<span id="${buttonIndex}" class="context #chord chord button">${escapeHtml(chord.key)}</span>`
                         chords.splice(chordIndex, 1)
                     }
 
@@ -92,7 +93,7 @@
                     if (item.auto && autoSize) style += `font-size: ${autoSize}px;`
 
                     // in some cases spaces will get width 0 and change text layout if at line breaks (this is not an issue)
-                    html += `<span id="${i}_${currentIndex}" class="invisible add" style="${style}">${letter}</span>`
+                    html += `<span id="${i}_${currentIndex}" class="invisible add" style="${escapeHtml(style || "")}">${escapeHtml(letter)}</span>`
 
                     currentIndex++
                 })
@@ -103,11 +104,11 @@
             chords.forEach((chord, ci) => {
                 chordButtons.push({ item, showRef: ref, itemIndex: index, chord, lineIndex: i })
                 let buttonIndex = chordButtons.length - 1
-                html += `<span id="${buttonIndex}" class="context #chord chord button" style="transform: translate(${60 * (ci + 1)}px, -80%);">${chord.key}</span>`
+                html += `<span id="${buttonIndex}" class="context #chord chord button" style="transform: translate(${60 * (ci + 1)}px, -80%);">${escapeHtml(chord.key)}</span>`
             })
 
             if (!html) return
-            chordLines[i] = html
+            chordLines[i] = sanitizeHtml(html)
         })
     }
 

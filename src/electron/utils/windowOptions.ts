@@ -17,8 +17,9 @@ export const loadingOptions: BrowserWindowConstructorOptions = {
     resizable: false,
     frame: false,
     webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true
     }
 }
 

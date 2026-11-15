@@ -1,3 +1,4 @@
+import { randomBytes, timingSafeEqual } from "crypto"
 import express from "express"
 import { ToMain } from "../../../types/IPC/ToMain"
 import { getContentProviderAccess, setContentProviderAccess } from "../../data/contentProviders"
@@ -8,6 +9,23 @@ import { httpsRequest } from "../../utils/requests"
 import type { ChurchAppsAuthData, ChurchAppsRequestData, ChurchAppsScopes } from "./types"
 import { CHURCHAPPS_API_URL, CHURCHAPPS_APP_URL, LESSONS_API_URL } from "./types"
 
+function escapeHtml(text: unknown): string {
+    return String(text ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;")
+}
+
+function verifyOAuthState(expected: string, received: unknown): boolean {
+    if (!expected || typeof received !== "string" || !received) return false
+    const expectedBuf = Buffer.from(expected, "utf8")
+    const receivedBuf = Buffer.from(received, "utf8")
+    if (expectedBuf.length !== receivedBuf.length) return false
+    return timingSafeEqual(expectedBuf, receivedBuf)
+}
+
 /**
  * Handles authentication and API communication with the ChurchApps service.
  * Manages OAuth flow, token refresh, and provides methods for making authenticated API requests.
@@ -17,7 +35,6 @@ import { CHURCHAPPS_API_URL, CHURCHAPPS_APP_URL, LESSONS_API_URL } from "./types
  * Use ContentProviderRegistry or ChurchAppsProvider instead.
  */
 export class ChurchAppsConnect {
-    private static app = express()
     private static readonly CHURCHAPPS_PORT = 5502
     private static CHURCHAPPS_ACCESS: ChurchAppsAuthData = null
     private static readonly clientId: string = getKey("churchApps_id")
@@ -110,23 +127,47 @@ export class ChurchAppsConnect {
     }
 
     private static async authenticate(scope: ChurchAppsScopes): Promise<ChurchAppsAuthData> {
-        const path = "/auth/complete"
-        const redirect_uri = `http://localhost:${this.CHURCHAPPS_PORT}${path}`
+        const callbackPath = "/auth/complete"
+        const redirect_uri = `http://localhost:${this.CHURCHAPPS_PORT}${callbackPath}`
+        const expectedState = randomBytes(32).toString("base64url")
+        let stateConsumed = false
 
-        const server = this.app.listen(this.CHURCHAPPS_PORT, () => {
-            console.info(`Listening for ChurchApps OAuth response at port ${this.CHURCHAPPS_PORT}`)
+        const callbackApp = express()
+        callbackApp.disable("x-powered-by")
+        callbackApp.use(express.json())
+
+        const server = callbackApp.listen(this.CHURCHAPPS_PORT, "127.0.0.1", () => {
+            console.info(`Listening for ChurchApps OAuth response at 127.0.0.1:${this.CHURCHAPPS_PORT}`)
         })
 
         server.once("error", (err: Error) => {
             if ((err as any).code === "EADDRINUSE") server.close()
         })
 
-        this.app.use(express.json())
-
         return new Promise((resolve) => {
-            this.app.get(path, (req, res) => {
-                const code = req.query.code?.toString() || ""
-                if (!code) return resolve(null)
+            callbackApp.get(callbackPath, (req, res) => {
+                res.setHeader("Content-Type", "text/html; charset=utf-8")
+
+                if (stateConsumed || !verifyOAuthState(expectedState, req.query.state)) {
+                    res.status(400).send(this.HTML_ERROR.replace("{error_msg}", escapeHtml("Invalid or missing OAuth state parameter")))
+                    server.close()
+                    return resolve(null)
+                }
+                stateConsumed = true
+
+                const oauthError = req.query.error_description || req.query.error
+                if (oauthError) {
+                    res.status(400).send(this.HTML_ERROR.replace("{error_msg}", escapeHtml(oauthError)))
+                    server.close()
+                    return resolve(null)
+                }
+
+                const code = typeof req.query.code === "string" ? req.query.code : ""
+                if (!code) {
+                    res.status(400).send(this.HTML_ERROR.replace("{error_msg}", escapeHtml("No authorization code received")))
+                    server.close()
+                    return resolve(null)
+                }
 
                 console.info("OAuth code received!")
 
@@ -140,9 +181,10 @@ export class ChurchAppsConnect {
 
                 httpsRequest(CHURCHAPPS_API_URL, "/membership/oauth/token", "POST", {}, params, (err, data: ChurchAppsAuthData) => {
                     if (err) {
-                        res.setHeader("Content-Type", "text/html")
-                        const errorPage = this.HTML_ERROR.replace("{error_msg}", err.message)
-                        res.send(errorPage)
+                        res.setHeader("Content-Type", "text/html; charset=utf-8")
+                        const errorPage = this.HTML_ERROR.replace("{error_msg}", escapeHtml(err.message))
+                        res.status(400).send(errorPage)
+                        server.close()
 
                         sendToMain(ToMain.ALERT, "Could not authorize! " + err.message)
                         return resolve(null)
@@ -150,7 +192,7 @@ export class ChurchAppsConnect {
 
                     console.info("OAuth completed!")
 
-                    res.setHeader("Content-Type", "text/html")
+                    res.setHeader("Content-Type", "text/html; charset=utf-8")
                     res.send(this.HTML_SUCCESS)
 
                     server.close()
@@ -162,8 +204,9 @@ export class ChurchAppsConnect {
                 })
             })
 
-            const URL = `${CHURCHAPPS_APP_URL}/login?returnUrl=` + encodeURIComponent(`/oauth?client_id=${this.clientId}&redirect_uri=${encodeURIComponent(redirect_uri)}&response_type=code&scope=${scope}`) + "&forceLogin=1"
-            openURL(URL)
+            const oauthReturnPath = `/oauth?client_id=${encodeURIComponent(this.clientId)}&redirect_uri=${encodeURIComponent(redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(expectedState)}`
+            const authUrl = `${CHURCHAPPS_APP_URL}/login?returnUrl=` + encodeURIComponent(oauthReturnPath) + "&forceLogin=1"
+            openURL(authUrl)
         })
     }
 

@@ -4,6 +4,7 @@
     import { sendMain } from "../../IPC/main"
     import { activePopup, openToolsTab, outputs, showNotesActive, shows, showsCache, special, styles, templates } from "../../stores"
     import { translateText } from "../../utils/language"
+    import { sanitizeHtml } from "../../utils/sanitizeHtml"
     import Icon from "../helpers/Icon.svelte"
     import { allOutputsHasStyleTemplate, getFirstActiveOutput } from "../helpers/output"
     import { removeTemplatesFromShow } from "../helpers/show"
@@ -94,7 +95,7 @@
         {#if notes}
             <span class="notes" role="none" data-title={translateText(notes.title)} on:click={(e) => openTab(e, notes?.tab || "")}>
                 <Icon id={notes.icon} size={0.8} right white />
-                <p>{@html notes.text}</p>
+                <p>{@html sanitizeHtml(notes.text)}</p>
             </span>
         {/if}
     </p>

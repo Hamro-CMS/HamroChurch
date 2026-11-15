@@ -4,6 +4,7 @@
     import { activeShow, showNotesActive, showsCache } from "../../stores"
     import { DEFAULT_WIDTH } from "../../utils/common"
     import { translateText } from "../../utils/language"
+    import { escapeHtml, sanitizeHtml } from "../../utils/sanitizeHtml"
     import Icon from "../helpers/Icon.svelte"
     import { _show } from "../helpers/shows"
     import MaterialButton from "../inputs/MaterialButton.svelte"
@@ -31,7 +32,7 @@
 
     // make links clickable
     function formatLinks(text: string) {
-        return text
+        return escapeHtml(text)
             .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s]+)/g, (_match, label, link, rawUrl) => {
                 const url = link || rawUrl
                 let preview = label || rawUrl
@@ -71,7 +72,7 @@
 {:else if note}
     <span class="notes" role="none" data-title={translateText("tools.notes")} on:click={(e) => notesClick(e)}>
         <Icon id="notes" size={0.8} right white />
-        <p>{@html formatLinks(note)}</p>
+        <p>{@html sanitizeHtml(formatLinks(note))}</p>
     </span>
 {/if}
 

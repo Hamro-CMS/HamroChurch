@@ -66,7 +66,7 @@
             return a
         })
 
-        if (value) sendMain(Main.WEBSOCKET_START, $ports.companion)
+        if (value) sendMain(Main.WEBSOCKET_START, { port: $ports.companion, allowLan: $companion?.allowLan === true, token: $companion?.token || "" })
         else sendMain(Main.WEBSOCKET_STOP)
     }
 

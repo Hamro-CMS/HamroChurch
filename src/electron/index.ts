@@ -14,7 +14,7 @@ import { runHamroChurchMigration } from "./data/hamroMigration"
 import { cleanupProtectedCache, registerProtectedProtocol } from "./data/protected"
 import { config, setupStores } from "./data/store"
 import { receiveMain, sendMain } from "./IPC/main"
-import { autoErrorReport } from "./IPC/responsesMain"
+import { autoErrorReport, openURL } from "./IPC/responsesMain"
 import { receiveNDI } from "./ndi/talk"
 import { OutputHelper } from "./output/OutputHelper"
 import { initializeUpdater } from "./updater"
@@ -153,7 +153,7 @@ function requestHeaders() {
 let loadingWindow: BrowserWindow | null = null
 function createLoading() {
     loadingWindow = new BrowserWindow(loadingOptions)
-    loadingWindow.loadFile("public/loading.html")
+    loadingWindow.loadFile("public/loading.html", { query: { version: app.getVersion() } })
     loadingWindow.once("closed", () => (loadingWindow = null))
 }
 
@@ -235,8 +235,38 @@ function mainWindowLoaded() {
     if (RECORD_STARTUP_TIME) console.timeEnd("Full startup")
 }
 
+function isAllowedAppNavigation(targetUrl: string): boolean {
+    try {
+        const parsed = new URL(targetUrl)
+        if (parsed.protocol === "file:") return true
+        if (!isProd && parsed.protocol === "http:" && (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1")) {
+            return true
+        }
+        return false
+    } catch {
+        return false
+    }
+}
+
+function attachWindowNavigationGuards(window: BrowserWindow) {
+    window.webContents.on("will-navigate", (event, navigationUrl) => {
+        if (isAllowedAppNavigation(navigationUrl)) return
+        event.preventDefault()
+        openURL(navigationUrl)
+    })
+
+    window.webContents.setWindowOpenHandler(({ url }) => {
+        openURL(url)
+        return { action: "deny" }
+    })
+}
+
 export async function loadWindowContent(window: BrowserWindow, type: null | "output" = null) {
     const mainOutput = type === null
+
+    if (!mainOutput) {
+        attachWindowNavigationGuards(window)
+    }
 
     if (mainOutput) {
         // If startup data is slow, fall back to the in-app loader instead of leaving the splash up forever.
@@ -289,6 +319,8 @@ function setMainListeners() {
 
     mainWindow.on("close", callClose)
     mainWindow.once("closed", exitApp)
+
+    attachWindowNavigationGuards(mainWindow)
 
     mainWindow.webContents.on("context-menu", (_, a) => spellcheck(a))
 }
@@ -348,10 +380,53 @@ app.on("will-quit", () => {
 })
 
 app.on("web-contents-created", (_e, contents) => {
-    contents.on("will-attach-webview", (_event, webPreferences) => {
-        // remove unused preload scripts
+    contents.on("will-attach-webview", (event, webPreferences, params) => {
+        // Strip any preload scripts and enforce isolated sandboxed webview preferences
         delete webPreferences.preload
+        delete (webPreferences as any).preloadURL
+        webPreferences.nodeIntegration = false
+        webPreferences.nodeIntegrationInWorker = false
+        webPreferences.nodeIntegrationInSubFrames = false
+        webPreferences.contextIsolation = true
+        webPreferences.sandbox = true
+        webPreferences.webSecurity = true
+        webPreferences.allowRunningInsecureContent = false
+        ;(webPreferences as any).enableBlinkFeatures = ""
+
+        const rawSrc = String(params?.src || "").trim()
+        let allowedSrc = false
+        if (rawSrc) {
+            try {
+                const parsed = new URL(rawSrc)
+                allowedSrc = parsed.protocol === "https:" || parsed.protocol === "http:"
+            } catch {
+                allowedSrc = false
+            }
+        }
+
+        if (!allowedSrc) {
+            console.warn(`Blocked unsafe <webview> source URL: ${rawSrc}`)
+            event.preventDefault()
+        }
     })
+
+    if (contents.getType() === "webview") {
+        contents.on("will-navigate", (event, navigationUrl) => {
+            try {
+                const parsed = new URL(navigationUrl)
+                if (parsed.protocol === "https:" || parsed.protocol === "http:") return
+            } catch {
+                // fallthrough to preventDefault
+            }
+            console.warn(`Blocked unsafe <webview> navigation: ${navigationUrl}`)
+            event.preventDefault()
+        })
+
+        contents.setWindowOpenHandler(({ url }) => {
+            openURL(url)
+            return { action: "deny" }
+        })
+    }
 })
 
 // handle graceful shutdown on SIGINT (e.g. Ctrl+C)

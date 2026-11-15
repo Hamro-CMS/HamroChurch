@@ -6,11 +6,9 @@
 
         <!-- Live reload (dev):        http://localhost:35729/livereload.js -->
         <!-- Svelte inspector (dev):   http://localhost:5001 -->
-        <!-- YouTube iframe:           http://www.youtube.com/iframe_api -->
-        <!-- Other sites (vimeo):      https://* -->
-        <!-- Inline <script>/<style>:  unsafe-inline -->
-        <!-- NumberInput math:         unsafe-eval -->
-        <meta http-equiv="Content-Security-Policy" content="script-src 'self' http://www.youtube.com/iframe_api https://* 'unsafe-inline' 'unsafe-eval';" />
+        <!-- YouTube iframe:           https://www.youtube.com/iframe_api -->
+        <!-- Trusted media players:    https://www.youtube.com https://s.ytimg.com https://player.vimeo.com -->
+        <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://www.youtube.com https://s.ytimg.com https://player.vimeo.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self';" />
 
         <title>Hamro Church</title>
         <link rel="icon" href="./hamrochurch.png" />

@@ -5,7 +5,7 @@
  */
 
 import express from "express"
-import { randomFillSync, createHash } from "crypto"
+import { createHash, randomFillSync, timingSafeEqual } from "crypto"
 
 import { ToMain } from "../../../types/IPC/ToMain"
 import { getContentProviderAccess, setContentProviderAccess } from "../../data/contentProviders"
@@ -60,20 +60,32 @@ const HTML_error = `
 
 let PCO_ACCESS: PCOAuthData = null
 
+function escapeHtml(text: unknown): string {
+    return String(text ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;")
+}
+
 function pcoAuthenticate(scope: PCOScopes): Promise<PCOAuthData> {
     const path = "/auth/complete"
     const redirect_uri = `http://localhost:${PCO_PORT}${path}`
 
-    // Generate PKCE values
+    // Generate PKCE and cryptographic state values
     const codeVerifier = generateCodeVerifier()
     const codeChallenge = generateCodeChallenge(codeVerifier)
+    const expectedState = generateCodeVerifier()
+    let stateConsumed = false
 
     const app = express()
+    app.disable("x-powered-by")
     app.use(express.json())
 
     return new Promise((resolve) => {
-        const server = app.listen(PCO_PORT, () => {
-            console.info(`Listening for Planning Center OAuth response at port ${PCO_PORT}`)
+        const server = app.listen(PCO_PORT, "127.0.0.1", () => {
+            console.info(`Listening for Planning Center OAuth response at 127.0.0.1:${PCO_PORT}`)
         })
 
         server.once("error", (err: Error) => {
@@ -81,9 +93,30 @@ function pcoAuthenticate(scope: PCOScopes): Promise<PCOAuthData> {
         })
 
         app.get(path, (req, res) => {
-            const code = req.query.code?.toString() || ""
-            console.info(`OAuth code received: ${code}`)
+            res.setHeader("Content-Type", "text/html; charset=utf-8")
+
+            const receivedState = typeof req.query.state === "string" ? req.query.state : ""
+            const expectedBuf = Buffer.from(expectedState, "utf8")
+            const receivedBuf = Buffer.from(receivedState, "utf8")
+            const validState = !stateConsumed && receivedState.length > 0 && expectedBuf.length === receivedBuf.length && timingSafeEqual(expectedBuf, receivedBuf)
+            stateConsumed = true
+
+            if (!validState) {
+                res.status(400).send(HTML_error.replace("{error_msg}", escapeHtml("Invalid or missing OAuth state parameter")))
+                server.close()
+                return resolve(null)
+            }
+
+            const oauthError = req.query.error_description || req.query.error
+            if (oauthError) {
+                res.status(400).send(HTML_error.replace("{error_msg}", escapeHtml(oauthError)))
+                server.close()
+                return resolve(null)
+            }
+
+            const code = typeof req.query.code === "string" ? req.query.code : ""
             if (!code) {
+                res.status(400).send(HTML_error.replace("{error_msg}", escapeHtml("No authorization code received")))
                 server.close()
                 return resolve(null)
             }
@@ -98,9 +131,9 @@ function pcoAuthenticate(scope: PCOScopes): Promise<PCOAuthData> {
 
             httpsRequest(PCO_API_URL, "/oauth/token", "POST", {}, params, (err, data: PCOAuthData) => {
                 if (err) {
-                    res.setHeader("Content-Type", "text/html")
-                    const errorPage = HTML_error.replace("{error_msg}", err.message)
-                    res.send(errorPage)
+                    res.setHeader("Content-Type", "text/html; charset=utf-8")
+                    const errorPage = HTML_error.replace("{error_msg}", escapeHtml(err.message))
+                    res.status(400).send(errorPage)
 
                     server.close()
                     sendToMain(ToMain.ALERT, "Could not authorize! " + err.message)
@@ -110,7 +143,7 @@ function pcoAuthenticate(scope: PCOScopes): Promise<PCOAuthData> {
                 // AUTHORIZED
                 console.info("OAuth completed!")
 
-                res.setHeader("Content-Type", "text/html")
+                res.setHeader("Content-Type", "text/html; charset=utf-8")
                 res.send(HTML_success)
 
                 // close when request is completed!
@@ -123,7 +156,7 @@ function pcoAuthenticate(scope: PCOScopes): Promise<PCOAuthData> {
             })
         })
 
-        const URL = `${PCO_API_URL}/oauth/authorize?client_id=${clientId}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&code_challenge=${codeChallenge}&code_challenge_method=S256`
+        const URL = `${PCO_API_URL}/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(expectedState)}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256`
 
         openURL(URL)
     })

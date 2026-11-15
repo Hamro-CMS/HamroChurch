@@ -65,6 +65,7 @@ export interface AppUpdateAsset {
     url: string
     contentType?: string
     digest?: string | null
+    tagName?: string
 }
 
 export interface AppUpdateInfo {

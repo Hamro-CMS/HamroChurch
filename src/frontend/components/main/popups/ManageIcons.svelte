@@ -2,6 +2,7 @@
     import { uid } from "uid"
     import type { Popups } from "../../../../types/Main"
     import { activePopup, customizedIcons, popupData } from "../../../stores"
+    import { sanitizeSvg } from "../../../utils/sanitizeHtml"
     import { customIcons, customIconsColors } from "../../../values/customIcons"
     import Icon from "../../helpers/Icon.svelte"
     import T from "../../helpers/T.svelte"
@@ -34,8 +35,11 @@
         }
         if (!text || !text.includes("<svg")) return
 
+        const sanitized = sanitizeSvg(text)
+        if (!sanitized) return
+
         customizedIcons.update((a) => {
-            a.svg.push({ id: uid(), path: text })
+            a.svg.push({ id: uid(), path: sanitized })
             return a
         })
     }
@@ -79,7 +83,7 @@
         <div class="custom grid">
             {#each $customizedIcons.svg as icon}
                 <MaterialButton style="padding: 12px;" on:click={() => deleteCustom(icon.id)} title="actions.delete">
-                    {@html icon.path}
+                    {@html sanitizeSvg(icon.path)}
                 </MaterialButton>
             {/each}
         </div>

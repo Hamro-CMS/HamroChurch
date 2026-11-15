@@ -33,8 +33,7 @@ export class AmazingLifeConnect {
                 tokenUrl: `${AMAZING_LIFE_OAUTH_BASE}/token`,
                 redirectUri,
                 scopes: ["openid", "profile", "email"],
-                usePKCE: true,
-                additionalParams: { state: "xyz" }
+                usePKCE: true
             })
         }
 
@@ -146,8 +145,8 @@ export class AmazingLifeConnect {
     private static async authenticate(scope: AmazingLifeScopes): Promise<AmazingLifeAuthData | null> {
         this.initializeOAuthHelper()
 
-        const server = this.app.listen(this.AMAZING_LIFE_PORT, () => {
-            console.info(`Listening for APlay OAuth response at port ${this.AMAZING_LIFE_PORT}`)
+        const server = this.app.listen(this.AMAZING_LIFE_PORT, "127.0.0.1", () => {
+            console.info(`Listening for APlay OAuth response at 127.0.0.1:${this.AMAZING_LIFE_PORT}`)
         })
 
         server.once("error", (err: Error) => {

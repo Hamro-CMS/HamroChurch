@@ -310,10 +310,20 @@ export function selectFolderDialog(title = "", defaultPath = ""): string {
 // DATA FOLDERS
 
 export function openInSystem(filePath: string, openFolder = false) {
-    if (!doesPathExist(filePath)) return sendToMain(ToMain.ALERT, "This does not exist!")
+    if (!filePath || typeof filePath !== "string") return
+    const resolvedPath = path.resolve(filePath)
+    if (!doesPathExist(resolvedPath)) return sendToMain(ToMain.ALERT, "This does not exist!")
 
-    if (openFolder) shell.openPath(filePath).catch((err) => console.error("Could not open system folder: " + String(err)))
-    else shell.showItemInFolder(filePath)
+    try {
+        const stat = fs.statSync(resolvedPath)
+        if (openFolder && stat.isDirectory()) {
+            shell.openPath(resolvedPath).catch((err) => console.error("Could not open system folder: " + String(err)))
+        } else {
+            shell.showItemInFolder(resolvedPath)
+        }
+    } catch (err) {
+        console.error("Could not inspect system path: " + String(err))
+    }
 }
 
 export const dataFolderNames = {

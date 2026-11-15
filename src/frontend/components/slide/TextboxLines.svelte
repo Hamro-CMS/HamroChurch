@@ -4,6 +4,7 @@
     import type { Item, TemplateStyleOverride } from "../../../types/Show"
     import { createVirtualBreaks } from "../../show/slides"
     import { outputs, slidesOptions, styles, variables } from "../../stores"
+    import { escapeHtml, sanitizeHtml } from "../../utils/sanitizeHtml"
     import { getItemText } from "../edit/scripts/textStyle"
     import { clone } from "../helpers/array"
     import { getFirstActiveOutput } from "../helpers/output"
@@ -186,24 +187,24 @@
                 letters.forEach((letter) => {
                     let chordIndex = chords.findIndex((a) => a.pos === index)
                     if (chordIndex >= 0) {
-                        html += `<span class="chord">${chords[chordIndex].key}</span>`
+                        html += `<span class="chord">${escapeHtml(chords[chordIndex].key)}</span>`
                         chords.splice(chordIndex, 1)
                     }
 
                     // let size = fontSizeValue
                     let size = fontSize || 0
-                    html += `<span class="invisible" style="${style ? getCustomStyle(text.style) : ""}${size ? `font-size: ${size}px;` : ""}">${letter}</span>`
+                    html += `<span class="invisible" style="${escapeHtml(style ? getCustomStyle(text.style) : "")}${size ? `font-size: ${size}px;` : ""}">${escapeHtml(letter)}</span>`
 
                     index++
                 })
             })
 
             chords.forEach((chord, i) => {
-                html += `<span class="chord end" style="transform: translate(calc(${80 * (i + 1)}px - 50%), calc(${isStage ? "-55% - 2px" : "-12px"} - var(--offsetY)));">${chord.key}</span>`
+                html += `<span class="chord end" style="transform: translate(calc(${80 * (i + 1)}px - 50%), calc(${isStage ? "-55% - 2px" : "-12px"} - var(--offsetY)));">${escapeHtml(chord.key)}</span>`
             })
 
             if (!html) return
-            chordLines[i] = html
+            chordLines[i] = sanitizeHtml(html)
         })
     }
 
@@ -228,10 +229,10 @@
                 previousValue[id] = newValue
             }
 
-            return newValue
+            return sanitizeHtml(newValue)
         }
 
-        return value
+        return sanitizeHtml(value)
     }
 
     // UPDATE DYNAMIC VALUES e.g. {time_} EVERY SECOND

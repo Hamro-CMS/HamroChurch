@@ -1,5 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher, onDestroy } from "svelte"
+    import { evaluateSafeExpression } from "../../utils/safeExpression"
     import Icon from "../helpers/Icon.svelte"
     import Button from "./Button.svelte"
     import TextInput from "./TextInput.svelte"
@@ -26,7 +27,8 @@
     const input = (e: any) => {
         let inputValue = e.target.value || 0
         try {
-            inputValue = new Function(`return ${inputValue}`)() // calculate without eval()
+            inputValue = typeof inputValue === "string" ? Number(evaluateSafeExpression(inputValue)) : Number(inputValue)
+            if (isNaN(inputValue)) inputValue = value
         } catch (err) {
             inputValue = value
         }

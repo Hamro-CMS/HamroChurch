@@ -1,5 +1,6 @@
 import type { BrowserWindow, DesktopCapturerSource } from "electron"
 import { app, desktopCapturer, screen, shell, systemPreferences } from "electron"
+import fs from "fs"
 import os from "os"
 import path from "path"
 import { getMainWindow, isProd, mainWindow, maximizeMain, setGlobalMenu } from ".."
@@ -96,7 +97,7 @@ export const mainResponses: MainResponses = {
     [Main.OPEN_LOG]: () => openInSystem(_store.ERROR_LOG?.path || ""),
     [Main.OPEN_CACHE]: () => openInSystem(getThumbnailFolderPath(), true),
     [Main.OPEN_APPDATA]: () => openInSystem(appDataPath, true),
-    [Main.OPEN_FOLDER_PATH]: (folderPath) => openInSystem(folderPath, true),
+    [Main.OPEN_FOLDER_PATH]: (folderPath) => safeOpenFolderPath(folderPath),
     [Main.OPEN_NOW_PLAYING]: () => openNowPlaying(),
     [Main.GET_STORE_VALUE]: (data) => getStoreValue(data),
     [Main.SET_STORE_VALUE]: (data) => setStoreValue(data),
@@ -140,7 +141,7 @@ export const mainResponses: MainResponses = {
     [Main.STOP]: () => closeServers(),
     [Main.SERVER_DATA]: (data) => updateServerData(data),
     // WebSocket / REST / OSC
-    [Main.WEBSOCKET_START]: (port) => startWebSocketAndRest(port),
+    [Main.WEBSOCKET_START]: (config) => startWebSocketAndRest(config),
     [Main.WEBSOCKET_STOP]: () => stopApiListener(),
     [Main.API_TRIGGER]: (data) => apiReturnData(data),
     [Main.EMIT_OSC]: (data) => emitOSC(data),
@@ -158,7 +159,7 @@ export const mainResponses: MainResponses = {
     // FILES
     [Main.RESTORE]: (data) => restoreFiles(data),
     [Main.RECORDER]: (data) => saveRecording(data),
-    [Main.SYSTEM_OPEN]: (data) => openInSystem(data),
+    [Main.SYSTEM_OPEN]: (data) => safeSystemOpen(data),
     [Main.LOCATE_MEDIA_FILE]: (data) => locateMediaFile(data),
     [Main.GET_MEDIA_FOLDER_PATH]: () => getMediaSyncFolderPath(),
     [Main.SET_MEDIA_FOLDER_PATH]: (data) => setMediaSyncFolderPath(data),
@@ -275,20 +276,134 @@ function importFiles(data: { id: string; paths: string[] }) {
     importShow(data.id, data.paths, {})
 }
 
+const BLOCKED_EXECUTABLE_EXTENSIONS = new Set([
+    ".exe",
+    ".bat",
+    ".cmd",
+    ".com",
+    ".msi",
+    ".msp",
+    ".ps1",
+    ".psm1",
+    ".psd1",
+    ".vbs",
+    ".vbe",
+    ".js",
+    ".jse",
+    ".mjs",
+    ".cjs",
+    ".wsf",
+    ".wsh",
+    ".scr",
+    ".hta",
+    ".lnk",
+    ".url",
+    ".scf",
+    ".pif",
+    ".reg",
+    ".jar",
+    ".cpl",
+    ".dll",
+    ".inf",
+    ".appref-ms",
+    ".application",
+    ".msc",
+    ".sh",
+    ".command"
+])
+
+function resolveSafePathInFolder(baseFolder: string, rawName: string, appendExtension = ""): string | null {
+    if (typeof rawName !== "string") return null
+    const trimmed = rawName.trim()
+    if (!trimmed || trimmed.includes("\0")) return null
+
+    const safeBase = path.basename(trimmed)
+    if (!safeBase || safeBase === "." || safeBase === "..") return null
+
+    const fileName = appendExtension ? safeBase + appendExtension : safeBase
+    const resolvedFolder = path.resolve(baseFolder)
+    const resolvedTarget = path.resolve(resolvedFolder, fileName)
+    const folderPrefix = resolvedFolder.endsWith(path.sep) ? resolvedFolder : resolvedFolder + path.sep
+
+    const isContained = process.platform === "win32" ? resolvedTarget.toLowerCase().startsWith(folderPrefix.toLowerCase()) : resolvedTarget.startsWith(folderPrefix)
+    if (!isContained || resolvedTarget === resolvedFolder) return null
+
+    return resolvedTarget
+}
+
+function hasNonDriveScheme(target: string): boolean {
+    return !/^[a-zA-Z]:[\\/]/.test(target) && /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(target)
+}
+
+function safeSystemOpen(target: string) {
+    const raw = typeof target === "string" ? target.trim() : ""
+    if (!raw || raw.includes("\0")) return
+
+    if (/^(https?:|mailto:)/i.test(raw)) {
+        try {
+            const parsed = new URL(raw)
+            if (parsed.protocol === "http:" || parsed.protocol === "https:" || parsed.protocol === "mailto:") {
+                void shell.openExternal(parsed.toString())
+            }
+        } catch {
+            console.warn("Blocked invalid external URL in SYSTEM_OPEN")
+        }
+        return
+    }
+
+    if (hasNonDriveScheme(raw)) {
+        console.warn("Blocked unsafe URI scheme in SYSTEM_OPEN")
+        return
+    }
+
+    // Strip trailing dots/spaces and block NTFS alternate data stream suffixes
+    const withoutAds = process.platform === "win32" && /^[a-zA-Z]:/.test(raw) ? raw.slice(0, 2) + raw.slice(2).split(":")[0] : raw.split(":")[0]
+    const normalizedForExt = (process.platform === "win32" ? withoutAds : raw).replace(/[.\s]+$/, "")
+    const ext = path.extname(normalizedForExt).toLowerCase()
+    if (BLOCKED_EXECUTABLE_EXTENSIONS.has(ext)) {
+        console.warn(`Blocked executable/script extension in SYSTEM_OPEN: ${ext}`)
+        return
+    }
+
+    openInSystem(path.resolve(raw), false)
+}
+
+function safeOpenFolderPath(folderPath: string) {
+    const raw = typeof folderPath === "string" ? folderPath.trim() : ""
+    if (!raw || raw.includes("\0") || hasNonDriveScheme(raw)) return
+
+    const resolved = path.resolve(raw)
+    try {
+        const stat = fs.statSync(resolved)
+        if (stat.isDirectory()) {
+            void shell.openPath(resolved).catch((err) => console.error("Could not open system folder: " + String(err)))
+        } else {
+            shell.showItemInFolder(resolved)
+        }
+    } catch {
+        openInSystem(resolved, false)
+    }
+}
+
 // BIBLE
 export function loadScripture(msg: { id: string; name: string }) {
     if (msg?.name === "Nepali Bible") {
         ensureNepaliBiblePresentSync()
     }
 
+    const rawName = String(msg?.name || "")
     const bibleFolder: string = getDataFolderPath("scriptures")
-    let filePath: string = path.join(bibleFolder, msg.name + ".fsb")
+    const filePath = resolveSafePathInFolder(bibleFolder, rawName, ".fsb")
+    if (!filePath) return { error: "not_found", id: msg?.id || "" }
 
     let bible = loadFile(filePath, msg.id)
 
     // pre v0.5.6
-    if (bible.error) filePath = path.join(app.getPath("documents"), "Bibles", msg.name + ".fsb")
-    bible = loadFile(filePath, msg.id)
+    if (bible.error) {
+        const legacyFolder = path.join(app.getPath("documents"), "Bibles")
+        const legacyPath = resolveSafePathInFolder(legacyFolder, rawName, ".fsb")
+        if (legacyPath) bible = loadFile(legacyPath, msg.id)
+    }
 
     // convert "value" keys to correct "text" key, pre v1.3.0
     if (bible.content?.[1]?.books?.[0]?.chapters?.[0]?.verses?.[0]?.value) {
@@ -616,7 +731,10 @@ async function resetHamroData() {
 // SHOW
 export function loadShow(msg: { id: string; name: string }) {
     const showsFolder = getDataFolderPath("shows")
-    const filePath = path.join(showsFolder, (msg.name || msg.id) + ".show")
+    const rawName = String(msg?.name || msg?.id || "")
+    const filePath = resolveSafePathInFolder(showsFolder, rawName, ".show")
+    if (!filePath) return { error: "not_found", id: msg?.id || "" }
+
     const show = loadFile(filePath, msg.id)
 
     return show
@@ -750,13 +868,23 @@ function getScreens(type: "window" | "screen" = "screen"): Promise<{ name: strin
 let systemOpened = false
 export function saveRecording(data: { blob: ArrayBuffer; name: string }) {
     const folder = getDataFolderPath("recordings")
-    const filePath = path.join(folder, data.name)
+    const filePath = resolveSafePathInFolder(folder, String(data?.name || ""))
+    if (!filePath) {
+        console.warn("Blocked invalid recording filename")
+        return
+    }
+
+    const ext = path.extname(filePath).toLowerCase()
+    if (BLOCKED_EXECUTABLE_EXTENSIONS.has(ext)) {
+        console.warn(`Blocked unsafe recording extension: ${ext}`)
+        return
+    }
 
     const buffer = Buffer.from(data.blob)
     writeFile(filePath, buffer)
 
     if (!systemOpened) {
-        openInSystem(folder)
+        openInSystem(folder, true)
         systemOpened = true
     }
 }

@@ -1,9 +1,18 @@
-import { createHash, randomFillSync } from "crypto"
+import { createHash, randomFillSync, timingSafeEqual } from "crypto"
 import type express from "express"
 import { openURL } from "../../IPC/responsesMain"
 import { httpsRequest } from "../../utils/requests"
 import type { BaseAuthData } from "./ContentProvider"
 import { ContentProviderError, ContentProviderErrorType } from "./types"
+
+function escapeHtml(text: unknown): string {
+    return String(text ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;")
+}
 
 /**
  * OAuth2 configuration for different providers
@@ -20,7 +29,7 @@ interface OAuth2Config {
 }
 
 /**
- * PKCE (Proof Key for Code Exchange) helper methods
+ * PKCE (Proof Key for Code Exchange) and OAuth state helper methods
  */
 export class PKCEHelper {
     static generateCodeVerifier(): string {
@@ -34,6 +43,12 @@ export class PKCEHelper {
         hash.update(verifier)
         return hash.digest().toString("base64url")
     }
+
+    static generateState(): string {
+        const buffer = Buffer.alloc(32)
+        randomFillSync(buffer)
+        return buffer.toString("base64url")
+    }
 }
 
 /**
@@ -42,6 +57,7 @@ export class PKCEHelper {
 export class OAuth2Helper<TAuthData extends BaseAuthData = BaseAuthData> {
     private config: OAuth2Config
     private codeVerifier?: string
+    private expectedState?: string
     private resolveAuth?: (value: TAuthData | null) => void
     private rejectAuth?: (reason: any) => void
 
@@ -64,34 +80,59 @@ export class OAuth2Helper<TAuthData extends BaseAuthData = BaseAuthData> {
         })
     }
 
+    private verifyState(receivedState: unknown): boolean {
+        const expected = this.expectedState
+        if (!expected || typeof receivedState !== "string" || !receivedState) {
+            return false
+        }
+        const expectedBuf = Buffer.from(expected, "utf8")
+        const receivedBuf = Buffer.from(receivedState, "utf8")
+        if (expectedBuf.length !== receivedBuf.length) {
+            return false
+        }
+        return timingSafeEqual(expectedBuf, receivedBuf)
+    }
+
     /**
      * Handles the OAuth2 callback from the authorization server
      */
     async handleCallback(req: express.Request, res: express.Response): Promise<void> {
         try {
-            const { code, error, error_description } = req.query
+            const { code, state, error, error_description } = req.query
+
+            res.setHeader("Content-Type", "text/html; charset=utf-8")
+
+            if (!this.verifyState(state)) {
+                this.expectedState = undefined
+                res.status(400).send(this.getErrorHtml("Invalid or missing OAuth state parameter"))
+                this.rejectAuth?.(new ContentProviderError(ContentProviderErrorType.AUTHENTICATION_FAILED, "Invalid OAuth state parameter"))
+                return
+            }
+
+            this.expectedState = undefined
 
             if (error) {
-                const errorMsg = error_description || error
-                res.send(this.getErrorHtml(errorMsg as string))
+                const errorMsg = String(error_description || error)
+                res.status(400).send(this.getErrorHtml(errorMsg))
                 this.rejectAuth?.(new ContentProviderError(ContentProviderErrorType.AUTHENTICATION_FAILED, `Authorization failed: ${errorMsg}`))
                 return
             }
 
-            if (!code) {
-                res.send(this.getErrorHtml("No authorization code received"))
+            if (!code || typeof code !== "string") {
+                res.status(400).send(this.getErrorHtml("No authorization code received"))
                 this.rejectAuth?.(new ContentProviderError(ContentProviderErrorType.AUTHENTICATION_FAILED, "No authorization code received"))
                 return
             }
 
             // Exchange code for tokens
-            const tokens = await this.exchangeCodeForTokens(code as string)
+            const tokens = await this.exchangeCodeForTokens(code)
 
             res.send(this.getSuccessHtml())
             this.resolveAuth?.(tokens)
         } catch (error) {
             console.error("OAuth callback error:", error)
-            res.send(this.getErrorHtml("Authentication failed"))
+            res.setHeader("Content-Type", "text/html; charset=utf-8")
+            res.status(500).send(this.getErrorHtml("Authentication failed"))
             this.rejectAuth?.(error)
         }
     }
@@ -131,7 +172,7 @@ export class OAuth2Helper<TAuthData extends BaseAuthData = BaseAuthData> {
                         expires_in: data.expires_in,
                         scope
                     } as TAuthData)
-                } catch (error) {
+                } catch (error: any) {
                     reject(new ContentProviderError(ContentProviderErrorType.NETWORK_ERROR, `Token refresh failed: ${error.message}`))
                 }
             })
@@ -149,6 +190,9 @@ export class OAuth2Helper<TAuthData extends BaseAuthData = BaseAuthData> {
             scope,
             ...this.config.additionalParams
         })
+
+        this.expectedState = PKCEHelper.generateState()
+        params.set("state", this.expectedState)
 
         if (this.config.usePKCE) {
             this.codeVerifier = PKCEHelper.generateCodeVerifier()
@@ -199,7 +243,7 @@ export class OAuth2Helper<TAuthData extends BaseAuthData = BaseAuthData> {
                         expires_in: data.expires_in,
                         scope: data.scope || scope
                     } as TAuthData)
-                } catch (error) {
+                } catch (error: any) {
                     reject(new ContentProviderError(ContentProviderErrorType.AUTHENTICATION_FAILED, `Token exchange failed: ${error.message}`))
                 }
             })
@@ -224,7 +268,7 @@ export class OAuth2Helper<TAuthData extends BaseAuthData = BaseAuthData> {
         </head>
         <body style="padding: 80px;background: #242832;color: #f0f0ff;font-family: system-ui;font-size: 1.2em;">
             <h1>Could not complete authentication!</h1>
-            <p>${error}</p>
+            <p>${escapeHtml(error)}</p>
         </body>`
     }
 }

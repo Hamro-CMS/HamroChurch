@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { Slide } from "../../../types/Show"
     import { slidesOptions } from "../../stores"
+    import { sanitizeHtml } from "../../utils/sanitizeHtml"
 
     export let slide: Slide
     export let index: number
@@ -18,7 +19,7 @@
     {#if viewMode === "lyrics"}
         <div class="label" style="color: {color};margin-bottom: 5px;">
             <span style="color: var(--text);opacity: 0.85;font-size: 0.9em;">{index + 1}</span>
-            <span class="text">{@html name === null ? "" : name === "." ? "" : name || "—"}</span>
+            <span class="text">{@html name === null ? "" : name === "." ? "" : sanitizeHtml(name) || "—"}</span>
             <div class="alignment" />
         </div>
     {/if}
@@ -34,7 +35,7 @@
     {:else if viewMode !== "lyrics"}
         <div class="label" style="color: {color};border-bottom: 2px solid {color || 'var(--primary-darkest)'};">
             <span style="color: var(--text);opacity: 0.85;font-size: 0.9em;">{index + 1}</span>
-            <span class="text" style={name === null ? "opacity: 0;" : ""}>{@html name === null ? "-" : name === "." ? "" : name || "—"}</span>
+            <span class="text" style={name === null ? "opacity: 0;" : ""}>{@html name === null ? "-" : name === "." ? "" : sanitizeHtml(name) || "—"}</span>
             <div class="alignment" />
         </div>
     {/if}

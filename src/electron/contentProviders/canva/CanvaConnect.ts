@@ -38,8 +38,7 @@ export class CanvaConnect {
                 tokenUrl: CANVA_OAUTH_TOKEN_URL,
                 redirectUri: AUTH_REDIRECT_URL,
                 scopes: ["folder:read", "design:content:read", "design:meta:read"],
-                usePKCE: true,
-                additionalParams: { state: "freeshow_canva" }
+                usePKCE: true
             })
         }
 
@@ -125,8 +124,8 @@ export class CanvaConnect {
     private static async authenticate(scope: CanvaScopes, data: any): Promise<CanvaAuthData | null> {
         this.initializeOAuthHelper(data)
 
-        const server = this.app.listen(OAUTH_PORT, () => {
-            console.info(`Listening for Canva OAuth response at port ${OAUTH_PORT}`)
+        const server = this.app.listen(OAUTH_PORT, "127.0.0.1", () => {
+            console.info(`Listening for Canva OAuth response at 127.0.0.1:${OAUTH_PORT}`)
         })
 
         server.once("error", (err: Error) => {

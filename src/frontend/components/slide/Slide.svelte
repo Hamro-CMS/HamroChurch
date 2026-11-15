@@ -7,6 +7,7 @@
     import { wait } from "../../utils/common"
     import { translateText } from "../../utils/language"
     import { getAccess } from "../../utils/profile"
+    import { sanitizeHtml } from "../../utils/sanitizeHtml"
     import { slideHasAction } from "../actions/actions"
     import MediaLoader from "../drawer/media/MediaLoader.svelte"
     import Editbox from "../edit/editbox/Editbox.svelte"
@@ -281,7 +282,7 @@
                     <!-- border-bottom: 1px dashed {color}; -->
                     <div class="label" data-title={removeTagsAndContent(name || "")} style="color: {color};margin-bottom: 5px;">
                         <span style="color: var(--text);opacity: 0.85;font-size: 0.9em;">{index + 1}</span>
-                        <span class="text">{@html name === null || name === "." ? "" : name || "—"}</span>
+                        <span class="text">{@html name === null || name === "." ? "" : sanitizeHtml(name) || "—"}</span>
                     </div>
                 {/if}
                 <Zoomed
@@ -424,7 +425,7 @@
                         <!-- <div class="label" title={name || ""} style="border-bottom: 2px solid {color};"> -->
                         <!-- font-size: 0.8em; -->
                         <span style="color: {$fullColors ? getContrast(color || '') : 'var(--text)'};opacity: 0.85;font-size: 0.9em;">{index + 1}</span>
-                        <span class="text" style={name === null || name === "." ? "opacity: 0;" : ""}>{@html name === null || name === "." ? "-" : name || "—"}</span>
+                        <span class="text" style={name === null || name === "." ? "opacity: 0;" : ""}>{@html name === null || name === "." ? "-" : sanitizeHtml(name) || "—"}</span>
 
                         <!-- group is locked! -->
                         {#if slide.locked || show?.slides?.[layoutSlide?.parent || ""]?.locked}
