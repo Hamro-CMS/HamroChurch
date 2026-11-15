@@ -14,9 +14,30 @@ export interface Config {
     englishLanguageDefaultApplied?: boolean
     englishOutputLabelsApplied?: boolean
     analytics_consent?: boolean | null
+    analytics_consent_version?: number
     anonymous_device_id?: string
     analytics_consent_updated_at?: string | null
     machineId?: string
+    dismissed_promotions?: { [campaignKey: string]: string }
+}
+
+export interface SoftwarePromotionPayload {
+    id: number
+    campaign_key: string
+    campaign_version: number
+    title: string
+    body: string | null
+    image_url: string | null
+    image_mime: string | null
+    resolved_image_src?: string | null
+    cta_label: string | null
+    cta_url: string | null
+    position: "clock_area" | "bottom_left"
+    dismiss_mode: "once_per_campaign" | "once_per_day" | "every_launch"
+    starts_at: string | null
+    ends_at: string | null
+    event_url: string | null
+    updated_at: string | null
 }
 
 export interface PrivacySettings {

@@ -22,6 +22,7 @@ import { callClose, exitApp, saveAndClose } from "./utils/close"
 import { isDraggableAreaVisible, isWithinDisplayBounds, mainWindowInitialize, openDevTools, parseCommandLineArgs, waitForBundle } from "./utils/init"
 import { template } from "./utils/menuTemplate"
 import { initSoftwareTelemetry, stopSoftwareHeartbeat } from "./utils/softwareHeartbeat"
+import { startSoftwarePromotions, stopSoftwarePromotions } from "./utils/softwarePromotions"
 import { spellcheck } from "./utils/spellcheck"
 import { loadingOptions, mainOptions } from "./utils/windowOptions"
 
@@ -229,6 +230,7 @@ function mainWindowLoaded() {
     if (config.get("maximized")) maximizeMain()
 
     revealMainWindowShell()
+    startSoftwarePromotions()
 
     if (RECORD_STARTUP_TIME) console.timeEnd("Full startup")
 }
@@ -366,6 +368,7 @@ process.on("SIGTERM", () => {
 
 function cleanupBeforeQuit() {
     ipcMain.removeAllListeners()
+    stopSoftwarePromotions()
     stopSoftwareHeartbeat()
 
     // Remove window listeners and destroy windows if not already destroyed

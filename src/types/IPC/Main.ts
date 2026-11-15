@@ -6,7 +6,7 @@ import type { SyncProviderId } from "../../electron/cloud/syncManager"
 import type { ContentFile, ContentLibraryCategory, ContentProviderId, MediaLicense } from "../../electron/contentProviders/base/types"
 import type { _store } from "../../electron/data/store"
 import type { TimecodeMode } from "../../electron/timecode/timecode"
-import type { AppUpdateDownloadResult, AppUpdateInfo, DeleteAnalyticsResult, ErrorLog, FileFolder, LessonsData, LyricSearchResult, MainFilePaths, Media, OS, PrivacySettings, SpotifyState, Subtitle } from "../Main"
+import type { AppUpdateDownloadResult, AppUpdateInfo, DeleteAnalyticsResult, ErrorLog, FileFolder, LessonsData, LyricSearchResult, MainFilePaths, Media, OS, PrivacySettings, SoftwarePromotionPayload, SpotifyState, Subtitle } from "../Main"
 import type { Output } from "../Output"
 import type { Folders, Projects } from "../Projects"
 import type { Dictionary, Resolution, Themes } from "../Settings"
@@ -174,7 +174,11 @@ export enum Main {
     // Privacy & Anonymous Telemetry
     GET_PRIVACY_SETTINGS = "GET_PRIVACY_SETTINGS",
     SET_ANALYTICS_CONSENT = "SET_ANALYTICS_CONSENT",
-    DELETE_ANALYTICS_DATA = "DELETE_ANALYTICS_DATA"
+    DELETE_ANALYTICS_DATA = "DELETE_ANALYTICS_DATA",
+    // Software Promotions / Announcements
+    GET_SOFTWARE_PROMOTION = "GET_SOFTWARE_PROMOTION",
+    DISMISS_SOFTWARE_PROMOTION = "DISMISS_SOFTWARE_PROMOTION",
+    OPEN_SOFTWARE_PROMOTION = "OPEN_SOFTWARE_PROMOTION"
 }
 
 export interface MainSendPayloads {
@@ -279,6 +283,10 @@ export interface MainSendPayloads {
     [Main.GET_PRIVACY_SETTINGS]?: undefined
     [Main.SET_ANALYTICS_CONSENT]: { consent: boolean }
     [Main.DELETE_ANALYTICS_DATA]?: undefined
+    // Software Promotions / Announcements
+    [Main.GET_SOFTWARE_PROMOTION]?: undefined
+    [Main.DISMISS_SOFTWARE_PROMOTION]: { campaignKey: string; dismissMode: "once_per_campaign" | "once_per_day" | "every_launch" }
+    [Main.OPEN_SOFTWARE_PROMOTION]: { id: number; url: string; eventUrl?: string | null }
 }
 
 export interface MainReturnPayloads {
@@ -383,6 +391,10 @@ export interface MainReturnPayloads {
     [Main.GET_PRIVACY_SETTINGS]: PrivacySettings
     [Main.SET_ANALYTICS_CONSENT]: PrivacySettings
     [Main.DELETE_ANALYTICS_DATA]: Promise<DeleteAnalyticsResult>
+    // Software Promotions / Announcements
+    [Main.GET_SOFTWARE_PROMOTION]: Promise<SoftwarePromotionPayload | null>
+    [Main.DISMISS_SOFTWARE_PROMOTION]: boolean
+    [Main.OPEN_SOFTWARE_PROMOTION]: Promise<boolean>
 }
 
 ///////////

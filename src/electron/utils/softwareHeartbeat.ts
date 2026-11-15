@@ -5,6 +5,7 @@ import { app } from "electron"
 import axios from "axios"
 import type { DeleteAnalyticsResult, PrivacySettings } from "../../types/Main"
 import { config } from "../data/store"
+import { ingestPromotionFromServer } from "./softwarePromotions"
 
 const HEARTBEAT_URL = process.env.HAMRO_SOFTWARE_HEARTBEAT_URL || "https://hamrocms.com/api/v1/software/heartbeat"
 const DELETE_DEVICE_BASE_URL = process.env.HAMRO_ANALYTICS_DELETE_BASE_URL || "https://hamrocms.com/api/analytics/device"
@@ -133,7 +134,7 @@ async function sendHeartbeat(event: HeartbeatEvent = "heartbeat", timeout = 8000
     try {
         if (event === "start") hasSentStart = true
 
-        await axios.post(HEARTBEAT_URL, buildAnonymousTelemetryPayload(event), {
+        const response = await axios.post(HEARTBEAT_URL, buildAnonymousTelemetryPayload(event), {
             timeout,
             headers: {
                 Accept: "application/json",
@@ -141,6 +142,10 @@ async function sendHeartbeat(event: HeartbeatEvent = "heartbeat", timeout = 8000
                 "User-Agent": `HamroChurch/${app.getVersion()}`
             }
         })
+
+        if (event !== "stop" && response.data && "promotion" in response.data) {
+            void ingestPromotionFromServer(response.data.promotion)
+        }
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         console.warn(`Anonymous usage ping skipped: ${message}`)

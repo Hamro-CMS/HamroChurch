@@ -10,7 +10,7 @@ import type { Event } from "../types/Calendar"
 import type { Draw, DrawLine, DrawSettings, DrawTools } from "../types/Draw"
 import type { Effects } from "../types/Effects"
 import type { History, HistoryNew } from "../types/History"
-import type { ActiveEdit, Clipboard, Media, MediaOptions, NumberObject, OS, Popups, Profiles, Selected, SlidesOptions, Variable } from "../types/Main"
+import type { ActiveEdit, Clipboard, Media, MediaOptions, NumberObject, OS, Popups, Profiles, Selected, SlidesOptions, SoftwarePromotionPayload, Variable } from "../types/Main"
 import type { Folders, Projects, ShowRef } from "../types/Projects"
 import type { Dictionary, Styles, Themes } from "../types/Settings"
 import type { Action, Emitter, ID, Overlays, ShowGroups, ShowList, Shows, ShowType, SlideTimer, Tag, Templates, Timer, Transition, TrimmedShows } from "../types/Show"
@@ -41,6 +41,7 @@ export const currentWindow: Writable<null | "output" | "pdf"> = writable(null)
 export const localeDirection: Writable<"rtl" | "ltr"> = writable("ltr")
 export const dictionary: Writable<Dictionary> = writable({})
 export const nepaliTypingEnabled: Writable<boolean> = writable(false)
+export const softwarePromotion: Writable<SoftwarePromotionPayload | null> = writable(null)
 export const saved: Writable<boolean> = writable(true)
 export const loaded: Writable<boolean> = writable(false)
 export const loadedState: Writable<string[]> = writable([])

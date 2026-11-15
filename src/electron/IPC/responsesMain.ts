@@ -30,6 +30,7 @@ import { addToMediaFolder, bundleMediaFiles, createFolder, getDataFolderPath, ge
 import { getMachineId } from "../utils/helpers"
 import { fetchNepaliTransliteration } from "../utils/nepaliTransliteration"
 import { deleteAnalyticsServerData, getPrivacySettings, setAnalyticsConsent } from "../utils/softwareHeartbeat"
+import { dismissSoftwarePromotion, getActiveSoftwarePromotion, openSoftwarePromotionLink } from "../utils/softwarePromotions"
 import { LyricSearch } from "../utils/LyricSearch"
 import { closeMidiInPorts, getMidiInputs, getMidiOutputs, receiveMidi, sendMidi } from "../utils/midi"
 import { deleteShows, deleteShowsNotIndexed, getAllShows, getEmptyShows, refreshAllShows } from "../utils/shows"
@@ -250,7 +251,11 @@ export const mainResponses: MainResponses = {
     // Privacy & Anonymous Telemetry
     [Main.GET_PRIVACY_SETTINGS]: () => getPrivacySettings(),
     [Main.SET_ANALYTICS_CONSENT]: (data) => setAnalyticsConsent(!!data?.consent),
-    [Main.DELETE_ANALYTICS_DATA]: () => deleteAnalyticsServerData()
+    [Main.DELETE_ANALYTICS_DATA]: () => deleteAnalyticsServerData(),
+    // Software Promotions / Announcements
+    [Main.GET_SOFTWARE_PROMOTION]: () => getActiveSoftwarePromotion(),
+    [Main.DISMISS_SOFTWARE_PROMOTION]: (data) => dismissSoftwarePromotion(data),
+    [Main.OPEN_SOFTWARE_PROMOTION]: (data) => openSoftwarePromotionLink(data)
 }
 
 /// ///////
@@ -353,14 +358,7 @@ function readHamroHymns() {
     const primaryContent = readFile(primaryPath)
     if (primaryContent) return { path: primaryPath, content: normalizePayload(primaryContent, primaryPath) }
 
-    const candidates = [
-        path.join(root, "nepali_hymns.json"),
-        path.join(root, "imports", "nepali_hymns.json"),
-        path.join(root, "imports", "Hymns", "nepali_hymns.json"),
-        path.join(root, "imports", "Hamro Church", "nepali_hymns.json"),
-        path.join(root, "import", "nepali_hymns.json"),
-        path.join("C:\\Mandali Show", "church-presentation-app", "data", "nepali_hymns.json")
-    ]
+    const candidates = [path.join(root, "nepali_hymns.json"), path.join(root, "imports", "nepali_hymns.json"), path.join(root, "imports", "Hymns", "nepali_hymns.json"), path.join(root, "imports", "Hamro Church", "nepali_hymns.json"), path.join(root, "import", "nepali_hymns.json"), path.join("C:\\Mandali Show", "church-presentation-app", "data", "nepali_hymns.json")]
 
     for (const candidate of candidates) {
         const content = readFile(candidate)
@@ -406,7 +404,9 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
 
         const editId = String(data.id || "").trim()
         const hymnId = editId || `manual-${Date.now()}`
-        const normalizedLyrics = String(data.lyrics || "").replace(/\r\n/g, "\n").trim()
+        const normalizedLyrics = String(data.lyrics || "")
+            .replace(/\r\n/g, "\n")
+            .trim()
         const slides = normalizedLyrics
             .split(/\n\s*\n/)
             .map((entry) => entry.trim())
@@ -472,9 +472,15 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
 }
 
 function syncHamroHymnShows(updates: { id?: string; title: string; titleEn?: string; lyrics: string; categoryId: "bhajan" | "chorus" | "children" | "new"; number?: string; authors?: string }[] = []) {
-    const normalize = (value: any) => String(value || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim()
+    const normalize = (value: any) =>
+        String(value || "")
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n")
+            .trim()
     const normalizeCategory = (value: any) => {
-        const category = String(value || "").trim().toLowerCase()
+        const category = String(value || "")
+            .trim()
+            .toLowerCase()
         if (category === "chorus") return "chorus"
         if (category === "children") return "children"
         if (category === "new") return "new"
@@ -492,7 +498,11 @@ function syncHamroHymnShows(updates: { id?: string; title: string; titleEn?: str
     const getSongLyrics = (song: any) => {
         const lyrics = normalize(song?.lyrics)
         if (lyrics) return lyrics
-        if (Array.isArray(song?.slides)) return song.slides.map((slide: any) => normalize(slide)).filter(Boolean).join("\n\n")
+        if (Array.isArray(song?.slides))
+            return song.slides
+                .map((slide: any) => normalize(slide))
+                .filter(Boolean)
+                .join("\n\n")
         return ""
     }
     const findExistingSong = (payload: any, data: { id?: string; title: string; number?: string }) => {
@@ -529,13 +539,7 @@ function syncHamroHymnShows(updates: { id?: string; title: string; titleEn?: str
             const nextCategoryId = normalizeCategory(update?.categoryId)
 
             if (currentSong) {
-                const unchanged =
-                    normalize(currentSong?.title) === title &&
-                    normalize(currentSong?.titleEn) === normalize(update?.titleEn) &&
-                    normalize(currentSong?.authors) === normalize(update?.authors) &&
-                    normalizeNumber(extractNumber(currentSong?.sourceRefs || [])) === normalizeNumber(update?.number) &&
-                    matched?.categoryId === nextCategoryId &&
-                    getSongLyrics(currentSong) === lyrics
+                const unchanged = normalize(currentSong?.title) === title && normalize(currentSong?.titleEn) === normalize(update?.titleEn) && normalize(currentSong?.authors) === normalize(update?.authors) && normalizeNumber(extractNumber(currentSong?.sourceRefs || [])) === normalizeNumber(update?.number) && matched?.categoryId === nextCategoryId && getSongLyrics(currentSong) === lyrics
 
                 if (unchanged) continue
             } else if (!normalize(update?.id)) {

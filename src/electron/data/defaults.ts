@@ -10,7 +10,8 @@ export const defaultConfig = {
     englishOutputLabelsApplied: false,
     analytics_consent: null as boolean | null,
     anonymous_device_id: "",
-    analytics_consent_updated_at: null as string | null
+    analytics_consent_updated_at: null as string | null,
+    dismissed_promotions: {} as { [key: string]: string }
 }
 
 export const defaultGroups = {

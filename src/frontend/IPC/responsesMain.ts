@@ -70,6 +70,7 @@ import {
     redoHistory,
     shows,
     showsCache,
+    softwarePromotion,
     spellcheck,
     stageShows,
     templates,
@@ -541,5 +542,7 @@ export const mainResponses: MainResponses = {
     // Timecode
     [Main.TIMECODE_VALUE]: (data) => updateTimelineTime(data!),
     [Main.TIMECODE_STATUS]: (data) => updateTimelineStatus(data!),
-    [Main.TIMECODE_AUDIO_DATA]: (data) => processTimecodeFrame(data!)
+    [Main.TIMECODE_AUDIO_DATA]: (data) => processTimecodeFrame(data!),
+    // Software Promotions / Announcements
+    [ToMain.SOFTWARE_PROMOTION]: (data) => softwarePromotion.set(data ?? null)
 }
