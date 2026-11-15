@@ -1,9 +1,9 @@
 <script lang="ts">
     import { createEventDispatcher, onDestroy, onMount } from "svelte"
+    import Icon from "../../helpers/Icon.svelte"
     import { nepaliTypingInput } from "../../helpers/inputActions"
     import { hymnSearchValue } from "./hymns"
     import { nepaliTypingEnabled } from "../../../stores"
-    import T from "../../helpers/T.svelte"
     import { translateText } from "../../../utils/language"
 
     const dispatch = createEventDispatcher<{ input: string }>()
@@ -54,61 +54,56 @@
 </script>
 
 <div class="searchbar">
-    <label class="title" for="hymnSearchInput"><T id="hymns.search_label" /></label>
-    <div class="inputRow">
-        <input
-            id="hymnSearchInput"
-            bind:this={searchInput}
-            type="text"
-            class="searchInput edit"
-            bind:value
-            on:input={onInput}
-            on:focus={() => (isFocused = true)}
-            on:blur={() => (isFocused = false)}
-            use:nepaliTypingInput
-            placeholder={placeholder}
-            inputmode="text"
-            autocapitalize="off"
-            autocomplete="off"
-            spellcheck="false"
-        />
-        {#if value}
-            <button class="clear" on:click={clearSearch} aria-label="Clear hymn search">×</button>
-        {/if}
-    </div>
+    <span class="searchIcon" aria-hidden="true">
+        <Icon id="search" size={0.92} white />
+    </span>
+    <input id="hymnSearchInput" bind:this={searchInput} type="text" class="searchInput edit" bind:value on:input={onInput} on:focus={() => (isFocused = true)} on:blur={() => (isFocused = false)} use:nepaliTypingInput {placeholder} aria-label={placeholder} title={translateText("hymns.search_focus_tip")} inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" />
+    {#if value}
+        <button type="button" class="clear" on:click={clearSearch} aria-label="Clear hymn search">×</button>
+    {/if}
 </div>
 
 <style>
     .searchbar {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-        padding: 0.65rem 0.9rem 0.55rem;
-        border-bottom: 1px solid var(--primary-lighter);
-        background: linear-gradient(180deg, color-mix(in srgb, var(--primary-darkest) 94%, var(--secondary) 6%) 0%, var(--primary-darker) 100%);
-    }
-
-    .title {
-        font-size: 0.8rem;
-        opacity: 0.72;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-    }
-
-    .inputRow {
         position: relative;
+        flex: 1 1 200px;
+        min-width: 175px;
+        display: flex;
+        align-items: center;
+    }
+
+    .searchIcon {
+        position: absolute;
+        left: 0.68rem;
+        top: 50%;
+        transform: translateY(-50%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.65;
+        pointer-events: none;
     }
 
     .searchInput {
         width: 100%;
-        border: 1px solid color-mix(in srgb, var(--secondary) 25%, var(--primary-lighter) 75%);
-        border-radius: 12px;
+        height: 36px;
+        border: 1px solid color-mix(in srgb, var(--secondary) 30%, var(--primary-lighter) 70%);
+        border-radius: 9px;
         background: var(--primary-darkest);
         color: var(--text);
-        padding: 0.7rem 2.35rem 0.7rem 0.85rem;
+        padding: 0 2.05rem 0 2.15rem;
         font: inherit;
-        font-size: 0.95rem;
+        font-size: 0.91rem;
+        line-height: 1.2;
         outline: none;
+        transition:
+            border-color 0.15s ease,
+            box-shadow 0.15s ease;
+    }
+
+    .searchInput::placeholder {
+        opacity: 0.58;
+        font-size: 0.84rem;
     }
 
     .searchInput:focus {
@@ -118,15 +113,20 @@
 
     .clear {
         position: absolute;
-        right: 0.55rem;
+        right: 0.45rem;
         top: 50%;
         transform: translateY(-50%);
         border: none;
         background: transparent;
         color: var(--text);
-        opacity: 0.7;
-        font-size: 1.5rem;
+        opacity: 0.72;
+        font-size: 1.25rem;
         line-height: 1;
+        padding: 0.15rem 0.25rem;
         cursor: pointer;
+    }
+
+    .clear:hover {
+        opacity: 1;
     }
 </style>

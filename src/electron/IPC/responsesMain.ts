@@ -671,10 +671,21 @@ function checkRamUsage() {
     }
 }
 
-// URL: open url in default web browser
+// URL: open url in default web browser (strictly restricted to http/https schemes)
 export const openURL = (url: string) => {
-    shell.openExternal(url)
-    return
+    const raw = String(url || "").trim()
+    if (!raw) return
+
+    try {
+        const parsed = new URL(raw)
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+            console.warn(`Blocked unsafe external URL scheme: ${parsed.protocol}`)
+            return
+        }
+        void shell.openExternal(parsed.toString())
+    } catch {
+        console.warn("Blocked invalid external URL")
+    }
 }
 
 async function searchLyrics({ artist, title }: { artist: string; title: string }) {

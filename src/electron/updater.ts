@@ -14,6 +14,44 @@ const RELEASES_LATEST_URL = "https://api.github.com/repos/Hamro-CMS/HamroChurch/
 const RELEASES_PAGE_URL = "https://github.com/Hamro-CMS/HamroChurch/releases"
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
 const UPDATE_TEMP_DIR = path.join(os.tmpdir(), "Hamro Church Updates")
+const ALLOWED_UPDATE_EXTENSIONS = new Set([".exe", ".dmg", ".zip", ".appimage", ".deb", ".rpm"])
+
+function isTrustedGitHubAssetUrl(rawUrl: unknown): boolean {
+    if (typeof rawUrl !== "string" || !rawUrl.trim()) return false
+
+    try {
+        const parsed = new URL(rawUrl.trim())
+        if (parsed.protocol !== "https:") return false
+
+        const host = parsed.hostname.toLowerCase()
+        if (host === "objects.githubusercontent.com" || host === "release-assets.githubusercontent.com") {
+            return true
+        }
+
+        if (host === "github.com") {
+            return parsed.pathname.toLowerCase().startsWith("/hamro-cms/hamrochurch/")
+        }
+
+        return false
+    } catch {
+        return false
+    }
+}
+
+function sanitizeReleasePageUrl(rawUrl: unknown): string {
+    if (typeof rawUrl !== "string" || !rawUrl.trim()) return RELEASES_PAGE_URL
+
+    try {
+        const parsed = new URL(rawUrl.trim())
+        if (parsed.protocol === "https:" && parsed.hostname.toLowerCase() === "github.com" && parsed.pathname.toLowerCase().startsWith("/hamro-cms/hamrochurch")) {
+            return parsed.toString()
+        }
+    } catch {
+        // Fall through to official releases page
+    }
+
+    return RELEASES_PAGE_URL
+}
 
 type GitHubRelease = {
     tag_name?: string
@@ -36,7 +74,9 @@ export function initializeUpdater() {
 }
 
 function normalizeVersion(value: string) {
-    return String(value || "").trim().replace(/^v/i, "")
+    return String(value || "")
+        .trim()
+        .replace(/^v/i, "")
 }
 
 function parseSemver(value: string) {
@@ -93,12 +133,7 @@ function scoreAsset(assetName: string) {
 
 function selectAsset(release: GitHubRelease): AppUpdateAsset | null {
     const assets = Array.isArray(release.assets) ? release.assets : []
-    const platformMatchers =
-        process.platform === "win32"
-            ? [/\.exe$/i]
-            : process.platform === "darwin"
-              ? [/\.dmg$/i, /\.zip$/i]
-              : [/\.AppImage$/i, /\.deb$/i, /\.rpm$/i]
+    const platformMatchers = process.platform === "win32" ? [/\.exe$/i] : process.platform === "darwin" ? [/\.dmg$/i, /\.zip$/i] : [/\.AppImage$/i, /\.deb$/i, /\.rpm$/i]
 
     const matchingAssets = assets.filter((asset) => {
         const name = String(asset.name || "")
@@ -108,10 +143,10 @@ function selectAsset(release: GitHubRelease): AppUpdateAsset | null {
     if (!matchingAssets.length) return null
 
     const asset = matchingAssets.sort((left, right) => scoreAsset(String(right.name || "")) - scoreAsset(String(left.name || "")))[0]
-    if (!asset?.name || !asset.browser_download_url) return null
+    if (!asset?.name || !asset.browser_download_url || !isTrustedGitHubAssetUrl(asset.browser_download_url)) return null
 
     return {
-        name: asset.name,
+        name: path.basename(asset.name),
         url: asset.browser_download_url,
         contentType: asset.content_type,
         digest: asset.digest || null
@@ -169,7 +204,7 @@ export async function checkForUpdates(options: { manual?: boolean; includeBeta?:
             currentVersion,
             latestVersion,
             releaseNotes: String(release.body || ""),
-            releaseUrl: String(release.html_url || RELEASES_PAGE_URL),
+            releaseUrl: sanitizeReleasePageUrl(release.html_url),
             publishedAt: release.published_at,
             asset: hasUpdate ? selectAsset(release) : null,
             checkedAt
@@ -194,8 +229,22 @@ function getExpectedHash(asset: AppUpdateAsset | null | undefined) {
 }
 
 async function downloadAsset(asset: AppUpdateAsset) {
+    if (!isTrustedGitHubAssetUrl(asset.url)) {
+        throw new Error("Blocked untrusted update download origin.")
+    }
+
+    const safeFileName = path.basename(String(asset.name || "").trim())
+    const ext = path.extname(safeFileName).toLowerCase()
+    if (!safeFileName || safeFileName === "." || safeFileName === ".." || !ALLOWED_UPDATE_EXTENSIONS.has(ext)) {
+        throw new Error("Blocked invalid update installer filename.")
+    }
+
     await fs.promises.mkdir(UPDATE_TEMP_DIR, { recursive: true })
-    const targetPath = path.join(UPDATE_TEMP_DIR, asset.name)
+    const resolvedTempRoot = path.resolve(UPDATE_TEMP_DIR)
+    const targetPath = path.resolve(resolvedTempRoot, safeFileName)
+    if (!targetPath.startsWith(resolvedTempRoot + path.sep)) {
+        throw new Error("Blocked unsafe update destination path.")
+    }
 
     const response = await axios.get(asset.url, {
         responseType: "stream",

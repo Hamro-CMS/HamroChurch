@@ -7,10 +7,28 @@ import type { DeleteAnalyticsResult, PrivacySettings } from "../../types/Main"
 import { config } from "../data/store"
 import { ingestPromotionsFromServer } from "./softwarePromotions"
 
-const HEARTBEAT_URL = process.env.HAMRO_SOFTWARE_HEARTBEAT_URL || "https://hamrocms.com/api/v1/software/heartbeat"
-const DELETE_DEVICE_BASE_URL = process.env.HAMRO_ANALYTICS_DELETE_BASE_URL || "https://hamrocms.com/api/analytics/device"
+const DEFAULT_HEARTBEAT_URL = "https://hamrocms.com/api/v1/software/heartbeat"
+const DEFAULT_DELETE_DEVICE_BASE_URL = "https://hamrocms.com/api/analytics/device"
 const HEARTBEAT_INTERVAL_MS = 60 * 1000
 const INITIAL_START_DELAY_MS = 2500
+
+function resolveHeartbeatUrl(): string {
+    if (app.isPackaged) {
+        return DEFAULT_HEARTBEAT_URL
+    }
+
+    const custom = String(process.env.HAMRO_SOFTWARE_HEARTBEAT_URL || "").trim()
+    return custom || DEFAULT_HEARTBEAT_URL
+}
+
+function resolveDeleteDeviceBaseUrl(): string {
+    if (app.isPackaged) {
+        return DEFAULT_DELETE_DEVICE_BASE_URL
+    }
+
+    const custom = String(process.env.HAMRO_ANALYTICS_DELETE_BASE_URL || "").trim()
+    return custom || DEFAULT_DELETE_DEVICE_BASE_URL
+}
 const LEGACY_MACHINE_ID_FILE = ".hamro-machine-id"
 const ANALYTICS_CONSENT_VERSION = 2
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -134,7 +152,7 @@ async function sendHeartbeat(event: HeartbeatEvent = "heartbeat", timeout = 8000
     try {
         if (event === "start") hasSentStart = true
 
-        const response = await axios.post(HEARTBEAT_URL, buildAnonymousTelemetryPayload(event), {
+        const response = await axios.post(resolveHeartbeatUrl(), buildAnonymousTelemetryPayload(event), {
             timeout,
             headers: {
                 Accept: "application/json",
@@ -225,7 +243,7 @@ export function setAnalyticsConsent(consent: boolean): PrivacySettings {
 
 export async function deleteAnalyticsServerData(): Promise<DeleteAnalyticsResult> {
     const currentId = getAnonymousDeviceId()
-    const deleteUrl = `${DELETE_DEVICE_BASE_URL.replace(/\/+$/, "")}/${encodeURIComponent(currentId)}`
+    const deleteUrl = `${resolveDeleteDeviceBaseUrl().replace(/\/+$/, "")}/${encodeURIComponent(currentId)}`
 
     try {
         const response = await axios.delete(deleteUrl, {

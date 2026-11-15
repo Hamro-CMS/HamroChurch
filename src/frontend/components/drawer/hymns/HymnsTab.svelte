@@ -77,21 +77,21 @@
 </script>
 
 <div class="hymnsPanel">
-    <HymnSearchBar />
-
     <div class="toolbar">
+        <HymnSearchBar />
+
         <div class="toolbarActions">
-            <MaterialButton variant="outlined" icon="add" on:click={openAddHymn}>
+            <MaterialButton variant="outlined" icon="add" iconSize={0.92} style="padding: 0.38rem 0.68rem; font-size: 0.83rem; min-height: 36px; height: 36px; border-radius: 8px; gap: 6px;" on:click={openAddHymn}>
                 <T id="hymns.add_new" />
             </MaterialButton>
-            <MaterialButton variant="outlined" icon="edit" on:click={openEditHymn} disabled={!selectedHymn} white>
+            <MaterialButton variant="outlined" icon="edit" iconSize={0.9} style="padding: 0.38rem 0.68rem; font-size: 0.83rem; min-height: 36px; height: 36px; border-radius: 8px; gap: 6px;" on:click={openEditHymn} disabled={!selectedHymn} white>
                 <T id="hymns.edit_title" />
             </MaterialButton>
-            <MaterialButton variant="outlined" icon="reset" on:click={resetHymns} disabled={resetting} title="hymns.reset_confirm" white red>
+            <MaterialButton variant="outlined" icon="reset" iconSize={0.9} style="padding: 0.38rem 0.68rem; font-size: 0.83rem; min-height: 36px; height: 36px; border-radius: 8px; gap: 6px;" on:click={resetHymns} disabled={resetting} title="hymns.reset_confirm" white red>
                 {#if confirmingReset}<T id="popup.continue" />?{:else}<T id="hymns.reset_original" />{/if}
             </MaterialButton>
+            <div class="activeBadge">{getHymnCategoryDisplay(activeCategory, $language)} <span>{counts[activeCategory]}</span></div>
         </div>
-        <div class="activeBadge">{getHymnCategoryDisplay(activeCategory, $language)} <span>{counts[activeCategory]}</span></div>
     </div>
 
     {#if $hymnLoading}
@@ -118,16 +118,18 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 1rem;
-        padding: 0.7rem 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0.45rem 0.75rem;
         border-bottom: 1px solid var(--primary-lighter);
-        background: color-mix(in srgb, var(--primary-darker) 94%, var(--secondary) 6%);
+        background: linear-gradient(180deg, color-mix(in srgb, var(--primary-darkest) 92%, var(--secondary) 8%) 0%, color-mix(in srgb, var(--primary-darker) 94%, var(--secondary) 6%) 100%);
     }
 
     .toolbarActions {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.4rem;
+        flex-shrink: 0;
         flex-wrap: wrap;
     }
 
@@ -147,11 +149,14 @@
     .activeBadge {
         display: inline-flex;
         align-items: center;
-        gap: 0.55rem;
-        padding: 0.45rem 0.8rem;
+        gap: 0.45rem;
+        height: 36px;
+        padding: 0 0.72rem;
         border: 1px solid color-mix(in srgb, var(--secondary) 35%, var(--primary-lighter) 65%);
         border-radius: 999px;
-        font-size: 0.82rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        flex-shrink: 0;
         color: var(--text);
         background: color-mix(in srgb, var(--primary-darkest) 80%, black 20%);
     }

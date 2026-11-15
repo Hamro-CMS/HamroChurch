@@ -5,12 +5,39 @@ import type { SoftwarePromotionPayload, SoftwarePromotionTransitionStyle } from 
 import { config } from "../data/store"
 import { sendToMain } from "../IPC/main"
 
-const PROMOTION_URL = process.env.HAMRO_SOFTWARE_PROMOTION_URL || "https://hamrocms.com/api/v1/software/promotion"
+const DEFAULT_PROMOTION_URL = "https://hamrocms.com/api/v1/software/promotion"
 const INITIAL_DELAY_MS = 2800
 const POLL_INTERVAL_MS = 45 * 1000
 const MAX_MEDIA_BYTES = 4 * 1024 * 1024
 
 const VALID_TRANSITION_STYLES: SoftwarePromotionTransitionStyle[] = ["auto_mix", "flip_y", "flip_x", "flip_diagonal", "swing_3d"]
+
+function resolvePromotionEndpointUrl(): string {
+    if (app.isPackaged) {
+        return DEFAULT_PROMOTION_URL
+    }
+
+    const custom = String(process.env.HAMRO_SOFTWARE_PROMOTION_URL || "").trim()
+    return custom || DEFAULT_PROMOTION_URL
+}
+
+function sanitizeSafePromotionUrl(raw: unknown, fallback: string | null = null): string | null {
+    if (typeof raw !== "string" || !raw.trim()) return fallback
+
+    try {
+        const parsed = new URL(raw.trim())
+        if (parsed.protocol === "https:") {
+            return parsed.toString()
+        }
+        if (!app.isPackaged && parsed.protocol === "http:") {
+            return parsed.toString()
+        }
+    } catch {
+        // Ignore malformed URLs
+    }
+
+    return fallback
+}
 
 let initialTimer: NodeJS.Timeout | null = null
 let pollTimer: NodeJS.Timeout | null = null
@@ -103,9 +130,9 @@ function sanitizePromotion(raw: any): SoftwarePromotionPayload | null {
 
     const sortOrder = Number.isFinite(Number(raw.sort_order)) ? Math.floor(Number(raw.sort_order)) : 0
 
-    const imageUrl = typeof raw.image_url === "string" && /^https?:\/\//i.test(raw.image_url.trim()) ? raw.image_url.trim() : null
-    const ctaUrl = typeof raw.cta_url === "string" && /^https?:\/\//i.test(raw.cta_url.trim()) ? raw.cta_url.trim() : "https://hamrocms.com"
-    const eventUrl = typeof raw.event_url === "string" && /^https?:\/\//i.test(raw.event_url.trim()) ? raw.event_url.trim() : null
+    const imageUrl = sanitizeSafePromotionUrl(raw.image_url, null)
+    const ctaUrl = sanitizeSafePromotionUrl(raw.cta_url, "https://hamrocms.com") || "https://hamrocms.com"
+    const eventUrl = sanitizeSafePromotionUrl(raw.event_url, null)
 
     return {
         id,
@@ -172,8 +199,10 @@ async function resolveMediaSource(promo: SoftwarePromotionPayload): Promise<stri
 }
 
 async function recordPromotionMetric(promoId: number, event: "impression" | "click", explicitEventUrl?: string | null) {
-    const fallbackBase = PROMOTION_URL.replace(/\/promotion(?:s\/active)?\/?$/i, "")
-    const targetUrl = explicitEventUrl && /^https?:\/\//i.test(explicitEventUrl) ? explicitEventUrl : `${fallbackBase}/promotions/${encodeURIComponent(String(promoId))}/event`
+    const promotionUrl = resolvePromotionEndpointUrl()
+    const fallbackBase = promotionUrl.replace(/\/promotion(?:s\/active)?\/?$/i, "")
+    const safeExplicit = sanitizeSafePromotionUrl(explicitEventUrl, null)
+    const targetUrl = !app.isPackaged && safeExplicit ? safeExplicit : `${fallbackBase}/promotions/${encodeURIComponent(String(promoId))}/event`
 
     try {
         await axios.post(
@@ -246,7 +275,7 @@ export async function ingestPromotionsFromServer(rawInput: any, forceEmit = fals
 
 export async function fetchActiveSoftwarePromotions(forceEmit = false): Promise<SoftwarePromotionPayload[]> {
     try {
-        const response = await axios.get(PROMOTION_URL, {
+        const response = await axios.get(resolvePromotionEndpointUrl(), {
             timeout: 8000,
             headers: {
                 Accept: "application/json",
@@ -346,15 +375,15 @@ export function dismissSoftwarePromotion(data: {
 }
 
 export async function openSoftwarePromotionLink(data: { id: number; url: string; eventUrl?: string | null }): Promise<boolean> {
-    const rawUrl = String(data?.url || "").trim()
-    if (!/^https?:\/\//i.test(rawUrl)) return false
+    const safeUrl = sanitizeSafePromotionUrl(data?.url, null)
+    if (!safeUrl) return false
 
     if (Number.isFinite(Number(data?.id)) && Number(data.id) > 0) {
         void recordPromotionMetric(Number(data.id), "click", data.eventUrl)
     }
 
     try {
-        await shell.openExternal(rawUrl)
+        await shell.openExternal(safeUrl)
         return true
     } catch {
         return false
