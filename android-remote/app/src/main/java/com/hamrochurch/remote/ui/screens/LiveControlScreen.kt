@@ -156,7 +156,7 @@ fun LiveControlScreen(
                                 text = live.currentGroup,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFFFFB1DF),
+                                color = Color(0xFF7DD3FC),
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
@@ -388,7 +388,7 @@ fun LiveControlScreen(
                                             text = "${slide.index + 1}. ${slide.group}",
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (isCurrent) Color(0xFFFFB1DF) else TextSecondary
+                                            color = if (isCurrent) Color(0xFF7DD3FC) else TextSecondary
                                         )
                                         if (isCurrent) {
                                             Text(

@@ -147,7 +147,7 @@
                 <p>{translateText(format.name)}</p>
 
                 <div class="freeshow">
-                    <img style="height: 18px;padding: 0;" src="./logo.png" alt="Aradhana Studio logo" draggable={false} />
+                    <img style="height: 22px;width: 22px;object-fit: contain;padding: 0;" src="./icon.png" alt="Aradhana Studio logo" draggable={false} />
                 </div>
             </MaterialButton>
         {/each}
@@ -243,7 +243,7 @@
                 <p>{translateText(format.name)}</p>
 
                 <div class="freeshow">
-                    <img style="height: 18px;padding: 0;" src="./logo.png" alt="Aradhana Studio logo" draggable={false} />
+                    <img style="height: 22px;width: 22px;object-fit: contain;padding: 0;" src="./icon.png" alt="Aradhana Studio logo" draggable={false} />
                 </div>
             </MaterialButton>
         {/each}

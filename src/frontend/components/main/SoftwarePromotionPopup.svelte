@@ -426,12 +426,12 @@
         position: relative;
         width: 100%;
         border-radius: 14px;
-        border: 1px solid color-mix(in srgb, var(--secondary) 52%, var(--primary-lighter) 48%);
-        background: linear-gradient(165deg, color-mix(in srgb, var(--primary-darker) 94%, #1a1a28 6%), color-mix(in srgb, var(--primary-darkest) 96%, black 4%));
+        border: 1px solid color-mix(in srgb, var(--secondary) 48%, var(--primary-lighter) 52%);
+        background: linear-gradient(165deg, color-mix(in srgb, var(--primary) 92%, #0f213d 8%), color-mix(in srgb, var(--primary-darkest) 96%, #050a14 4%));
         color: var(--text);
         box-shadow:
-            0 16px 38px rgb(0 0 0 / 0.56),
-            0 0 0 1px rgb(255 255 255 / 0.04) inset;
+            0 16px 38px rgb(0 0 0 / 0.58),
+            0 0 0 1px rgb(56 189 248 / 0.08) inset;
         overflow: hidden;
         transform-style: preserve-3d;
         backface-visibility: hidden;
@@ -530,12 +530,12 @@
         align-items: center;
         padding: 2px 8px;
         border-radius: 999px;
-        font-size: 0.65rem;
-        font-weight: 700;
-        letter-spacing: 0.03em;
-        background: color-mix(in srgb, var(--secondary) 18%, transparent);
-        border: 1px solid color-mix(in srgb, var(--secondary) 42%, transparent);
-        color: color-mix(in srgb, var(--secondary) 75%, white 25%);
+        font-size: 0.64rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        background: rgb(245 158 11 / 0.16);
+        border: 1px solid rgb(245 158 11 / 0.45);
+        color: #fbbf24;
     }
 
     .headerControls {
@@ -554,7 +554,7 @@
 
     .autoProgressFill {
         height: 100%;
-        background: linear-gradient(90deg, var(--secondary), #6366f1);
+        background: linear-gradient(90deg, #0ea5e9, #38bdf8, #f59e0b);
         transition: width 240ms linear;
     }
 

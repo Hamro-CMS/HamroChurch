@@ -283,7 +283,7 @@ fun HymnsScreen(
                                 ) {
                                     Text(
                                         text = hymn.number,
-                                        color = Color(0xFFFFB1DF),
+                                        color = Color(0xFF7DD3FC),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
                                         modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)

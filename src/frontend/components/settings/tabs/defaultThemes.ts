@@ -9,17 +9,17 @@ export const defaultThemes: { [key: string]: Themes } = {
             size: "1em"
         },
         colors: {
-            primary: "#242832",
-            "primary-lighter": "#2f3542",
-            "primary-darker": "#191923",
-            "primary-darkest": "#12121c",
-            text: "#f0f0ff",
-            textInvert: "#131313",
-            "secondary-text": "#f0f0ff",
-            secondary: "#F0008C",
-            "secondary-opacity": "rgba(240, 0, 140, 0.5)",
-            hover: "rgb(255 255 255 / 0.05)",
-            focus: "rgb(255 255 255 / 0.1)"
+            primary: "#101B30",
+            "primary-lighter": "#1C2F4F",
+            "primary-darker": "#0B1324",
+            "primary-darkest": "#070D19",
+            text: "#EEF6FF",
+            textInvert: "#06101F",
+            "secondary-text": "#FFFFFF",
+            secondary: "#0EA5E9",
+            "secondary-opacity": "rgba(14, 165, 233, 0.35)",
+            hover: "rgb(56 189 248 / 0.09)",
+            focus: "rgb(56 189 248 / 0.18)"
         }
     },
     dark: {
@@ -30,17 +30,17 @@ export const defaultThemes: { [key: string]: Themes } = {
             size: "1.1em"
         },
         colors: {
-            primary: "#242832",
-            "primary-lighter": "#2f3542",
-            "primary-darker": "#191923",
-            "primary-darkest": "#12121c",
-            text: "#f0f0ff",
-            textInvert: "#131313",
-            "secondary-text": "#f0f0ff",
-            secondary: "#E64934",
-            "secondary-opacity": "rgb(230 73 52 / 0.5)",
-            hover: "rgb(255 255 255 / 0.05)",
-            focus: "rgb(255 255 255 / 0.1)"
+            primary: "#131D31",
+            "primary-lighter": "#213252",
+            "primary-darker": "#0C1424",
+            "primary-darkest": "#070C17",
+            text: "#F0F6FF",
+            textInvert: "#06101F",
+            "secondary-text": "#FFFFFF",
+            secondary: "#F59E0B",
+            "secondary-opacity": "rgb(245 158 11 / 0.38)",
+            hover: "rgb(56 189 248 / 0.08)",
+            focus: "rgb(56 189 248 / 0.16)"
         }
     },
     light: {
@@ -51,17 +51,17 @@ export const defaultThemes: { [key: string]: Themes } = {
             size: "1em"
         },
         colors: {
-            primary: "#DADDE2",
-            "primary-lighter": "#B0B5C0",
-            "primary-darker": "#E8EAED",
-            "primary-darkest": "#EFF2F6",
-            text: "#333748",
-            textInvert: "#f0f0ff",
-            "secondary-text": "#131313",
-            secondary: "#F0008C",
-            "secondary-opacity": "rgb(230 52 156 / 0.5)",
-            hover: "rgb(0 0 0 / 0.05)",
-            focus: "rgb(0 0 0 / 0.1)"
+            primary: "#E2E8F0",
+            "primary-lighter": "#CBD5E1",
+            "primary-darker": "#F1F5F9",
+            "primary-darkest": "#F8FAFC",
+            text: "#0F172A",
+            textInvert: "#F8FAFC",
+            "secondary-text": "#FFFFFF",
+            secondary: "#0284C7",
+            "secondary-opacity": "rgb(2 132 199 / 0.32)",
+            hover: "rgb(15 23 42 / 0.05)",
+            focus: "rgb(15 23 42 / 0.1)"
         }
     },
     white: {

@@ -147,12 +147,14 @@ export function updateSettings(data: any) {
     }
 
     // theme
-    let currentTheme = get(themes)[data.theme]
+    const activeThemeId = data.theme || "default"
+    let currentTheme = get(themes)[activeThemeId] || clone(defaultThemes.default)
     if (currentTheme?.colors) {
-        // update colors (pre 0.9.2 or 1.4.9)
-        const pre092 = currentTheme.colors.secondary?.toLowerCase() === "#e6349c"
-        const pre149 = currentTheme.colors.primary?.toLowerCase() === "#292c36"
-        if (data.theme === "default" && (pre092 || pre149)) {
+        // upgrade legacy FreeShow pink/purple default theme to Aradhana Studio Midnight Blue
+        const legacySec = currentTheme.colors.secondary?.toLowerCase()
+        const legacyPri = currentTheme.colors.primary?.toLowerCase()
+        const isLegacyDefault = ["#f0008c", "#e6349c", "#cb9a41"].includes(legacySec || "") || ["#242832", "#292c36", "#f8f6f0"].includes(legacyPri || "")
+        if (activeThemeId === "default" && isLegacyDefault) {
             themes.update((a) => {
                 a.default = clone(defaultThemes.default)
                 currentTheme = a.default
@@ -306,6 +308,9 @@ const updateList: { [key in SaveListSettings | SaveListSyncedSettings]: any } = 
     outputs: (v: any) => {
         Object.keys(v).forEach((id: string) => {
             delete v[id].out
+            if (typeof v[id]?.color === "string" && v[id].color.toLowerCase() === "#f0008c") {
+                v[id].color = "#0EA5E9"
+            }
         })
         outputs.set(v)
     },
@@ -335,7 +340,26 @@ const updateList: { [key in SaveListSettings | SaveListSyncedSettings]: any } = 
     groupNumbers: (v: any) => groupNumbers.set(v),
     fullColors: (v: any) => fullColors.set(v),
     formatNewShow: (v: any) => formatNewShow.set(v),
-    groups: (v: any) => groups.set(v),
+    groups: (v: any) => {
+        if (v && typeof v === "object") {
+            const legacyGroupMap: Record<string, { old: string; next: string }> = {
+                break: { old: "#f5255e", next: "#ef4444" },
+                bridge: { old: "#f52598", next: "#3b82f6" },
+                chorus: { old: "#f525d2", next: "#f59e0b" },
+                intro: { old: "#d525f5", next: "#14b8a6" },
+                outro: { old: "#a525f5", next: "#6366f1" },
+                pre_chorus: { old: "#8825f5", next: "#06b6d4" },
+                tag: { old: "#7525f5", next: "#eab308" },
+                verse: { old: "#5825f5", next: "#0ea5e9" }
+            }
+            Object.entries(legacyGroupMap).forEach(([key, { old, next }]) => {
+                if (v[key]?.default && typeof v[key]?.color === "string" && v[key].color.toLowerCase() === old) {
+                    v[key].color = next
+                }
+            })
+        }
+        groups.set(v)
+    },
     labelsDisabled: (v: any) => labelsDisabled.set(v),
     mediaFolders: (v: any) => mediaFolders.set(v),
     mediaOptions: (v: any) => mediaOptions.set(v),

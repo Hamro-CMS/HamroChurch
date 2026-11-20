@@ -468,7 +468,6 @@
     }
 
     .slide {
-        /* padding: 3px; */
         background-color: var(--primary-darkest);
         z-index: 0;
         outline-offset: 0;
@@ -477,36 +476,27 @@
         position: relative;
         display: flex;
 
-        /* height: fit-content; */
-        /* border: 2px solid var(--primary-lighter); */
-
-        /* border-radius: 4px; */
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid color-mix(in srgb, var(--primary-lighter) 82%, transparent);
     }
-
-    /* .slide :global(.selectElem#slide) {
-        border-radius: 4px;
-    }
-    .slide :global(.zoomed .slide) {
-        border-top-left-radius: 4px;
-        border-top-right-radius: 4px;
-    } */
 
     .slide :global(.isSelected) {
-        outline: 5px solid var(--text) !important;
-        border-radius: 0 !important;
+        outline: 4px solid var(--secondary) !important;
+        border-radius: 8px !important;
     }
 
     .main.focused {
         outline: 2px solid var(--secondary-opacity);
         outline-offset: -1px;
+        border-radius: 10px;
         z-index: 2;
     }
     .main.active {
-        /* outline: 3px solid var(--secondary); */
         outline: 2px solid var(--secondary);
         outline-offset: -1px;
-        /* this z-index causes the button title to show behind! */
-        /* z-index: 2; */
+        border-radius: 10px;
+        box-shadow: 0 4px 16px color-mix(in srgb, var(--secondary) 22%, transparent);
     }
 
     .group_box {

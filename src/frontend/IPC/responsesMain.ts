@@ -137,10 +137,24 @@ export const mainResponses: MainResponses = {
     [Main.EVENTS]: (a) => events.set(a),
     [Main.MEDIA]: (a) => media.set(a),
     [Main.THEMES]: (a) => {
-        themes.set(Object.keys(a).length ? a : clone(defaultThemes))
+        const loadedThemes = Object.keys(a).length ? a : clone(defaultThemes)
+        const legacyDefaultSec = loadedThemes.default?.colors?.secondary?.toLowerCase()
+        const legacyDefaultPri = loadedThemes.default?.colors?.primary?.toLowerCase()
+        if (!loadedThemes.default || ["#f0008c", "#e6349c", "#cb9a41"].includes(legacyDefaultSec || "") || ["#242832", "#292c36", "#f8f6f0"].includes(legacyDefaultPri || "")) {
+            loadedThemes.default = clone(defaultThemes.default)
+        }
+        if (loadedThemes.light?.colors?.secondary?.toLowerCase() === "#f0008c") {
+            loadedThemes.light = clone(defaultThemes.light)
+        }
+        if (loadedThemes.dark?.colors?.primary?.toLowerCase() === "#242832") {
+            loadedThemes.dark = clone(defaultThemes.dark)
+        }
 
-        // update if themes are loaded after settings
-        if (get(theme) !== "default") updateThemeValues(get(themes)[get(theme)])
+        themes.set(loadedThemes)
+
+        // apply active theme (including upgraded default theme) immediately
+        const activeId = get(theme) || "default"
+        updateThemeValues(loadedThemes[activeId] || loadedThemes.default)
     },
     [Main.DRIVE_API_KEY]: (a) => driveKeys.set(a),
     [Main.HISTORY]: (a) => {

@@ -73,9 +73,11 @@
             <div class="unsaved" />
         {/if}
         <h1 class="brandTitle">
-            <img class="brandLogoIcon" src="./icon.png" alt="" draggable={false} />
-            <span>{$language === "ne" ? "आराधना स्टुडियो" : "Aradhana Studio"}</span>
-            <span class="brandDomain">(hamrocms.com)</span>
+            <span class="brandLogoBadge">
+                <img class="brandLogoIcon" src="./icon.png" alt="" draggable={false} />
+            </span>
+            <span class="brandNameText">{$language === "ne" ? "आराधना स्टुडियो" : "Aradhana Studio"}</span>
+            <span class="brandDomain">hamrocms.com</span>
         </h1>
     </span>
     <span>
@@ -143,10 +145,12 @@
         display: flex;
         justify-content: space-between;
         z-index: 30;
-        min-height: 40px;
-        height: 40px;
+        min-height: 44px;
+        height: 44px;
 
-        box-shadow: 0 0 4px rgb(0 0 0 / 0.4);
+        background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 92%, #1a3358 8%) 0%, color-mix(in srgb, var(--primary-darker) 88%, #0e1d36 12%) 100%);
+        border-bottom: 1px solid color-mix(in srgb, var(--secondary) 24%, var(--primary-lighter) 76%);
+        box-shadow: 0 2px 10px rgb(0 0 0 / 0.38);
 
         /* disabled because it's causing unexpected behaviour in Windows 11 */
         /* -webkit-app-region: drag; */
@@ -218,28 +222,53 @@
 
     .brandTitle {
         align-self: center;
-        padding-inline: 14px 12px;
-        font-size: 1.65em;
+        padding-inline: 12px 12px;
+        font-size: 1.42em;
         display: inline-flex;
         align-items: center;
-        gap: 8px;
+        gap: 9px;
         min-width: 0;
         white-space: nowrap;
+        color: var(--text);
+    }
+
+    .brandLogoBadge {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        padding: 3px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: linear-gradient(145deg, color-mix(in srgb, var(--secondary) 24%, #0d1f3c 76%), #071122);
+        border: 1px solid color-mix(in srgb, var(--secondary) 48%, transparent);
+        box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
     }
 
     .brandLogoIcon {
-        width: 26px;
-        height: 26px;
+        width: 100%;
+        height: 100%;
         object-fit: contain;
         flex-shrink: 0;
     }
 
-    .brandDomain {
-        font-size: 0.62em;
-        font-weight: 600;
+    .brandNameText {
         color: var(--text);
-        opacity: 0.88;
+        font-weight: 700;
         letter-spacing: 0.01em;
+    }
+
+    .brandDomain {
+        font-size: 0.56em;
+        font-weight: 700;
+        color: #fbbf24;
+        background: rgb(245 158 11 / 0.14);
+        border: 1px solid rgb(245 158 11 / 0.42);
+        border-radius: 999px;
+        padding: 2px 9px;
+        line-height: 1.35;
+        letter-spacing: 0.02em;
     }
 
     @media screen and (max-width: 780px) {

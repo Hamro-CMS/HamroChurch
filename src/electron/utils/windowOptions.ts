@@ -25,7 +25,7 @@ export const loadingOptions: BrowserWindowConstructorOptions = {
 
 export const mainOptions: BrowserWindowConstructorOptions = {
     icon: appIconPath,
-    backgroundColor: "#242832",
+    backgroundColor: "#0B1324",
     titleBarStyle: isMac ? "hidden" : "default",
     trafficLightPosition: { x: 10, y: 12 }, // mac buttons
     show: false,

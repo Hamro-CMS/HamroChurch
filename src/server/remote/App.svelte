@@ -28,16 +28,16 @@
 <svelte:head>
     <style>
         :root {
-            --primary: #242832;
-            --primary-lighter: #2f3542;
-            --primary-darker: #191923;
-            --primary-darkest: #12121c;
+            --primary: #101b30;
+            --primary-lighter: #1c2f4f;
+            --primary-darker: #0b1324;
+            --primary-darkest: #070d19;
             --text: #f0f0ff;
             --textInvert: #131313;
-            --secondary: #f0008c;
-            --secondary-opacity: rgba(240, 0, 140, 0.5);
+            --secondary: #0ea5e9;
+            --secondary-opacity: rgba(14, 165, 233, 0.35);
             --secondary-text: #f0f0ff;
-            --transparent: #232530;
+            --transparent: #0d1629;
 
             --accent: #90caf9;
 

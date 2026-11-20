@@ -357,7 +357,7 @@ fun MobilePromotionOverlay(
                             text = "HamroCMS.com",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFFFF85C8)
+                            color = Color(0xFFFBBF24)
                         )
                     }
 

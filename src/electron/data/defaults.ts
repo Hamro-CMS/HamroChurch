@@ -15,14 +15,14 @@ export const defaultConfig = {
 }
 
 export const defaultGroups = {
-    break: { name: "break", default: true, color: "#f5255e" },
-    bridge: { name: "bridge", default: true, color: "#f52598", shortcut: "B" },
-    chorus: { name: "chorus", default: true, color: "#f525d2", shortcut: "C" },
-    intro: { name: "intro", default: true, color: "#d525f5" },
-    outro: { name: "outro", default: true, color: "#a525f5" },
-    pre_chorus: { name: "pre_chorus", default: true, color: "#8825f5" },
-    tag: { name: "tag", default: true, color: "#7525f5" },
-    verse: { name: "verse", default: true, color: "#5825f5", shortcut: "V" }
+    break: { name: "break", default: true, color: "#ef4444" },
+    bridge: { name: "bridge", default: true, color: "#3b82f6", shortcut: "B" },
+    chorus: { name: "chorus", default: true, color: "#f59e0b", shortcut: "C" },
+    intro: { name: "intro", default: true, color: "#14b8a6" },
+    outro: { name: "outro", default: true, color: "#6366f1" },
+    pre_chorus: { name: "pre_chorus", default: true, color: "#06b6d4" },
+    tag: { name: "tag", default: true, color: "#eab308" },
+    verse: { name: "verse", default: true, color: "#0ea5e9", shortcut: "V" }
 }
 
 export const defaultSettings: { [key in SaveListSettings]: any } = {
@@ -33,7 +33,7 @@ export const defaultSettings: { [key in SaveListSettings]: any } = {
             enabled: true,
             active: true,
             name: "Primary",
-            color: "#F0008C",
+            color: "#0EA5E9",
             bounds: { x: 0, y: 0, width: 1920, height: 1080 },
             screen: null,
             style: "default",

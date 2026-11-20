@@ -4,8 +4,8 @@
     "short_name": "ControlShow",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#242832",
-    "theme_color": "#242832",
+    "background_color": "#101b30",
+    "theme_color": "#101b30",
     "description": "A remote controller app for Aradhana Studio.",
     "icons": [
         {

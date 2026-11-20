@@ -101,19 +101,20 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto;
-        width: min(300px, 82vw);
-        aspect-ratio: 2.15 / 1;
-        overflow: hidden;
+        margin: 4px auto 8px;
+        padding: 4px 10px;
+        width: min(360px, 88vw);
+        overflow: visible;
     }
 
     .logo img {
-        width: 142%;
-        max-width: none;
+        width: 100%;
+        max-width: 340px;
+        max-height: 144px;
         height: auto;
-        flex-shrink: 0;
+        display: block;
         object-fit: contain;
-        transform: translateX(-2.2%);
+        filter: drop-shadow(0 8px 20px rgb(0 0 0 / 0.42));
     }
 
     .church-cta {

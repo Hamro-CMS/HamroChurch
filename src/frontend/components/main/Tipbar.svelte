@@ -61,7 +61,7 @@
             {message}
 
             {#if activeMessage === "donate"}
-                <MaterialButton style="margin-left: 10px;padding: 2px 10px;background: linear-gradient(160deg, #f0008c 0%, #d100db 10%, #b300f0 30%, #9000f0 50%, #8000f0 100%) !important;" on:click={donate}>
+                <MaterialButton style="margin-left: 10px;padding: 2px 10px;background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 55%, #0369a1 100%) !important;" on:click={donate}>
                     <span style="font-weight: bold;color: white;">Donate</span>
                     <Icon id="launch" white />
                 </MaterialButton>
@@ -88,7 +88,7 @@
 
         /* border-top: 1px solid; */
         border-bottom: 2px solid;
-        border-image: linear-gradient(160deg, #8000f0 0%, #9000f0 10%, #b300f0 30%, #d100db 50%, #f0008c 100%) 1;
+        border-image: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #38bdf8 100%) 1;
     }
 
     .text {

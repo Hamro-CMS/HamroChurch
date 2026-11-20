@@ -32,26 +32,26 @@
 }
 
 :root {
-    --primary: #f8f6f0;
-    --primary-lighter: #fdfcf8;
-    --primary-darker: #eae8e3;
-    --primary-darkest: #d4cec4;
-    --text: #2d2a26;
-    --textInvert: #f8f6f0;
-    --secondary: #cb9a41;
-    --secondary-opacity: rgb(203 154 65 / 0.28);
-    --secondary-text: #2d2a26;
-    --transparent: rgb(248 246 240 / 0.82);
+    --primary: #101b30;
+    --primary-lighter: #1c2f4f;
+    --primary-darker: #0b1324;
+    --primary-darkest: #070d19;
+    --text: #eef6ff;
+    --textInvert: #06101f;
+    --secondary: #0ea5e9;
+    --secondary-opacity: rgb(14 165 233 / 0.35);
+    --secondary-text: #ffffff;
+    --transparent: rgb(11 19 36 / 0.86);
 
-    --accent: #2c6e6b;
+    --accent: #f59e0b;
 
-    --connected: #4a7c59;
-    --disconnected: #d9822b;
+    --connected: #10b981;
+    --disconnected: #f59e0b;
 
-    --red: rgb(255 0 0 / 0.25);
+    --red: rgb(239 68 68 / 0.28);
 
-    --hover: rgb(44 110 107 / 0.08);
-    --focus: rgb(203 154 65 / 0.18);
+    --hover: rgb(56 189 248 / 0.09);
+    --focus: rgb(56 189 248 / 0.18);
 
     /* https://css-tricks.com/snippets/css/system-font-stack/ */
     --font-family: "NotoSansDevanagari", "CMGSans", "Segoe UI", sans-serif;
@@ -81,11 +81,9 @@ body {
     display: flex;
     flex-direction: column;
     color: var(--text);
-    background: linear-gradient(180deg, #fdfcf8 0%, #f3efe4 100%);
+    background-color: var(--primary-darker);
     box-sizing: border-box;
-    /* gradient color background transition not easily possible */
-    /* https://stackoverflow.com/questions/6542212/use-css3-transitions-with-gradient-backgrounds */
-    transition: background-color 0.5s;
+    transition: background-color 0.35s;
 
     font-family: var(--font-family);
     font-size: var(--font-size);
@@ -99,16 +97,16 @@ body {
 
 ::-webkit-scrollbar-track,
 ::-webkit-scrollbar-corner {
-    background: rgb(255 255 255 / 0.05);
+    background: rgb(7 13 25 / 0.45);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgb(255 255 255 / 0.3);
+    background: rgb(125 176 232 / 0.26);
     border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgb(255 255 255 / 0.5);
+    background: rgb(56 189 248 / 0.48);
 }
 
 /* selection */
@@ -123,7 +121,7 @@ h4,
 h5,
 h6 {
     color: var(--secondary);
-    transition: color 0.5s;
+    transition: color 0.35s;
 
     text-overflow: ellipsis;
     overflow: hidden;
@@ -144,8 +142,7 @@ p {
 /* CHECKERED */
 
 .checkered {
-    /* background-color: var(--transparent); */
-    background: repeating-conic-gradient(rgba(70, 70, 80, 0.15) 0% 25%, transparent 0% 50%) 50% / 26px 26px;
+    background: repeating-conic-gradient(rgba(30, 58, 95, 0.24) 0% 25%, transparent 0% 50%) 50% / 26px 26px;
 }
 
 /* OPTIMIZED MODE */

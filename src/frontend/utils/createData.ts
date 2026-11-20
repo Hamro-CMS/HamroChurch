@@ -228,13 +228,13 @@ function getDefaultOverlays() {
     a.watermark = {
         isDefault: true,
         name: translateText("example.watermark"),
-        color: "#F0008C",
+        color: "#0EA5E9",
         category: "notice",
         items: [
             {
                 style: "top:870px;left:1248px;height:170px;width:630px;",
                 align: "align-items:flex-end;",
-                lines: [{ align: "text-align: right;", text: [{ value: "Aradhana Studio", style: "font-size:50px;font-weight:bold;color:#CB9A41;" }] }]
+                lines: [{ align: "text-align: right;", text: [{ value: "Aradhana Studio", style: "font-size:50px;font-weight:bold;color:#38BDF8;" }] }]
             }
         ]
     }

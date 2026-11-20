@@ -23,7 +23,7 @@
     import Info from "./info/Info.svelte"
 
     const minHeight = 40
-    const topHeight = 40
+    const topHeight = 44
     let maxHeight = window.innerHeight - topHeight - ($os.platform === "win32" ? MENU_BAR_HEIGHT - 0.3 : 0)
     $: height = $drawer.height
 
@@ -229,9 +229,8 @@
         <span class="tabs">
             {#each tabs as tab, i}
                 {#if $drawerTabsData[tab.id]?.enabled !== false && getAccess(tab.id).global !== "none" && (!$focusMode || !hiddenInFocusMode.includes(tab.id))}
-                    <!-- overflow: unset; -->
-                    <MaterialButton id={tab.id} style="border-radius: 0;border-bottom: 2px solid var(--primary);padding: 0.2em 0.8em;" class="context #drawer_top" title="<b>{tab.name.split('.')[0]}.{tab.name.split('.')[1]}</b>{tab.title ? `\n${tab.title}` : ''} [Ctrl+{i + 1}]" isActive={activeTab === tab.id} on:click={() => openDrawerTab(tab)} on:dblclick={closeDrawer}>
-                        <Icon id={tab.icon} size={1.3} white={activeTab === tab.id} />
+                    <MaterialButton id={tab.id} style="border-radius: 7px;margin: 3px 2px;border: 1px solid transparent;padding: 0.2em 0.82em;" class="drawerNavCapsule context #drawer_top" title="<b>{tab.name.split('.')[0]}.{tab.name.split('.')[1]}</b>{tab.title ? `\n${tab.title}` : ''} [Ctrl+{i + 1}]" isActive={activeTab === tab.id} on:click={() => openDrawerTab(tab)} on:dblclick={closeDrawer}>
+                        <Icon id={tab.icon} size={1.25} white={activeTab === tab.id} />
                         {#if !$labelsDisabled && !$focusMode}
                             <span><T id={tab.name} /></span>
                         {/if}
@@ -304,39 +303,50 @@
         display: flex;
         justify-content: space-between;
         padding-top: 4px;
+        padding-inline: 4px;
 
-        box-shadow: 0 -1.8px 8px rgb(0 0 0 / 0.2);
+        background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 92%, #193055 8%) 0%, color-mix(in srgb, var(--primary-darker) 88%, #0d1a30 12%) 100%);
+        border-bottom: 1px solid color-mix(in srgb, var(--secondary) 18%, var(--primary-lighter) 82%);
+        box-shadow: 0 -2px 10px rgb(0 0 0 / 0.28);
         z-index: 1;
     }
     .top::after {
         content: "";
-        background-color: var(--primary-lighter);
+        background-color: color-mix(in srgb, var(--secondary) 28%, var(--primary-lighter) 72%);
         position: absolute;
         top: 0;
+        left: 0;
         width: 100%;
-        height: 4px;
+        height: 3px;
         cursor: ns-resize;
     }
 
     .top .tabs {
         display: flex;
+        align-items: center;
         overflow-x: auto;
         overflow-y: hidden;
     }
 
+    .top :global(button.drawerNavCapsule.isActive) {
+        background: linear-gradient(180deg, color-mix(in srgb, var(--secondary) 26%, var(--primary) 74%) 0%, color-mix(in srgb, var(--secondary) 14%, var(--primary-darkest) 86%) 100%) !important;
+        border: 1px solid color-mix(in srgb, var(--secondary) 58%, transparent) !important;
+        border-bottom: 1px solid color-mix(in srgb, var(--secondary) 68%, transparent) !important;
+        color: #ffffff !important;
+    }
+
     .search {
-        background-color: rgb(0 0 0 / 0.2);
+        background-color: var(--primary-darkest);
         color: var(--text);
         font-size: inherit;
         font-family: inherit;
         width: var(--navigation-width);
         min-width: var(--navigation-width);
-        /* width: 50%; */
-        padding: 0 8px;
+        margin: 3px 2px;
+        padding: 0 10px;
         padding-right: 40px;
-        border: none;
-        border-radius: 4px;
-        border-inline-start: 4px solid var(--primary-darker);
+        border: 1px solid var(--primary-lighter);
+        border-radius: 7px;
     }
     .search:active,
     .search:focus {

@@ -42,16 +42,24 @@
     }
 </script>
 
-<!-- border-top-left-radius: 12px;border-top-right-radius: 12px; -->
-<MaterialButton style="border-radius: 0;border-bottom: 2px solid var(--primary);{label ? 'padding: 0.3em 1.2em;' : ''}" title={translateText(`menu._title_${id}${$special.numberKeys ? "" : ` [${keys[id]}]`}`, $dictionary)} isActive={$activePage === id} {disabled} on:click={openPage} {red}>
-    <Icon {id} size={1.5} white={$activePage === id} />
+<MaterialButton class="topNavCapsule" style="border-radius: 8px;margin: 5px 3px;min-height: 32px;border: 1px solid transparent;{label ? 'padding: 0.24em 1.05em;' : 'padding: 0.24em 0.65em;'}" title={translateText(`menu._title_${id}${$special.numberKeys ? "" : ` [${keys[id]}]`}`, $dictionary)} isActive={$activePage === id} {disabled} on:click={openPage} {red}>
+    <Icon {id} size={1.35} white={$activePage === id} />
     {#if label}<span><T id="menu.{id}" /></span>{/if}
 </MaterialButton>
 
 <style>
-    /* span {
-        font-weight: 700;
-    } */
+    :global(button.topNavCapsule.isActive) {
+        background: linear-gradient(180deg, color-mix(in srgb, var(--secondary) 28%, var(--primary) 72%) 0%, color-mix(in srgb, var(--secondary) 16%, var(--primary-darkest) 84%) 100%) !important;
+        border: 1px solid color-mix(in srgb, var(--secondary) 62%, transparent) !important;
+        border-bottom: 1px solid color-mix(in srgb, var(--secondary) 72%, transparent) !important;
+        box-shadow: 0 2px 10px color-mix(in srgb, var(--secondary) 20%, transparent);
+        color: #ffffff !important;
+    }
+
+    :global(button.topNavCapsule:not(.isActive):not(:disabled):hover) {
+        background: color-mix(in srgb, var(--secondary) 10%, var(--primary) 90%) !important;
+        border-color: color-mix(in srgb, var(--secondary) 28%, transparent) !important;
+    }
 
     @media screen and (max-width: 750px) {
         span {
