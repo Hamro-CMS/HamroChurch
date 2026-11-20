@@ -220,7 +220,7 @@ function deriveVerses(song: RawHymnSong) {
     return blocks.length ? blocks : [lyrics]
 }
 
-function inferSlideGroup(text: string) {
+export function inferSlideGroup(text: string) {
     const trimmed = text.trim().toLowerCase()
     if (trimmed.startsWith("को.")) return "chorus"
     if (trimmed.includes("कोरस") || trimmed.includes("chorus")) return "chorus"
@@ -440,7 +440,7 @@ export function highlightHymnText(text: string, query: string) {
     return escapeHtml(text).replace(new RegExp(escaped, "gi"), (match) => `<mark>${match}</mark>`)
 }
 
-function buildHymnShow(hymn: HymnRecord): Show {
+export function buildHymnShow(hymn: HymnRecord): Show {
     const layoutId = uid()
     const created = Date.now()
     const slides: Record<string, any> = {}

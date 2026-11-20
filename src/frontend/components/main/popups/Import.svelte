@@ -16,11 +16,11 @@
     popupData.set({})
 
     const freeshow_formats = [
-        { name: "formats.show", title: "Hamro Church Song/Presentation File", icon: "slide", extensions: ["show", "json"], id: "freeshow" },
-        { name: "formats.project", title: "Hamro Church Project File", icon: "project", extensions: ["project", "shows", "json", "zip"], id: "freeshow_project" },
-        { name: "formats.template", title: "Hamro Church Template File", icon: "templates", extensions: ["fstemplate", "fst", "template", "json", "zip"], id: "freeshow_template" },
-        { name: "formats.action", title: "Hamro Church Action File", icon: "actions", extensions: ["fsaction", "action", "json"], id: "freeshow_action" },
-        { name: "formats.theme", title: "Hamro Church Theme File", icon: "theme", extensions: ["fstheme", "theme", "json"], id: "freeshow_theme" }
+        { name: "formats.show", title: "Aradhana Studio Song/Presentation File", icon: "slide", extensions: ["show", "json"], id: "freeshow" },
+        { name: "formats.project", title: "Aradhana Studio Project File", icon: "project", extensions: ["project", "shows", "json", "zip"], id: "freeshow_project" },
+        { name: "formats.template", title: "Aradhana Studio Template File", icon: "templates", extensions: ["fstemplate", "fst", "template", "json", "zip"], id: "freeshow_template" },
+        { name: "formats.action", title: "Aradhana Studio Action File", icon: "actions", extensions: ["fsaction", "action", "json"], id: "freeshow_action" },
+        { name: "formats.theme", title: "Aradhana Studio Theme File", icon: "theme", extensions: ["fstheme", "theme", "json"], id: "freeshow_theme" }
     ]
 
     const freeshow_primary_formats = freeshow_formats.filter((format) => ["freeshow", "freeshow_project"].includes(format.id))
@@ -147,7 +147,7 @@
                 <p>{translateText(format.name)}</p>
 
                 <div class="freeshow">
-                    <img style="height: 18px;padding: 0;" src="./logo.png" alt="Hamro Church logo" draggable={false} />
+                    <img style="height: 18px;padding: 0;" src="./logo.png" alt="Aradhana Studio logo" draggable={false} />
                 </div>
             </MaterialButton>
         {/each}
@@ -243,7 +243,7 @@
                 <p>{translateText(format.name)}</p>
 
                 <div class="freeshow">
-                    <img style="height: 18px;padding: 0;" src="./logo.png" alt="Hamro Church logo" draggable={false} />
+                    <img style="height: 18px;padding: 0;" src="./logo.png" alt="Aradhana Studio logo" draggable={false} />
                 </div>
             </MaterialButton>
         {/each}

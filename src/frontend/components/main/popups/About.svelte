@@ -23,7 +23,7 @@
 
 <div style="text-align: center;">
     <div class="logo">
-        <img src="./logo.png" alt="Hamro Church logo" draggable={false} />
+        <img src="./logo.png" alt="Aradhana Studio logo" draggable={false} />
     </div>
 
     <p style="font-size: 0.8em;margin-top: 2px;">

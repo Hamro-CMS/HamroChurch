@@ -5,7 +5,7 @@ import { sendMain } from "../IPC/main"
 import { cloudSyncData, cloudUsers, special } from "../stores"
 import { isMainWindow } from "./common"
 
-// Cloud sync and ChurchApps team presence are disabled in Hamro Church.
+// Cloud sync and ChurchApps team presence are disabled in Aradhana Studio.
 
 export async function setupCloudSync(_auto: boolean = false) {
     return

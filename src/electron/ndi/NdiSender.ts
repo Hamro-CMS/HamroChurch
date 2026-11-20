@@ -108,7 +108,7 @@ export class NdiSender {
     }
 
     static initNameNDI(name?: string, outputName?: string) {
-        return name || `Hamro Church NDI${outputName ? ` - ${outputName}` : ""}`
+        return name || `Aradhana Studio NDI${outputName ? ` - ${outputName}` : ""}`
     }
 
     static async createSenderNDI(id: string, name = "", groups?: string) {

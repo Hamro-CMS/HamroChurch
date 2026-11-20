@@ -34,7 +34,9 @@ export enum ToMain {
     OPEN_FOLDER2 = "OPEN_FOLDER2",
     OPEN_FILE2 = "OPEN_FILE2",
     RECEIVE_MIDI2 = "RECEIVE_MIDI2",
-    SOFTWARE_PROMOTION = "SOFTWARE_PROMOTION"
+    SOFTWARE_PROMOTION = "SOFTWARE_PROMOTION",
+    MOBILE_SOFTWARE_PROMOTIONS = "MOBILE_SOFTWARE_PROMOTIONS",
+    MOBILE_CLIENTS_UPDATED = "MOBILE_CLIENTS_UPDATED"
 }
 export interface ToMainSendPayloads {
     [ToMain.ALERT]: string
@@ -112,6 +114,14 @@ export interface ToMainSendPayloads {
         type: "noteon" | "noteoff" | "control"
     }
     [ToMain.SOFTWARE_PROMOTION]: SoftwarePromotionPayload[]
+    [ToMain.MOBILE_SOFTWARE_PROMOTIONS]: SoftwarePromotionPayload[]
+    [ToMain.MOBILE_CLIENTS_UPDATED]: {
+        id: string
+        deviceName: string
+        ip: string
+        connectedAt: number
+        lastSeenAt: number
+    }[]
 }
 
 export interface ToMainReturnPayloads {

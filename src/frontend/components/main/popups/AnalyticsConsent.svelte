@@ -20,7 +20,7 @@
 
 <div class="consent-popup">
     <div class="consent-message">
-        To help improve <strong>Hamro Church</strong>, we only collect basic, anonymous statistics: your
+        To help improve <strong>Aradhana Studio</strong>, we only collect basic, anonymous statistics: your
         <strong>Country/City, Operating System, and how long the app is used</strong>. We <strong>NEVER</strong> collect
         your name, IP address, computer name, or any church/member data. You can turn this off anytime in
         <strong>Settings &gt; Privacy</strong>.

@@ -1,0 +1,5 @@
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keep class io.socket.** { *; }
+-keep class com.hamrochurch.remote.model.** { *; }

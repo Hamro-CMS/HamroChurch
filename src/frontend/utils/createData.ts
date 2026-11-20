@@ -234,7 +234,7 @@ function getDefaultOverlays() {
             {
                 style: "top:870px;left:1248px;height:170px;width:630px;",
                 align: "align-items:flex-end;",
-                lines: [{ align: "text-align: right;", text: [{ value: "Hamro Church", style: "font-size:50px;font-weight:bold;color:#CB9A41;" }] }]
+                lines: [{ align: "text-align: right;", text: [{ value: "Aradhana Studio", style: "font-size:50px;font-weight:bold;color:#CB9A41;" }] }]
             }
         ]
     }

@@ -117,6 +117,10 @@ export enum Main {
     WEBSOCKET_STOP = "WEBSOCKET_STOP",
     API_TRIGGER = "API_TRIGGER",
     EMIT_OSC = "EMIT_OSC",
+    MOBILE_CLIENTS_GET = "MOBILE_CLIENTS_GET",
+    MOBILE_CLIENT_DISCONNECT = "MOBILE_CLIENT_DISCONNECT",
+    MOBILE_BROADCAST = "MOBILE_BROADCAST",
+    MOBILE_GENERATE_TOKEN = "MOBILE_GENERATE_TOKEN",
     GET_MIDI_OUTPUTS = "GET_MIDI_OUTPUTS",
     GET_MIDI_INPUTS = "GET_MIDI_INPUTS",
     SEND_MIDI = "SEND_MIDI",
@@ -263,6 +267,10 @@ export interface MainSendPayloads {
     [Main.WEBSOCKET_START]: number | undefined | { port?: number; allowLan?: boolean; token?: string }
     [Main.API_TRIGGER]: { action: string; returnId: string; data: any }
     [Main.EMIT_OSC]: { signal: any; data: any }
+    [Main.MOBILE_CLIENTS_GET]?: undefined
+    [Main.MOBILE_CLIENT_DISCONNECT]: { id: string }
+    [Main.MOBILE_BROADCAST]: { event: string; data: any }
+    [Main.MOBILE_GENERATE_TOKEN]?: undefined
     [Main.GET_MIDI_OUTPUTS]: string[]
     [Main.GET_MIDI_INPUTS]: string[]
     [Main.SEND_MIDI]: any
@@ -403,6 +411,8 @@ export interface MainSendPayloads {
         id: number
         campaignKey: string
         eventUrl?: string | null
+        event?: "impression" | "click"
+        source?: "desktop" | "mobile"
     }
 }
 
@@ -565,6 +575,16 @@ export interface MainReturnPayloads {
     [Main.DISMISS_SOFTWARE_PROMOTION]: boolean
     [Main.OPEN_SOFTWARE_PROMOTION]: Promise<boolean>
     [Main.RECORD_SOFTWARE_PROMOTION_IMPRESSION]: boolean
+    // Mobile Remote
+    [Main.MOBILE_CLIENTS_GET]: {
+        id: string
+        deviceName: string
+        ip: string
+        connectedAt: number
+        lastSeenAt: number
+    }[]
+    [Main.MOBILE_CLIENT_DISCONNECT]: boolean
+    [Main.MOBILE_GENERATE_TOKEN]: string
 }
 
 ///////////

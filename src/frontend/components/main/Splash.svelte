@@ -9,7 +9,16 @@
     import Center from "../system/Center.svelte"
     import { getVOTD } from "./votd"
 
+    let logoSrc = "./logo-splash.png"
     let logoFailed = false
+
+    function handleLogoError() {
+        if (logoSrc !== "./logo.png") {
+            logoSrc = "./logo.png"
+        } else {
+            logoFailed = true
+        }
+    }
 
     function createProject() {
         // if opened project is empty go to project list (to reduce confusion)
@@ -48,101 +57,112 @@
     })
 </script>
 
-<Center class="context #splash">
-    {#if !logoFailed}
-        <div class="splashLogoWrap">
-            <img src="./logo.png" alt="Hamro Church" draggable={false} on:error={() => (logoFailed = true)} />
-        </div>
-    {:else}
-        <h1>Hamro Church</h1>
-    {/if}
+<Center class="context #splash" style="justify-content: flex-start;padding: 14px 16px;box-sizing: border-box;">
+    <div class="splashInner">
+        {#if !logoFailed}
+            <div class="splashLogoWrap">
+                <img src={logoSrc} alt="Aradhana Studio (आराधना स्टुडियो)" draggable={false} on:error={handleLogoError} />
+            </div>
+        {:else}
+            <h1>{$language === "ne" ? "आराधना स्टुडियो" : "Aradhana Studio"}</h1>
+        {/if}
 
-    <p class="versionText">v{$version}</p>
+        <p class="versionText">v{$version}</p>
 
-    {#if $special.splashText}
-        <p style="padding-top: 18px">
-            {@html extractLinksAndCleanText($special.splashText)}
-            <span class="links" style="display: flex;flex-direction: column;align-items: center;">
-                {#each links as link}
-                    <Link url={link}>
-                        {link.replace(/^(https?:\/\/)/, "")}
-                        <Icon id="launch" white />
-                    </Link>
-                {/each}
-            </span>
-        </p>
-    {:else if Object.keys($shows).length < 20}
-        <!-- shows up for new users (can be found in "About" menu) -->
-        <p style="padding-top: 18px">
-            <Link url="https://hamrocms.com/docs">
-                <T id="main.docs" />
-                <Icon id="launch" white />
-            </Link>
-        </p>
-    {:else if votd}
-        <p class="votd" style="padding-top: 18px" data-title="Verse of the Day [votd.org]">
-            <Link url="https://votd.org/">
-                {votd}
-            </Link>
-        </p>
-    {/if}
+        {#if $special.splashText}
+            <p style="padding-top: 12px">
+                {@html extractLinksAndCleanText($special.splashText)}
+                <span class="links" style="display: flex;flex-direction: column;align-items: center;">
+                    {#each links as link}
+                        <Link url={link}>
+                            {link.replace(/^(https?:\/\/)/, "")}
+                            <Icon id="launch" white />
+                        </Link>
+                    {/each}
+                </span>
+            </p>
+        {:else if Object.keys($shows).length < 20}
+            <!-- shows up for new users (can be found in "About" menu) -->
+            <p style="padding-top: 12px">
+                <Link url="https://hamrocms.com/docs">
+                    <T id="main.docs" />
+                    <Icon id="launch" white />
+                </Link>
+            </p>
+        {:else if votd}
+            <p class="votd" style="padding-top: 12px" data-title="Verse of the Day [votd.org]">
+                <Link url="https://votd.org/">
+                    {votd}
+                </Link>
+            </p>
+        {/if}
 
-    <span style="padding-top: 22px" class="buttons">
-        <MaterialButton icon="search" title="main.quick_search" on:click={() => quickSearchActive.set(true)}>
-            <T id="main.quick_search" />
-        </MaterialButton>
-        <MaterialButton icon="project" title="tooltip.project" on:click={createProject}>
-            <T id="new.project" />
-        </MaterialButton>
-        <MaterialButton
-            icon="add"
-            title="tooltip.show"
-            on:click={(e) => {
-                if (e.detail.ctrl) {
-                    history({ id: "UPDATE", newData: { remember: { project: $activeProject } }, location: { page: "show", id: "show" } })
-                } else activePopup.set("show")
-            }}
-        >
-            <T id="new.show" />
-        </MaterialButton>
-    </span>
-
-    <div class="securityNotice">
-        <span class="shieldBadge">🛡</span>
-        <span>
-            {#if $language === "ne"}
-                सुरक्षा सूचना: मालवेयर वा नक्कली सफ्टवेयरबाट बच्न सधैं आधिकारिक साइट
-                <Link url="https://hamrocms.com/download">hamrocms.com/download</Link>
-                बाट मात्र डाउनलोड र अपडेट गर्नुहोस्।
-            {:else}
-                Security Notice: Download &amp; update only from official site
-                <Link url="https://hamrocms.com/download">hamrocms.com/download</Link>
-                to avoid fake or malware copies.
-            {/if}
+        <span style="padding-top: 16px" class="buttons">
+            <MaterialButton icon="search" title="main.quick_search" on:click={() => quickSearchActive.set(true)}>
+                <T id="main.quick_search" />
+            </MaterialButton>
+            <MaterialButton icon="project" title="tooltip.project" on:click={createProject}>
+                <T id="new.project" />
+            </MaterialButton>
+            <MaterialButton
+                icon="add"
+                title="tooltip.show"
+                on:click={(e) => {
+                    if (e.detail.ctrl) {
+                        history({ id: "UPDATE", newData: { remember: { project: $activeProject } }, location: { page: "show", id: "show" } })
+                    } else activePopup.set("show")
+                }}
+            >
+                <T id="new.show" />
+            </MaterialButton>
         </span>
+
+        <div class="securityNotice">
+            <span class="shieldBadge">🛡</span>
+            <span>
+                {#if $language === "ne"}
+                    सुरक्षा सूचना: मालवेयर वा नक्कली सफ्टवेयरबाट बच्न सधैं आधिकारिक साइट
+                    <Link url="https://hamrocms.com/download">hamrocms.com/download</Link>
+                    बाट मात्र डाउनलोड र अपडेट गर्नुहोस्।
+                {:else}
+                    Security Notice: Download &amp; update only from official site
+                    <Link url="https://hamrocms.com/download">hamrocms.com/download</Link>
+                    to avoid fake or malware copies.
+                {/if}
+            </span>
+        </div>
     </div>
 </Center>
 
 <style>
+    .splashInner {
+        margin: auto 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        width: 100%;
+        flex-shrink: 0;
+    }
+
     .splashLogoWrap {
-        width: min(370px, 80vw);
-        aspect-ratio: 2.15 / 1;
+        width: min(350px, 78vw);
         flex-shrink: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        overflow: hidden;
+        overflow: visible;
+        padding-top: 4px;
         user-select: none;
         pointer-events: none;
     }
 
     .splashLogoWrap img {
-        width: 142%;
-        max-width: none;
+        width: 100%;
+        max-height: clamp(86px, 21vh, 154px);
         height: auto;
-        flex-shrink: 0;
+        display: block;
         object-fit: contain;
-        transform: translateX(-2.2%);
         filter: drop-shadow(0 8px 22px rgb(0 0 0 / 0.45));
     }
 

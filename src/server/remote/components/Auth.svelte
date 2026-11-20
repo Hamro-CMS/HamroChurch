@@ -16,8 +16,8 @@
 <div class="auth-page">
     <div class="panel">
         <div class="brand">
-            <img class="logo" src={hamroChurchLogo} alt="Hamro Church logo" draggable="false" />
-            <h1>Hamro Church Remote</h1>
+            <img class="logo" src={hamroChurchLogo} alt="Aradhana Studio logo" draggable="false" />
+            <h1>Aradhana Studio Remote</h1>
         </div>
 
         <form on:submit|preventDefault={submit} class="auth-form">

@@ -342,22 +342,25 @@ export const dataFolderNames = {
     cloud: "Cloud"
 }
 
-// Documents/Hamro Church
+// Documents/Aradhana Studio (preserves existing Documents/Hamro Church on upgraded machines)
 export function getDefaultDataFolderRoot() {
     const documentsPath = getMediaFolderPath("documents")
     if (!documentsPath) return appDataPath
 
-    const appFolderName = "Hamro Church"
-    const fullPath = path.join(documentsPath, appFolderName)
+    const newPath = path.join(documentsPath, "Aradhana Studio")
+    const legacyPath = path.join(documentsPath, "Hamro Church")
 
     try {
-        if (doesPathExist(fullPath)) {
-            fs.accessSync(fullPath, fs.constants.W_OK)
-            return fullPath
-        } else {
-            fs.mkdirSync(fullPath, { recursive: true })
-            return fullPath
+        if (doesPathExist(newPath)) {
+            fs.accessSync(newPath, fs.constants.W_OK)
+            return newPath
         }
+        if (doesPathExist(legacyPath)) {
+            fs.accessSync(legacyPath, fs.constants.W_OK)
+            return legacyPath
+        }
+        fs.mkdirSync(newPath, { recursive: true })
+        return newPath
     } catch (err) {
         console.warn("Documents folder is not writable, falling back to AppData:", err)
         return appDataPath

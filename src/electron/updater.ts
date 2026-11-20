@@ -109,7 +109,7 @@ function compareVersions(left: string, right: string) {
 function githubHeaders() {
     return {
         Accept: "application/vnd.github+json",
-        "User-Agent": `Hamro Church/${app.getVersion()}`
+        "User-Agent": `Aradhana Studio/${app.getVersion()}`
     }
 }
 
@@ -353,7 +353,7 @@ async function fetchExpectedSha512FromReleaseYml(asset: AppUpdateAsset, safeFile
                 responseType: "text",
                 timeout: 15000,
                 headers: {
-                    "User-Agent": `Hamro Church/${app.getVersion()}`
+                    "User-Agent": `Aradhana Studio/${app.getVersion()}`
                 },
                 validateStatus: (status) => status >= 200 && status < 300
             })

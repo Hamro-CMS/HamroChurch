@@ -58,6 +58,8 @@ import {
     lessonsLoaded,
     media,
     mediaDownloads,
+    mobileRemoteClients,
+    mobileSoftwarePromotions,
     outputs,
     overlays,
     pdfImports,
@@ -574,5 +576,11 @@ export const mainResponses: MainResponses = {
         const list = Array.isArray(data) ? data : []
         softwarePromotions.set(list)
         softwarePromotion.set(list[0] ?? null)
+    },
+    [ToMain.MOBILE_SOFTWARE_PROMOTIONS]: (data) => {
+        mobileSoftwarePromotions.set(Array.isArray(data) ? data : [])
+    },
+    [ToMain.MOBILE_CLIENTS_UPDATED]: (data) => {
+        mobileRemoteClients.set(Array.isArray(data) ? data : [])
     }
 }

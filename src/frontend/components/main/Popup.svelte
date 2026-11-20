@@ -89,7 +89,7 @@
         /* pointer-events: none; */
         width: 100%;
         height: 100%;
-        padding: 20px var(--navigation-width);
+        padding: 20px min(var(--navigation-width), 10vw);
         z-index: 5000;
 
         backdrop-filter: blur(4px);

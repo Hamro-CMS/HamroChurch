@@ -27,3 +27,12 @@ test-results/
 *.ipr
 *.iws
 .serena
+
+# Android Remote companion app build artifacts & secrets
+android-remote/.gradle/
+android-remote/build/
+android-remote/app/build/
+android-remote/local.properties
+android-remote/keystore.properties
+android-remote/*.jks
+android-remote/*.keystore

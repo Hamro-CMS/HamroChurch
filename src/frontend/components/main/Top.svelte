@@ -1,6 +1,6 @@
 <script type="ts">
     import { slide } from "svelte/transition"
-    import { activeEdit, activePage, activeProfile, activeShow, dictionary, drawSettings, drawTool, os, outputDisplay, outputs, paintCache, profiles, saved, settingsTab, shows } from "../../stores"
+    import { activeEdit, activePage, activePopup, activeProfile, activeShow, companion, dictionary, drawSettings, drawTool, language, mobileRemoteClients, os, outputDisplay, outputs, paintCache, popupData, profiles, saved, settingsTab, shows } from "../../stores"
     import { translateText } from "../../utils/language"
     import Icon from "../helpers/Icon.svelte"
     import { toggleOutputs } from "../helpers/output"
@@ -51,6 +51,13 @@
         activePage.set("settings")
     }
 
+    function openMobileRemoteQuick() {
+        popupData.set({ id: "mobile" })
+        activePopup.set("connect")
+    }
+
+    $: mobileActive = $companion?.enabled === true && $companion?.allowLan === true && typeof $companion?.token === "string" && $companion.token.trim().length >= 16
+
     // disabled tabs
 
     let settingsDisabled = false
@@ -65,7 +72,11 @@
         {#if !$saved && $os.platform !== "win32"}
             <div class="unsaved" />
         {/if}
-        <h1 class="brandTitle">Hamro Church <span class="brandDomain">(hamrocms.com)</span></h1>
+        <h1 class="brandTitle">
+            <img class="brandLogoIcon" src="./icon.png" alt="" draggable={false} />
+            <span>{$language === "ne" ? "आराधना स्टुडियो" : "Aradhana Studio"}</span>
+            <span class="brandDomain">(hamrocms.com)</span>
+        </h1>
     </span>
     <span>
         <TopButton id="show" />
@@ -75,6 +86,14 @@
     <span style="flex: 1 1 0; min-width: 0; justify-content: flex-end;">
         <TopButton id="draw" red={$drawTool === "fill" || ($drawTool === "zoom" && $drawSettings.zoom?.size !== 100) || !!($drawTool === "paint" && $paintCache?.length)} hideLabel />
         {#if !settingsDisabled}
+            <Button title="Mobile Remote (Android QR Pairing)" style="position: relative;min-width: 40px;justify-content: center;" on:click={openMobileRemoteQuick}>
+                <Icon id="mobile" size={1.25} white={!mobileActive} />
+                {#if $mobileRemoteClients.length > 0}
+                    <span class="mobileBadge">{$mobileRemoteClients.length}</span>
+                {:else if mobileActive}
+                    <span class="mobileReadyDot" />
+                {/if}
+            </Button>
             <TopButton id="settings" hideLabel />
         {/if}
 
@@ -171,14 +190,48 @@
         background-color: var(--red);
     }
 
+    .mobileBadge {
+        position: absolute;
+        top: 5px;
+        right: 4px;
+        min-width: 15px;
+        height: 15px;
+        padding: 0 4px;
+        border-radius: 999px;
+        background: #22c55e;
+        color: #fff;
+        font-size: 0.68em;
+        font-weight: 800;
+        line-height: 15px;
+        text-align: center;
+    }
+
+    .mobileReadyDot {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #22c55e;
+    }
+
     .brandTitle {
         align-self: center;
-        padding-inline: 42px 12px;
-        font-size: 1.8em;
+        padding-inline: 14px 12px;
+        font-size: 1.65em;
         display: inline-flex;
-        align-items: baseline;
+        align-items: center;
         gap: 8px;
         min-width: 0;
+        white-space: nowrap;
+    }
+
+    .brandLogoIcon {
+        width: 26px;
+        height: 26px;
+        object-fit: contain;
+        flex-shrink: 0;
     }
 
     .brandDomain {

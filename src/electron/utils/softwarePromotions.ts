@@ -1,7 +1,7 @@
 import { app, shell } from "electron"
 import axios from "axios"
 import { ToMain } from "../../types/IPC/ToMain"
-import type { SoftwarePromotionPayload, SoftwarePromotionTransitionStyle } from "../../types/Main"
+import type { SoftwarePromotionPayload, SoftwarePromotionTargetPlatform, SoftwarePromotionTransitionStyle } from "../../types/Main"
 import { config } from "../data/store"
 import { sendToMain } from "../IPC/main"
 
@@ -11,6 +11,7 @@ const POLL_INTERVAL_MS = 45 * 1000
 const MAX_MEDIA_BYTES = 4 * 1024 * 1024
 
 const VALID_TRANSITION_STYLES: SoftwarePromotionTransitionStyle[] = ["auto_mix", "flip_y", "flip_x", "flip_diagonal", "swing_3d"]
+const VALID_TARGET_PLATFORMS: SoftwarePromotionTargetPlatform[] = ["all", "desktop", "mobile"]
 
 function resolvePromotionEndpointUrl(): string {
     if (app.isPackaged) {
@@ -42,10 +43,13 @@ function sanitizeSafePromotionUrl(raw: unknown, fallback: string | null = null):
 let initialTimer: NodeJS.Timeout | null = null
 let pollTimer: NodeJS.Timeout | null = null
 let currentPromotions: SoftwarePromotionPayload[] = []
+let currentMobilePromotions: SoftwarePromotionPayload[] = []
 let lastEmittedSignature = "__uninitialized__"
+let lastEmittedMobileSignature = "__uninitialized__"
 
 const sessionDismissedKeys = new Set<string>()
 const recordedImpressions = new Set<string>()
+const recordedMobileEvents = new Set<string>()
 const mediaDataUriCache = new Map<string, string>()
 
 function todayLocalStamp(): string {
@@ -173,6 +177,7 @@ function sanitizePromotion(raw: any): SoftwarePromotionPayload | null {
     const rotateIntervalSeconds = Number.isFinite(rawRotate) && rawRotate >= 3 ? Math.min(300, Math.floor(rawRotate)) : 8
 
     const transitionStyle: SoftwarePromotionTransitionStyle = VALID_TRANSITION_STYLES.includes(raw.transition_style) ? raw.transition_style : "auto_mix"
+    const targetPlatform: SoftwarePromotionTargetPlatform = VALID_TARGET_PLATFORMS.includes(raw.target_platform) ? raw.target_platform : "all"
 
     const sortOrder = Number.isFinite(Number(raw.sort_order)) ? Math.floor(Number(raw.sort_order)) : 0
 
@@ -191,6 +196,7 @@ function sanitizePromotion(raw: any): SoftwarePromotionPayload | null {
         resolved_image_src: null,
         cta_label: ctaLabelText || null,
         cta_url: ctaUrl,
+        target_platform: targetPlatform,
         position,
         dismiss_mode: dismissMode,
         delay_seconds: delaySeconds,
@@ -281,11 +287,22 @@ function emitPromotionsToMainRenderer(promos: SoftwarePromotionPayload[], force 
     sendToMain(ToMain.SOFTWARE_PROMOTION, promos)
 }
 
+function emitMobilePromotionsToMainRenderer(promos: SoftwarePromotionPayload[], force = false) {
+    const signature = computeListSignature(promos)
+    if (!force && signature === lastEmittedMobileSignature) return
+    lastEmittedMobileSignature = signature
+    sendToMain(ToMain.MOBILE_SOFTWARE_PROMOTIONS, promos)
+}
+
 export async function ingestPromotionsFromServer(rawInput: any, forceEmit = false): Promise<SoftwarePromotionPayload[]> {
     let rawList: any[] = []
+    let rawMobileList: any[] | null = null
     if (Array.isArray(rawInput)) {
         rawList = rawInput
     } else if (rawInput && typeof rawInput === "object") {
+        if (Array.isArray(rawInput.mobile_promotions)) {
+            rawMobileList = rawInput.mobile_promotions
+        }
         if (Array.isArray(rawInput.promotions)) {
             rawList = rawInput.promotions
         } else if (rawInput.promotion && typeof rawInput.promotion === "object") {
@@ -302,20 +319,38 @@ export async function ingestPromotionsFromServer(rawInput: any, forceEmit = fals
     for (const item of rawList) {
         const parsed = sanitizePromotion(item)
         if (!parsed) continue
+        if (parsed.target_platform === "mobile") continue
         if (seenKeys.has(parsed.campaign_key)) continue
         if (isCampaignDismissed(parsed, storedDismissed)) continue
         seenKeys.add(parsed.campaign_key)
         activeList.push(parsed)
     }
 
-    await Promise.all(
-        activeList.map(async (promo) => {
+    const seenMobileKeys = new Set<string>()
+    const activeMobileList: SoftwarePromotionPayload[] = []
+    const mobileSource = rawMobileList ?? rawList
+    for (const item of mobileSource) {
+        const parsed = sanitizePromotion(item)
+        if (!parsed) continue
+        if (parsed.target_platform === "desktop") continue
+        if (seenMobileKeys.has(parsed.campaign_key)) continue
+        seenMobileKeys.add(parsed.campaign_key)
+        activeMobileList.push(parsed)
+    }
+
+    await Promise.all([
+        ...activeList.map(async (promo) => {
+            promo.resolved_image_src = await resolveMediaSource(promo)
+        }),
+        ...activeMobileList.map(async (promo) => {
             promo.resolved_image_src = await resolveMediaSource(promo)
         })
-    )
+    ])
 
     currentPromotions = activeList
+    currentMobilePromotions = activeMobileList
     emitPromotionsToMainRenderer(activeList, forceEmit)
+    emitMobilePromotionsToMainRenderer(activeMobileList, forceEmit)
 
     return activeList
 }
@@ -336,6 +371,7 @@ export async function fetchActiveSoftwarePromotions(forceEmit = false): Promise<
         // Remain silent when user has no internet connection during worship service
         if (forceEmit) {
             emitPromotionsToMainRenderer(currentPromotions, true)
+            emitMobilePromotionsToMainRenderer(currentMobilePromotions, true)
         }
         return currentPromotions
     }
@@ -346,15 +382,32 @@ export async function getActiveSoftwarePromotions(): Promise<SoftwarePromotionPa
     const filtered = currentPromotions.filter((p) => !isCampaignDismissed(p, storedDismissed))
     if (filtered.length > 0) {
         currentPromotions = filtered
+        emitMobilePromotionsToMainRenderer(currentMobilePromotions, true)
         return filtered
     }
     return await fetchActiveSoftwarePromotions(true)
 }
 
-export function recordSoftwarePromotionImpression(data: { id: number; campaignKey: string; eventUrl?: string | null }): boolean {
+export function recordSoftwarePromotionImpression(data: {
+    id: number
+    campaignKey: string
+    eventUrl?: string | null
+    event?: "impression" | "click"
+    source?: "desktop" | "mobile"
+}): boolean {
     const key = String(data?.campaignKey || "").trim()
     const id = Number(data?.id)
     if (!key || !Number.isFinite(id) || id <= 0) return false
+
+    const eventType: "impression" | "click" = data?.event === "click" ? "click" : "impression"
+    if (data?.source === "mobile") {
+        const dedupe = `${eventType}:${key}`
+        if (eventType === "impression" && recordedMobileEvents.has(dedupe)) return false
+        recordedMobileEvents.add(dedupe)
+        void recordPromotionMetric(id, eventType, data?.eventUrl)
+        return true
+    }
+
     if (recordedImpressions.has(key)) return false
 
     recordedImpressions.add(key)

@@ -2,8 +2,9 @@
 // Get all user configs
 // https://www.npmjs.com/package/electron-store
 
+import { app } from "electron"
 import Store from "electron-store"
-import { mkdirSync, statSync } from "fs"
+import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from "fs"
 import path from "path"
 import type { Event } from "../../types/Calendar"
 import type { History } from "../../types/History"
@@ -22,6 +23,33 @@ import "./contentProviders"
 import { defaultConfig, defaultSettings, defaultSyncedSettings } from "./defaults"
 
 // NOTE: defaults will always replace the keys with any in the default when they are removed
+
+// Seamlessly migrate existing Hamro Church userData JSON stores to Aradhana Studio on first launch
+;(function migrateLegacyHamroChurchAppData() {
+    try {
+        const currentUserData = app.getPath("userData")
+        const currentConfigFile = path.join(currentUserData, "config.json")
+        if (existsSync(currentConfigFile)) return
+
+        const appDataRoot = app.getPath("appData")
+        const legacyDirs = [path.join(appDataRoot, "hamro-church"), path.join(appDataRoot, "Hamro Church")]
+        const legacyDir = legacyDirs.find((dir) => dir !== currentUserData && existsSync(path.join(dir, "config.json")))
+        if (!legacyDir) return
+
+        mkdirSync(currentUserData, { recursive: true })
+        for (const entry of readdirSync(legacyDir)) {
+            if (!entry.endsWith(".json")) continue
+            const srcFile = path.join(legacyDir, entry)
+            const dstFile = path.join(currentUserData, entry)
+            if (!existsSync(dstFile) && statSync(srcFile).isFile()) {
+                copyFileSync(srcFile, dstFile)
+            }
+        }
+        console.info("Migrated existing user configuration from Hamro Church to Aradhana Studio.")
+    } catch (err) {
+        console.warn("Could not check legacy Hamro Church appData migration:", err)
+    }
+})()
 
 export const config = new Store<Config>({ defaults: defaultConfig })
 

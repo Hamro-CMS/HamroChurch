@@ -596,7 +596,7 @@ function getSettings() {
 
 const faq = [
     // Docs About
-    { id: "https://hamrocms.com/docs", name: "Hamro Church Documentation (English & नेपाली)", icon: "help", aliases: ["-docs", "-help", "-manual", "-guide"] },
+    { id: "https://hamrocms.com/docs", name: "Aradhana Studio Documentation (English & नेपाली)", icon: "help", aliases: ["-docs", "-help", "-manual", "-guide"] },
     { id: "https://hamrocms.com/docs/getting-started", name: "Getting Started Guide", icon: "help", aliases: ["-setup", "-install"] },
     { id: "https://hamrocms.com/docs/getting-started#system-requirements", name: "System Requirements", icon: "help", aliases: ["-Specs"] },
     { id: "https://hamrocms.com/docs/nepali-typing", name: "Nepali Typing Guide (EN / NE)", icon: "help", aliases: ["-Roman", "-Unicode", "-Ctrl+Alt+N"] },
@@ -621,10 +621,10 @@ const faq = [
     { id: "https://hamrocms.com/docs/shortcuts", name: "Keyboard Shortcuts Guide", icon: "help", aliases: ["-shortcuts", "-hotkeys"] },
     { id: "https://hamrocms.com/docs/privacy", name: "Offline Data & Privacy Guide", icon: "help", aliases: ["-privacy", "-offline"] },
     { id: "https://hamrocms.com/docs/troubleshooting", name: "Troubleshooting & FAQ", icon: "help", aliases: ["-slow", "-freezing", "-video", "-muted", "-codec"] },
-    // Hamro Church resources
-    { id: "https://hamrocms.com", name: "Hamro Church Home", icon: "help" },
-    { id: "https://hamrocms.com/download", name: "Download Hamro Church", icon: "help" },
-    { id: "https://hamrocms.com/faq", name: "Hamro Church FAQ", icon: "help" },
+    // Aradhana Studio resources
+    { id: "https://hamrocms.com", name: "Aradhana Studio Home", icon: "help" },
+    { id: "https://hamrocms.com/download", name: "Download Aradhana Studio", icon: "help" },
+    { id: "https://hamrocms.com/faq", name: "Aradhana Studio FAQ", icon: "help" },
     { id: "https://github.com/Hamro-CMS/HamroChurch/releases", name: "Release Notes", icon: "help" }
 ]
 

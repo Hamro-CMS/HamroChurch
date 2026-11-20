@@ -1,14 +1,14 @@
-# Privacy Policy — Hamro Church
+# Privacy Policy — Aradhana Studio
 
 **Effective Date:** November 14, 2026  
-**Project:** Hamro Church Desktop Presentation Software (`Hamro-CMS/HamroChurch`)  
+**Project:** Aradhana Studio Desktop Presentation Software (`Hamro-CMS/HamroChurch`)  
 **Privacy Contact:** `support@hamrocms.com`
 
 ---
 
 ## 1. Core Commitment: 100% Local Church Data & Zero PII
 
-**Hamro Church** is designed from the ground up to respect congregational privacy and comply strictly with the **UK General Data Protection Regulation (UK GDPR)** and **Nepal's Individual Privacy Act, 2075 (2018)**.
+**Aradhana Studio** is designed from the ground up to respect congregational privacy and comply strictly with the **UK General Data Protection Regulation (UK GDPR)** and **Nepal's Individual Privacy Act, 2075 (2018)**.
 
 - **100% Offline & Local Worship Data:** All church presentations, custom hymns, scripture notes, member/church records, financial slides, media files, and local configurations remain **100% offline and local** on your computer. None of your church or worship content is ever uploaded to our servers.
 - **Zero Personally Identifiable Information (PII):** We **never** collect, transmit, or store personal names, email addresses, computer hostnames (`os.hostname()`), system usernames, hardware serial numbers, or raw/partial IP addresses.
@@ -17,7 +17,7 @@
 
 ## 2. Optional, Strictly Opt-In Anonymous Usage Statistics
 
-On first launch, **Hamro Church** displays a transparent opt-in prompt (`Anonymous Usage Statistics`). **Zero telemetry requests are sent unless you explicitly click `Accept`.**
+On first launch, **Aradhana Studio** displays a transparent opt-in prompt (`Anonymous Usage Statistics`). **Zero telemetry requests are sent unless you explicitly click `Accept`.**
 
 If you choose to opt in, the desktop app sends only basic, non-personal aggregate usage statistics to help us understand regional adoption and improve stability across operating systems:
 
@@ -33,7 +33,7 @@ If you choose to opt in, the desktop app sends only basic, non-personal aggregat
 
 ## 3. What We NEVER Collect or Store
 
-Whether anonymous usage statistics are enabled or disabled, **Hamro Church** **NEVER** collects or stores:
+Whether anonymous usage statistics are enabled or disabled, **Aradhana Studio** **NEVER** collects or stores:
 
 1. Your name, church name, pastor/member directories, or financial data.
 2. Your computer hostname (e.g., `DESKTOP-...`) or operating system username.

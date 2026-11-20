@@ -15,16 +15,98 @@ export interface CompanionApiConfig {
     token?: string
 }
 
+export interface ConnectedMobileClient {
+    id: string
+    deviceName: string
+    ip: string
+    connectedAt: number
+    lastSeenAt: number
+}
+
+const MIN_LAN_TOKEN_LENGTH = 16
+
 const app = express()
 app.disable("x-powered-by")
 
 const servers: { [key: string]: http.Server | OSC } = {}
+let ioServer: Server | null = null
+const connectedClients = new Map<string, ConnectedMobileClient & { socket: Socket }>()
 const DEFAULT_PORTS = { WebSocket: 5505, REST: 5506 }
 
 let currentConfig: { port?: number; allowLan: boolean; token: string } = {
     port: undefined,
     allowLan: false,
     token: ""
+}
+
+export function generateMobileRemoteToken(): string {
+    return crypto.randomBytes(16).toString("hex")
+}
+
+function sanitizeClientLabel(raw: unknown): string {
+    if (typeof raw !== "string") return "Mobile Remote"
+    const cleaned = raw.replace(/[\u0000-\u001F\u007F<>]/g, "").trim().slice(0, 64)
+    return cleaned || "Mobile Remote"
+}
+
+function normalizeRemoteIp(raw: unknown): string {
+    if (typeof raw !== "string" || !raw) return "unknown"
+    return raw.replace(/^::ffff:/i, "").trim().slice(0, 64)
+}
+
+export function getConnectedMobileClients(): ConnectedMobileClient[] {
+    return Array.from(connectedClients.values()).map(({ id, deviceName, ip, connectedAt, lastSeenAt }) => ({
+        id,
+        deviceName,
+        ip,
+        connectedAt,
+        lastSeenAt
+    }))
+}
+
+function notifyClientsUpdated() {
+    sendToMain(ToMain.MOBILE_CLIENTS_UPDATED, getConnectedMobileClients())
+}
+
+export function disconnectMobileClient(id: string): boolean {
+    if (id === "all") {
+        connectedClients.forEach((entry) => {
+            try {
+                entry.socket.disconnect(true)
+            } catch {
+                // ignore
+            }
+        })
+        connectedClients.clear()
+        notifyClientsUpdated()
+        return true
+    }
+
+    const client = connectedClients.get(id)
+    if (!client) return false
+
+    try {
+        client.socket.disconnect(true)
+    } catch {
+        // ignore
+    }
+    connectedClients.delete(id)
+    notifyClientsUpdated()
+    return true
+}
+
+export function broadcastMobileData(payload: { event: string; data: any }) {
+    if (!connectedClients.size) return
+    const message = { isBroadcast: true, event: payload.event, data: payload.data, timestamp: Date.now() }
+    connectedClients.forEach((entry) => {
+        try {
+            if ((entry.socket as any).connected !== false) {
+                entry.socket.emit("data", message)
+            }
+        } catch {
+            // ignore per-socket emit error
+        }
+    })
 }
 
 function verifyApiToken(provided: unknown): boolean {
@@ -48,7 +130,7 @@ function extractHttpToken(headers: http.IncomingHttpHeaders): string {
     return ""
 }
 
-// WebSocket on 5505, REST on +1 (5506), bound to 127.0.0.1 by default unless allowLan + non-empty token are configured
+// WebSocket on 5505, REST on +1 (5506), bound to 127.0.0.1 by default unless allowLan + strong token (>= 16 chars) are configured
 export function startWebSocketAndRest(config?: number | CompanionApiConfig) {
     stopApiListener()
 
@@ -62,7 +144,7 @@ export function startWebSocketAndRest(config?: number | CompanionApiConfig) {
         }
     }
 
-    const bindHost = currentConfig.allowLan && currentConfig.token.length > 0 ? "0.0.0.0" : "127.0.0.1"
+    const bindHost = currentConfig.allowLan && currentConfig.token.length >= MIN_LAN_TOKEN_LENGTH ? "0.0.0.0" : "127.0.0.1"
     const wsPort = currentConfig.port || DEFAULT_PORTS.WebSocket
     const restPort = currentConfig.port ? currentConfig.port + 1 : DEFAULT_PORTS.REST
 
@@ -85,7 +167,11 @@ function startWebSocket(PORT: number, host: string) {
         if ((err as any).code === "EADDRINUSE") server.close()
     })
 
-    const io = new Server(server)
+    const io = (ioServer = new Server(server, {
+        pingInterval: 15000,
+        pingTimeout: 15000,
+        maxHttpBufferSize: 1e6
+    }))
     io.use((socket, next) => {
         // Prevent browser Cross-Site WebSocket Hijacking (CSWSH)
         if (socket.handshake.headers.origin !== undefined) {
@@ -105,19 +191,40 @@ function startWebSocket(PORT: number, host: string) {
 }
 
 function connected(socket: Socket) {
-    log("Client connected.")
-    sendToMain(ToMain.WEBSOCKET, "connected") // TODO: respond with API_DATA
+    const rawName = socket.handshake.auth?.deviceName ?? socket.handshake.headers["x-device-name"]
+    const clientInfo: ConnectedMobileClient & { socket: Socket } = {
+        id: socket.id,
+        deviceName: sanitizeClientLabel(rawName),
+        ip: normalizeRemoteIp(socket.handshake.address),
+        connectedAt: Date.now(),
+        lastSeenAt: Date.now(),
+        socket
+    }
+    connectedClients.set(socket.id, clientInfo)
+    notifyClientsUpdated()
 
-    socket.on("data", async (data: string) => {
-        let parsedData
+    log(`Client connected (${clientInfo.deviceName} @ ${clientInfo.ip}).`)
+    sendToMain(ToMain.WEBSOCKET, "connected")
+
+    socket.on("data", async (data: string | Record<string, any>) => {
+        const tracked = connectedClients.get(socket.id)
+        if (tracked) tracked.lastSeenAt = Date.now()
+
+        let parsedData: any
         try {
-            parsedData = data && typeof data === "string" ? JSON.parse(data) : {}
+            if (typeof data === "string") {
+                parsedData = data ? JSON.parse(data) : {}
+            } else if (data && typeof data === "object" && !Array.isArray(data)) {
+                parsedData = data
+            } else {
+                parsedData = {}
+            }
         } catch (err) {
             console.error("Could not parse socket data\n", err)
             return
         }
 
-        if (!parsedData || typeof parsedData !== "object") return
+        if (!parsedData || typeof parsedData !== "object" || Array.isArray(parsedData)) return
 
         let returnData
         if (parsedData.isVariable) {
@@ -135,7 +242,9 @@ function connected(socket: Socket) {
     ipcMain.on("API_DATA", apiDataHandler)
 
     socket.on("disconnect", () => {
-        log("Client disconnected.")
+        log(`Client disconnected (${clientInfo.deviceName}).`)
+        connectedClients.delete(socket.id)
+        notifyClientsUpdated()
 
         try {
             ipcMain.removeListener("API_DATA", apiDataHandler)
@@ -338,15 +447,26 @@ async function receivedData(data: any = {}, log: (...msg: any[]) => void): Promi
     if (!data?.action || typeof data.action !== "string") return log("Received message from client, but missing 'action' key.", true)
     log(`Received action ${String(data.action)}`)
 
-    const get = data.action.startsWith("get_")
-    if (get) data.returnId = uid(5)
+    const clientRequestId = typeof data.requestId === "string" ? data.requestId.slice(0, 64) : undefined
+    const expectsReturn = data.action.startsWith("get_") || data.action.startsWith("mobile_") || data.expectReturn === true
+    if (expectsReturn) data.returnId = uid(6)
 
     sendToMain(ToMain.API_TRIGGER2, data)
 
     if (!data.returnId) return
 
-    const returnData = await waitUntilValueIsDefined(() => returnDataObj[data.returnId], 50, 10000)
-    delete returnDataObj[data.returnId]
+    const returnId = data.returnId
+    const returnData = await waitUntilValueIsDefined(() => returnDataObj[returnId], 25, 10000)
+    delete returnDataObj[returnId]
+
+    if (returnData === undefined) {
+        return { action: data.action, ...(clientRequestId ? { requestId: clientRequestId } : {}), error: "Request timed out" }
+    }
+
+    if (clientRequestId && returnData && typeof returnData === "object" && !Array.isArray(returnData)) {
+        ;(returnData as Record<string, any>).requestId = clientRequestId
+    }
+
     log(`Sending data ${String(data.action)}`)
     return returnData
 }
@@ -367,6 +487,21 @@ export function stopApiListener(specificId = "") {
         ipcMain.removeAllListeners("API_DATA")
     } catch (err) {
         // ignore
+    }
+
+    if (!specificId || specificId === "WebSocket") {
+        connectedClients.clear()
+        notifyClientsUpdated()
+
+        if (ioServer) {
+            try {
+                ioServer.disconnectSockets(true)
+                ioServer.close()
+            } catch {
+                // ignore
+            }
+            ioServer = null
+        }
     }
 
     if (specificId) {

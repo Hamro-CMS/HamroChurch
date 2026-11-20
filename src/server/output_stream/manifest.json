@@ -1,12 +1,12 @@
 {
     "$schema": "https://json.schemastore.org/web-manifest-combined.json",
-    "name": "Hamro Church Output",
-    "short_name": "Hamro Church Output",
+    "name": "Aradhana Studio Output",
+    "short_name": "Aradhana Studio Output",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#242832",
     "theme_color": "#242832",
-    "description": "View the output from Hamro Church.",
+    "description": "View the output from Aradhana Studio.",
     "icons": [
         {
             "src": "icon.png",

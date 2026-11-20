@@ -47,6 +47,21 @@ export const dictionary: Writable<Dictionary> = writable({})
 export const nepaliTypingEnabled: Writable<boolean> = writable(false)
 export const softwarePromotion: Writable<SoftwarePromotionPayload | null> = writable(null)
 export const softwarePromotions: Writable<SoftwarePromotionPayload[]> = writable([])
+export const mobileSoftwarePromotions: Writable<SoftwarePromotionPayload[]> = writable([])
+export interface MobileRemoteClientInfo {
+    id: string
+    deviceName: string
+    ip: string
+    connectedAt: number
+    lastSeenAt: number
+}
+export const mobileRemoteClients: Writable<MobileRemoteClientInfo[]> = writable([])
+export const mobileStageAlert: Writable<{
+    text: string
+    target: "stage" | "output" | "both"
+    visible: boolean
+    updatedAt: number
+}> = writable({ text: "", target: "stage", visible: false, updatedAt: 0 })
 export const saved: Writable<boolean> = writable(true)
 export const loaded: Writable<boolean> = writable(false)
 export const loadedState: Writable<string[]> = writable([])

@@ -1,7 +1,7 @@
-appId: app.hamrochurch
-productName: Hamro Church
-artifactName: HamroChurch-${version}-${arch}.${ext}
-executableName: HamroChurch
+appId: app.aradhanastudio
+productName: Aradhana Studio
+artifactName: AradhanaStudio-${version}-${arch}.${ext}
+executableName: AradhanaStudio
 
 # WIDEVINE
 # Use castlabs electron builds to get widevine support
@@ -39,7 +39,7 @@ extraResources:
       filter:
           - connector-*
     - from: public/icon.ico
-      to: hamrochurch-icon.ico
+      to: aradhanastudio-icon.ico
 
 # windows
 

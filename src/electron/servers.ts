@@ -6,7 +6,7 @@ type ServerName = "REMOTE" | "STAGE" | "CONTROLLER" | "OUTPUT_STREAM"
 
 const serverDataStore: { [key in ServerName]?: ServerData } = {}
 
-// Remote/Stage/Controller/OutputStream servers are disabled in Hamro Church for now.
+// Remote/Stage/Controller/OutputStream servers are disabled in Aradhana Studio for now.
 export function startServers(_payload: MainSendPayloads[Main.START]) {
     closeServers()
 }

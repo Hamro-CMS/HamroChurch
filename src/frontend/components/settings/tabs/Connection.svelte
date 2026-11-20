@@ -3,7 +3,7 @@
     import type { ContentProviderId } from "../../../../electron/contentProviders/base/types"
     import { Main } from "../../../../types/IPC/Main"
     import { requestMain, sendMain } from "../../../IPC/main"
-    import { activePage, activePopup, activeShow, activeTriggerFunction, cloudSyncData, companion, connections, contentProviderData, disabledServers, maxConnections, notFound, outputs, popupData, ports, projectTemplates, providerConnections, serverData, special } from "../../../stores"
+    import { activePage, activePopup, activeShow, activeTriggerFunction, cloudSyncData, companion, connections, contentProviderData, disabledServers, maxConnections, mobileRemoteClients, notFound, outputs, popupData, ports, projectTemplates, providerConnections, serverData, special } from "../../../stores"
     import { triggerClickOnEnterSpace } from "../../../utils/clickable"
     import { translateText } from "../../../utils/language"
     import { contentProviderSync } from "../../../utils/startup"
@@ -18,10 +18,46 @@
     import MaterialToggleSwitch from "../../inputs/MaterialToggleSwitch.svelte"
 
     let ip = "localhost"
+    let allIps: string[] = ["localhost"]
 
     onMount(async () => {
-        ip = ((await requestMain(Main.IP)) || ["localhost"])[0]
+        const fetchedIps = (await requestMain(Main.IP)) || ["localhost"]
+        allIps = fetchedIps
+        ip = fetchedIps[0] || "localhost"
+        const clients = await requestMain(Main.MOBILE_CLIENTS_GET)
+        if (Array.isArray(clients)) mobileRemoteClients.set(clients)
     })
+
+    $: mobileRemoteEnabled = $companion?.enabled === true && $companion?.allowLan === true && typeof $companion?.token === "string" && $companion.token.trim().length >= 16
+
+    async function toggleMobileRemote(e: any) {
+        const enable = !!e.detail
+        let token = typeof $companion?.token === "string" ? $companion.token.trim() : ""
+        if (enable && token.length < 16) {
+            token = (await requestMain(Main.MOBILE_GENERATE_TOKEN)) || ""
+        }
+
+        const nextConfig = {
+            ...($companion || {}),
+            enabled: enable,
+            allowLan: enable ? true : ($companion?.allowLan === true),
+            token
+        }
+        companion.set(nextConfig)
+
+        if (enable) {
+            sendMain(Main.WEBSOCKET_START, { port: $ports.companion || 5505, allowLan: true, token })
+            popupData.set({ ip, ips: allIps, id: "mobile" })
+            activePopup.set("connect")
+        } else {
+            sendMain(Main.WEBSOCKET_STOP)
+        }
+    }
+
+    function openMobileRemotePopup() {
+        popupData.set({ ip, ips: allIps, id: "mobile" })
+        activePopup.set("connect")
+    }
 
     // WIP reset in popups
     // function reset() {
@@ -170,6 +206,23 @@
         if (taps >= 3) showAll = true
     }
 </script>
+
+<InputRow>
+    <MaterialButton
+        style="flex: 1;justify-content: space-between;border-left: 3px solid var(--secondary);"
+        disabled={!mobileRemoteEnabled}
+        on:click={openMobileRemotePopup}
+    >
+        <span style="display: flex;align-items: center;justify-content: center;gap: 15px;">
+            <Icon id="mobile" size={1.15} />
+            <span>Aradhana Studio Mobile Remote <span style="opacity: 0.65;font-size: 0.8em;margin-left: 6px;">(Android App / मोबाइल रिमोट — QR Pair)</span></span>
+            {#if $mobileRemoteClients.length}
+                <span style="background: #16a34a;color: #fff;font-size: 0.72em;padding: 2px 8px;border-radius: 999px;font-weight: 700;">{$mobileRemoteClients.length} connected</span>
+            {/if}
+        </span>
+    </MaterialButton>
+    <MaterialToggleSwitch label="" checked={mobileRemoteEnabled} on:change={toggleMobileRemote} />
+</InputRow>
 
 {#each servers as server}
     {@const disabled = server.id === "companion" ? $companion?.enabled !== true : server.enabledByDefault ? $disabledServers[server.id] === true : $disabledServers[server.id] !== false}

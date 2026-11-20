@@ -1,4 +1,4 @@
-// ----- Hamro Church -----
+// ----- Aradhana Studio -----
 // Svelte app entry point
 
 import "svelte"

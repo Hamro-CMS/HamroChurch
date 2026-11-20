@@ -3,10 +3,11 @@ import { uid } from "uid"
 import { OUTPUT, STARTUP } from "../../types/Channels"
 import { Main } from "../../types/IPC/Main"
 import { checkStartupActions } from "../components/actions/actions"
+import { setupMobileRemoteLiveSync } from "../components/actions/mobileRemoteApi"
 import { getTimeFromInterval } from "../components/helpers/time"
 import { requestMain, requestMainMultiple, sendMain, sendMainMultiple } from "../IPC/main"
 import { cameraManager } from "../media/cameraManager"
-import { activePopup, cachePath, currentWindow, deviceId, drawerTabsData, isDev, loaded, loadedState, os, scriptures, special, version, windowState } from "../stores"
+import { activePopup, cachePath, companion, currentWindow, deviceId, drawerTabsData, isDev, loaded, loadedState, os, ports, scriptures, special, version, windowState } from "../stores"
 import { startTracking } from "./analytics"
 import { wait, waitUntilValueIsDefined } from "./common"
 import { getDefaultElements } from "./createData"
@@ -67,6 +68,15 @@ async function startupMain() {
     else autoOpenLastUsedProfile()
 
     storeSubscriber()
+    setupMobileRemoteLiveSync()
+    const companionCfg = get(companion)
+    if (companionCfg?.enabled === true && typeof companionCfg.token === "string" && companionCfg.token.trim().length >= 16) {
+        sendMain(Main.WEBSOCKET_START, {
+            port: get(ports).companion || 5505,
+            allowLan: companionCfg.allowLan === true,
+            token: companionCfg.token.trim()
+        })
+    }
     await ensureBundledNepaliBibleRegistered()
     checkStartupActions()
     startTracking()
@@ -163,7 +173,7 @@ function autoBackup() {
 }
 
 export function contentProviderSync() {
-    // External content providers and cloud sync are disabled in Hamro Church.
+    // External content providers and cloud sync are disabled in Aradhana Studio.
 }
 
 function getMainData() {

@@ -1,8 +1,8 @@
-# Hamro Church
+# Aradhana Studio
 
-![Hamro Church logo](website/assets/images/logo.svg)
+![Aradhana Studio logo](website/assets/images/logo.svg)
 
-Hamro Church is bilingual church presentation software built for Nepali and English worship services. It supports scripture projection, hymn and lyric slides, media playback, stage display, remote control, and multi-output presentation workflows.
+Aradhana Studio is bilingual church presentation software built for Nepali and English worship services. It supports scripture projection, hymn and lyric slides, media playback, stage display, remote control, and multi-output presentation workflows.
 
 ---
 
@@ -112,7 +112,7 @@ Recommended validation before release:
 
 ## Privacy & Anonymous Telemetry
 
-Hamro Church is built with a strict **Zero-PII** architecture compliant with **UK GDPR** and **Nepal's Individual Privacy Act, 2075**:
+Aradhana Studio is built with a strict **Zero-PII** architecture compliant with **UK GDPR** and **Nepal's Individual Privacy Act, 2075**:
 
 - **100% Local & Offline Data:** All church records, worship presentations, custom hymns, Bibles, member directories, financial slides, and media files remain **100% local and offline** on your computer.
 - **Strictly Opt-In Anonymous Statistics:** On first launch, you can choose whether to share minimal anonymous statistics. **No telemetry ping is ever sent unless you explicitly click `Accept`.**
@@ -122,4 +122,4 @@ Hamro Church is built with a strict **Zero-PII** architecture compliant with **U
 
 ## License
 
-Hamro Church is licensed under the GNU General Public License v3.0. See the `LICENSE` file in this repository for full details.
+Aradhana Studio is licensed under the GNU General Public License v3.0. See the `LICENSE` file in this repository for full details.

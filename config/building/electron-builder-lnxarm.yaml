@@ -1,6 +1,6 @@
-appId: app.hamrochurch
-productName: Hamro Church
-artifactName: HamroChurch-${version}-${arch}.${ext}
+appId: app.aradhanastudio
+productName: Aradhana Studio
+artifactName: AradhanaStudio-${version}-${arch}.${ext}
 
 files:
     - package.json

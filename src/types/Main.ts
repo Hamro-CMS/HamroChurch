@@ -22,6 +22,7 @@ export interface Config {
 }
 
 export type SoftwarePromotionTransitionStyle = "auto_mix" | "flip_y" | "flip_x" | "flip_diagonal" | "swing_3d"
+export type SoftwarePromotionTargetPlatform = "all" | "desktop" | "mobile"
 
 export interface SoftwarePromotionPayload {
     id: number
@@ -34,6 +35,7 @@ export interface SoftwarePromotionPayload {
     resolved_image_src?: string | null
     cta_label: string | null
     cta_url: string | null
+    target_platform?: SoftwarePromotionTargetPlatform
     position: "clock_area" | "bottom_left"
     dismiss_mode: "once_per_campaign" | "once_per_day" | "every_launch"
     delay_seconds: number

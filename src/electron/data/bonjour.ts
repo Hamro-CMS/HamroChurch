@@ -8,6 +8,8 @@ import { isMac } from ".."
 // mDNS packets including host/A records. mDNSResponder detects this as a hostname
 // conflict and renames the computer. Use the native dns-sd command instead.
 
+const VIRTUAL_ADAPTER_PATTERN = /vethernet|wsl|docker|vmware|virtualbox|vbox|hyper-v|loopback|tailscale|zerotier|hamachi|tun|tap/i
+
 const bonjour = isMac
     ? null
     : new Bonjour({}, (err: any) => {
@@ -22,7 +24,7 @@ const instanceID = crypto.randomBytes(3).toString("hex")
 const publishedServices: Partial<Record<string, Service>> = {}
 const dnsSdProcesses: Partial<Record<string, ChildProcess>> = {}
 
-// check for existing Hamro Church services before publishing
+// check for existing Aradhana Studio services before publishing
 function checkAndPublish(name: string, port: number, uniqueName: string, customData: any) {
     if (!bonjour) return
 
@@ -133,21 +135,37 @@ function publishViaDnsSd(name: string, port: number, uniqueName: string) {
 
 export function getLocalIPs() {
     const interfaces = os.networkInterfaces()
-    const results: Record<string, string[]> = {}
+    const preferred: string[] = []
+    const hotspot: string[] = []
+    const standard: string[] = []
+    const virtual: string[] = []
 
     for (const name of Object.keys(interfaces)) {
+        const isVirtual = VIRTUAL_ADAPTER_PATTERN.test(name)
+        const isWifiOrEth = /^(wi-?fi|wlan|en\d+|eth\d+|ethernet)/i.test(name) && !isVirtual
+        const isHotspotName = /local area connection\*|hotspot|ap/i.test(name) && !isVirtual
+
         for (const net of interfaces[name] || []) {
             if (net.internal) continue
 
             // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
-            // 'IPv4' is in Node <= 17, from 18 it's a number 4 or 6
             const familyV4Value = typeof net.family === "string" ? "IPv4" : 4
             if (net.family !== familyV4Value) continue
+            if (net.address.startsWith("169.254.")) continue
 
-            if (!results[name]) results[name] = []
-            results[name].push(net.address)
+            const isWindowsHotspotSubnet = net.address.startsWith("192.168.137.")
+
+            if (isVirtual) {
+                virtual.push(net.address)
+            } else if (isWifiOrEth) {
+                preferred.push(net.address)
+            } else if (isHotspotName || isWindowsHotspotSubnet) {
+                hotspot.push(net.address)
+            } else {
+                standard.push(net.address)
+            }
         }
     }
 
-    return [...(results.en0 || []), ...(results.eth0 || []), ...(results["Wi-Fi"] || []), ...Object.values(results).flat(), "localhost"]
+    return [...new Set([...preferred, ...hotspot, ...standard, ...virtual, "localhost"])]
 }

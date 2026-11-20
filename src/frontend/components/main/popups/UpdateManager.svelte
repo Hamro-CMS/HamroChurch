@@ -93,7 +93,7 @@
         <Link url="https://hamrocms.com/download">hamrocms.com/download</Link>
         वा यही बिल्ट-इन अपडेटरबाट मात्र डाउनलोड र अपडेट गर्नुहोस्।
     {:else}
-        🛡 <strong>Official Security Notice:</strong> Always download and update Hamro Church only from
+        🛡 <strong>Official Security Notice:</strong> Always download and update Aradhana Studio only from
         <Link url="https://hamrocms.com/download">hamrocms.com/download</Link>
         or this built-in updater to protect your computer from malware copies.
     {/if}

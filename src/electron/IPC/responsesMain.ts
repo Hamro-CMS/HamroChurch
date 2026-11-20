@@ -25,7 +25,7 @@ import { libreConvert } from "../output/ppt/libreConverter"
 import { getPresentationApplications, presentationControl, startSlideshow } from "../output/ppt/presentation"
 import { closeServers, startServers, updateServerData } from "../servers"
 import { processAudioData, timecodeStart, timecodeStop, updateTimecodeValue } from "../timecode/timecode"
-import { apiReturnData, emitOSC, startWebSocketAndRest, stopApiListener } from "../utils/api"
+import { apiReturnData, broadcastMobileData, disconnectMobileClient, emitOSC, generateMobileRemoteToken, getConnectedMobileClients, startWebSocketAndRest, stopApiListener } from "../utils/api"
 import { closeMain } from "../utils/close"
 import { addToMediaFolder, bundleMediaFiles, createFolder, getDataFolderPath, getDataFolderRoot, getFileInfo, getMediaCodec, getMediaSyncFolderPath, getMediaTracks, getPaths, getSimularPaths, loadFile, loadShowsAsync, locateMediaFile, openInSystem, readExifData, readFile, readFolder, readFolderContent, selectFiles, selectFilesDialog, selectFolder, setMediaSyncFolderPath, writeFile } from "../utils/files"
 import { getMachineId } from "../utils/helpers"
@@ -140,11 +140,15 @@ export const mainResponses: MainResponses = {
     [Main.START]: (data) => startServers(data),
     [Main.STOP]: () => closeServers(),
     [Main.SERVER_DATA]: (data) => updateServerData(data),
-    // WebSocket / REST / OSC
+    // WebSocket / REST / OSC / Mobile Remote
     [Main.WEBSOCKET_START]: (config) => startWebSocketAndRest(config),
     [Main.WEBSOCKET_STOP]: () => stopApiListener(),
     [Main.API_TRIGGER]: (data) => apiReturnData(data),
     [Main.EMIT_OSC]: (data) => emitOSC(data),
+    [Main.MOBILE_CLIENTS_GET]: () => getConnectedMobileClients(),
+    [Main.MOBILE_CLIENT_DISCONNECT]: (data) => disconnectMobileClient(data?.id || ""),
+    [Main.MOBILE_BROADCAST]: (data) => broadcastMobileData(data),
+    [Main.MOBILE_GENERATE_TOKEN]: () => generateMobileRemoteToken(),
     // MIDI
     [Main.GET_MIDI_OUTPUTS]: () => getMidiOutputs(),
     [Main.GET_MIDI_INPUTS]: () => getMidiInputs(),
@@ -448,8 +452,8 @@ function readHamroHymns() {
                 payload.language = "ne"
                 changed = true
             }
-            if (payload.source?.name !== "Hamro Church" || payload.source?.url !== "https://hamrocms.com") {
-                payload.source = { name: "Hamro Church", url: "https://hamrocms.com" }
+            if (payload.source?.name !== "Aradhana Studio" || payload.source?.url !== "https://hamrocms.com") {
+                payload.source = { name: "Aradhana Studio", url: "https://hamrocms.com" }
                 changed = true
             }
 
@@ -478,7 +482,7 @@ function readHamroHymns() {
             content: normalizePayload(primaryContent, primaryPath)
         }
 
-    const candidates = [path.join(root, "nepali_hymns.json"), path.join(root, "imports", "nepali_hymns.json"), path.join(root, "imports", "Hymns", "nepali_hymns.json"), path.join(root, "imports", "Hamro Church", "nepali_hymns.json"), path.join(root, "import", "nepali_hymns.json"), path.join("C:\\Mandali Show", "church-presentation-app", "data", "nepali_hymns.json")]
+    const candidates = [path.join(root, "nepali_hymns.json"), path.join(root, "imports", "nepali_hymns.json"), path.join(root, "imports", "Hymns", "nepali_hymns.json"), path.join(root, "imports", "Aradhana Studio", "nepali_hymns.json"), path.join(root, "imports", "Hamro Church", "nepali_hymns.json"), path.join(root, "import", "nepali_hymns.json"), path.join("C:\\Mandali Show", "church-presentation-app", "data", "nepali_hymns.json")]
 
     for (const candidate of candidates) {
         const content = readFile(candidate)
@@ -503,7 +507,7 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
                 ? JSON.parse(fallback.content)
                 : {
                       version: 2,
-                      source: { name: "Hamro Church" },
+                      source: { name: "Aradhana Studio" },
                       language: "ne",
                       categories: []
                   }
@@ -512,7 +516,7 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
         if (!Array.isArray(payload.categories)) payload.categories = []
         payload.version = 2
         payload.language = "ne"
-        payload.source = { name: "Hamro Church", url: "https://hamrocms.com" }
+        payload.source = { name: "Aradhana Studio", url: "https://hamrocms.com" }
 
         const categoryNameMap = {
             bhajan: "Bhajan",

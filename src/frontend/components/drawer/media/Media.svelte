@@ -78,7 +78,7 @@
         else if (activeTab === "online") onlineTab = id
     }
 
-    // External content providers are disabled in Hamro Church
+    // External content providers are disabled in Aradhana Studio
     let contentProviders: { providerId: ContentProviderId; displayName: string; hasContentLibrary: boolean }[] = []
 
     function getFolderPreviewPaths(filePaths: string[]) {

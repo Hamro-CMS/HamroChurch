@@ -79,9 +79,9 @@
     }
 
     function contactPrivacySupport() {
-        const subject = encodeURIComponent("Hamro Church Privacy / Anonymous Data Deletion")
+        const subject = encodeURIComponent("Aradhana Studio Privacy / Anonymous Data Deletion")
         const body = encodeURIComponent(
-            `Hello Hamro Church Support,\n\nPlease ensure any anonymous usage records associated with my Anonymous Device ID are deleted:\nAnonymous Device ID: ${anonymousDeviceId}\n`
+            `Hello Aradhana Studio Support,\n\nPlease ensure any anonymous usage records associated with my Anonymous Device ID are deleted:\nAnonymous Device ID: ${anonymousDeviceId}\n`
         )
         sendMain(Main.URL, `mailto:support@hamrocms.com?subject=${subject}&body=${body}`)
     }

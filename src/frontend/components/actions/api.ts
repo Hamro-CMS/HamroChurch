@@ -83,6 +83,35 @@ import {
 } from "./apiHelper"
 import { oscToAPI } from "./apiOSC"
 import { emitData } from "./emitters"
+import {
+    getMobileBibleBooks,
+    getMobileBibleChapter,
+    getMobileBibles,
+    getMobileBibleSearch,
+    getMobileBootstrap,
+    getMobileHymnDetail,
+    getMobileHymns,
+    getMobileLiveState,
+    getMobileProjects,
+    getMobilePromotions,
+    getMobileShows,
+    mobileClear,
+    mobileNextSlide,
+    mobileOpenProjectItem,
+    mobileOpenShow,
+    mobilePointer,
+    mobilePrevSlide,
+    mobileProjectHymn,
+    mobileProjectScripture,
+    mobilePromotionEvent,
+    mobileScriptureStep,
+    mobileSelectProject,
+    mobileSelectSlide,
+    mobileStageMessage,
+    mobileTimerAction,
+    mobileToggleLock,
+    mobileToggleOutputWindow
+} from "./mobileRemoteApi"
 import { sendRestCommandSync } from "./rest"
 
 /// STEPS TO CREATE A CUSTOM API ACTION ///
@@ -398,7 +427,41 @@ export const API_ACTIONS = {
     get_thumbnail: (data: API_media) => getThumbnail(data),
     get_slide_thumbnail: (data: API_slide_thumbnail) => getSlideThumbnail(data),
     get_pdf_thumbnails: (data: API_media) => getPDFThumbnails(data),
-    get_cleared: () => getClearedState()
+    get_cleared: () => getClearedState(),
+
+    // HAMRO CHURCH MOBILE REMOTE CONTROLLER API (0-based indices)
+    get_mobile_ping: () => ({ ok: true, app: "Aradhana Studio", timestamp: Date.now() }),
+    get_mobile_bootstrap: () => getMobileBootstrap(),
+    get_mobile_live_state: () => getMobileLiveState(),
+    mobile_next_slide: () => mobileNextSlide(),
+    mobile_prev_slide: () => mobilePrevSlide(),
+    mobile_select_slide: (data: any) => mobileSelectSlide(data),
+    mobile_clear: (data: any) => mobileClear(data),
+    mobile_toggle_lock: (data: any) => mobileToggleLock(data),
+    mobile_toggle_output_window: (data: any) => mobileToggleOutputWindow(data),
+
+    get_mobile_hymns: (data: any) => getMobileHymns(data),
+    get_mobile_hymn_detail: (data: any) => getMobileHymnDetail(data),
+    mobile_project_hymn: (data: any) => mobileProjectHymn(data),
+
+    get_mobile_bibles: () => getMobileBibles(),
+    get_mobile_bible_books: (data: any) => getMobileBibleBooks(data),
+    get_mobile_bible_chapter: (data: any) => getMobileBibleChapter(data),
+    get_mobile_bible_search: (data: any) => getMobileBibleSearch(data),
+    mobile_project_scripture: (data: any) => mobileProjectScripture(data),
+    mobile_scripture_step: (data: any) => mobileScriptureStep(data),
+
+    get_mobile_projects: () => getMobileProjects(),
+    mobile_select_project: (data: any) => mobileSelectProject(data),
+    mobile_open_project_item: (data: any) => mobileOpenProjectItem(data),
+    get_mobile_shows: (data: any) => getMobileShows(data),
+    mobile_open_show: (data: any) => mobileOpenShow(data),
+
+    mobile_stage_message: (data: any) => mobileStageMessage(data),
+    mobile_timer_action: (data: any) => mobileTimerAction(data),
+    mobile_pointer: (data: any) => mobilePointer(data),
+    get_mobile_promotions: () => getMobilePromotions(),
+    mobile_promotion_event: (data: any) => mobilePromotionEvent(data)
 }
 
 /// RECEIVER / SENDER ///
@@ -408,9 +471,10 @@ export async function triggerAction(data: API) {
     if (data.action.startsWith("/")) data = oscToAPI(data)
 
     const id = data.action
+    const isMobileAction = id.startsWith("mobile_") || id.startsWith("get_mobile_")
 
-    // API start at 1, code start at 0
-    if (data.index !== undefined) data.index--
+    // Legacy Companion API starts at 1, internal code & mobile_* API start at 0
+    if (data.index !== undefined && !isMobileAction) data.index--
 
     if (!API_ACTIONS[id]) return console.error("Missing API ACTION:", id)
 

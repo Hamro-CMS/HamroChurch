@@ -1,9 +1,9 @@
 {
-    "name": "hamro-church",
-    "version": "1.7.32",
+    "name": "aradhana-studio",
+    "version": "1.7.33",
     "private": true,
     "main": "build/electron/index.js",
-    "description": "Nepali-localized church presentation software for worship services.",
+    "description": "Aradhana Studio (आराधना स्टुडियो) — Nepali & English church presentation software for worship services.",
     "repository": {
         "type": "git",
         "url": "https://github.com/Hamro-CMS/HamroChurch.git"
@@ -12,7 +12,7 @@
         "url": "https://github.com/Hamro-CMS/HamroChurch/issues"
     },
     "homepage": "https://hamrocms.com",
-    "author": "Hamro Church",
+    "author": "Aradhana Studio",
     "license": "GPL-3.0",
     "scripts": {
         "postinstall": "npm run rebuild:native",

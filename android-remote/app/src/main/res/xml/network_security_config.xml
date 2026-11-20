@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Local church Wi-Fi / Mobile Hotspot presentation servers run on dynamic RFC1918 LAN IPv4
+  addresses (192.168.x.x, 10.x.x.x, 172.16-31.x.x) where public CA TLS certificates cannot
+  be issued offline. Application-layer LanSecurityValidator strictly blocks any connection
+  or token transmission to public non-LAN IP addresses.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

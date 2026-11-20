@@ -43,7 +43,7 @@ export const isWindows: boolean = process.platform === "win32"
 export const isMac: boolean = process.platform === "darwin"
 export const isLinux: boolean = process.platform === "linux"
 
-if (isWindows) app.setAppUserModelId("app.hamrochurch")
+if (isWindows) app.setAppUserModelId("app.aradhanastudio")
 
 let autoProfile = ""
 export function setAutoProfile(profile: string) {
@@ -58,7 +58,7 @@ config.set("loaded", true)
 if (!config.get("loaded")) console.error("Could not get stored data!")
 
 // info
-console.info("Starting Hamro Church...")
+console.info("Starting Aradhana Studio...")
 if (!isProd) console.info("Building app! (This may take 20-90 seconds)")
 
 // set application menu

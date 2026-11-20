@@ -378,7 +378,9 @@ const updateList: { [key in SaveListSettings | SaveListSyncedSettings]: any } = 
     globalRegexes: (v: any) => globalRegexes.set(v),
     customMetadata: (v: any) => customMetadata.set(v),
     companion: (v: any) => {
-        companion.set({ ...v, enabled: false })
+        const hasStrongToken = typeof v?.token === "string" && v.token.trim().length >= 16
+        const shouldAutoEnable = v?.enabled === true && hasStrongToken
+        companion.set({ ...v, enabled: shouldAutoEnable })
     },
     special: (v: any) => {
         if (v.capitalize_words === undefined) v.capitalize_words = "Jesus, Lord" // God

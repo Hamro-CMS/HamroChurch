@@ -41,7 +41,7 @@
         folderLengths = newFolderLengths
     }
 
-    // External content providers are disabled in Hamro Church
+    // External content providers are disabled in Aradhana Studio
     let contentProviders: { providerId: ContentProviderId; displayName: string; hasContentLibrary: boolean }[] = []
     $: curriculumProviders = contentProviders.filter((a) => (a.providerId !== "churchApps" || $special.churchAppsCloudOnly !== true) && a.providerId !== "canva")
 
