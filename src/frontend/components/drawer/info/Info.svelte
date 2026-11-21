@@ -5,7 +5,6 @@
     import Date from "../../system/Date.svelte"
     import AudioInfo from "./AudioInfo.svelte"
     import CalendarInfo from "./CalendarInfo.svelte"
-    import DockedStudioSpotlight from "./DockedStudioSpotlight.svelte"
     import FunctionsInfo from "./FunctionsInfo.svelte"
     import HymnInfo from "./HymnInfo.svelte"
     import MediaInfo from "./MediaInfo.svelte"
@@ -18,52 +17,39 @@
 </script>
 
 <div class="main {id !== 'shows' || $activeShow !== null ? 'context #drawer_info' : ''}">
-    <div class="infoScrollArea">
-        {#if !$forceClock && id === "shows" && $activeShow !== null && ($activeShow.type === undefined || $activeShow.type === "show")}
-            <ShowInfo />
-        {:else if !$forceClock && id === "hymns"}
-            <HymnInfo />
-        {:else if !$forceClock && id === "stuti"}
-            <StutiMediaInfo />
-        {:else if !$forceClock && id === "media"}
-            <MediaInfo />
-        {:else if !$forceClock && id === "audio"}
-            <AudioInfo />
-            <!-- {:else if !$forceClock && id === "overlays"}
-            <OverlayInfo /> -->
-        {:else if !$forceClock && id === "templates"}
-            <TemplateInfo />
-        {:else if !$forceClock && id === "scripture"}
-            <ScriptureInfo />
-        {:else if !$forceClock && id === "calendar"}
-            <CalendarInfo />
-        {:else if !$forceClock && id === "functions"}
-            <FunctionsInfo />
-        {:else}
-            <Center>
-                <Clock />
-                <Date />
-            </Center>
-        {/if}
-    </div>
-
-    <DockedStudioSpotlight hideStutiCard={id === "stuti"} />
+    {#if !$forceClock && id === "shows" && $activeShow !== null && ($activeShow.type === undefined || $activeShow.type === "show")}
+        <ShowInfo />
+    {:else if !$forceClock && id === "hymns"}
+        <HymnInfo />
+    {:else if !$forceClock && id === "stuti"}
+        <StutiMediaInfo />
+    {:else if !$forceClock && id === "media"}
+        <MediaInfo />
+    {:else if !$forceClock && id === "audio"}
+        <AudioInfo />
+        <!-- {:else if !$forceClock && id === "overlays"}
+        <OverlayInfo /> -->
+    {:else if !$forceClock && id === "templates"}
+        <TemplateInfo />
+    {:else if !$forceClock && id === "scripture"}
+        <ScriptureInfo />
+    {:else if !$forceClock && id === "calendar"}
+        <CalendarInfo />
+    {:else if !$forceClock && id === "functions"}
+        <FunctionsInfo />
+    {:else}
+        <Center>
+            <Clock />
+            <Date />
+        </Center>
+    {/if}
 </div>
 
 <style>
-    .main {
+    div {
         display: flex;
         flex-direction: column;
         flex: 1;
-        min-height: 0;
-        overflow: hidden;
-    }
-
-    .infoScrollArea {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-height: 0;
         overflow-y: auto;
     }
 

@@ -1,5 +1,7 @@
 <script type="ts">
     import { slide } from "svelte/transition"
+    import { Main } from "../../../types/IPC/Main"
+    import { sendMain } from "../../IPC/main"
     import { activeEdit, activePage, activePopup, activeProfile, activeShow, companion, dictionary, drawSettings, drawTool, language, mobileRemoteClients, os, outputDisplay, outputs, paintCache, popupData, profiles, saved, settingsTab, shows } from "../../stores"
     import { translateText } from "../../utils/language"
     import Icon from "../helpers/Icon.svelte"
@@ -77,7 +79,14 @@
                 <img class="brandLogoIcon" src="./icon.png" alt="" draggable={false} />
             </span>
             <span class="brandNameText">{$language === "ne" ? "आराधना स्टुडियो" : "Aradhana Studio"}</span>
-            <span class="brandDomain">hamrocms.com</span>
+            <button
+                type="button"
+                class="brandDomain"
+                title={$language === "ne" ? "HamroCMS.com खोल्नुहोस्" : "Visit HamroCMS.com"}
+                on:click={() => sendMain(Main.URL, "https://hamrocms.com/?utm_source=aradhana_studio&utm_medium=header_badge")}
+            >
+                hamrocms.com
+            </button>
         </h1>
     </span>
     <span>
@@ -269,6 +278,14 @@
         padding: 2px 9px;
         line-height: 1.35;
         letter-spacing: 0.02em;
+        font-family: inherit;
+        cursor: pointer;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .brandDomain:hover {
+        background: rgb(245 158 11 / 0.24);
+        border-color: rgb(245 158 11 / 0.65);
     }
 
     @media screen and (max-width: 780px) {

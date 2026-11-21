@@ -4,6 +4,7 @@
     import CalendarTabs from "./navigation/CalendarTabs.svelte"
     import FunctionsTabs from "./navigation/FunctionsTabs.svelte"
     import HymnCategoryFilter from "./hymns/HymnCategoryFilter.svelte"
+    import DockedStudioSpotlight from "./info/DockedStudioSpotlight.svelte"
     import StutiMediaTabs from "./stuti/StutiMediaTabs.svelte"
     import MediaTabs from "./navigation/MediaTabs.svelte"
     import OverlaysTabs from "./navigation/OverlaysTabs.svelte"
@@ -42,14 +43,23 @@
             </DropArea>
         {/if}
     </div>
+    <DockedStudioSpotlight hidden={id === "stuti" || id === "scripture"} />
 </div>
 
 <style>
-    .main,
+    .main {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+
     .categories {
         display: flex;
         flex-direction: column;
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
         overflow-x: hidden;
     }

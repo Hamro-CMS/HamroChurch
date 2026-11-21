@@ -6,6 +6,7 @@
     import { DEFAULT_DRAWER_HEIGHT } from "../../../utils/common"
     import { copySelectedHymnToClipboard, formatHymnNumber, getHymnCategoryDisplay, hymnEditTarget, hymnFavoriteIds, hymnItems, hymnSelectedId, hymnSourceDates, toggleFavorite, insertSelectedHymnIntoSlides } from "../hymns/hymns"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
+    import Icon from "../../helpers/Icon.svelte"
     import T from "../../helpers/T.svelte"
     import InfoMetadata from "./InfoMetadata.svelte"
 
@@ -135,15 +136,17 @@
                 <img src={matchedStutiSong.thumbnail_url} alt={matchedStutiSong.title} loading="lazy" />
                 <div class="stutiMatchMeta">
                     <span class="stutiMatchLabel">
-                        🎧 {$language === "ne" ? "यो भजनको आधिकारिक भिडियो (Stuti Media)" : "Official Worship Video (Stuti Media)"}
+                        <Icon id="youtube" size={0.82} />
+                        <span>{$language === "ne" ? "यो भजनको आधिकारिक भिडियो (Stuti Media)" : "Official Worship Video (Stuti Media)"}</span>
                     </span>
                     <div class="stutiMatchTitle">{matchedStutiSong.title}</div>
                     <div class="stutiMatchActions">
                         <button type="button" class="stutiListenBtn" on:click={() => matchedStutiSong && openMatchedStutiVideo(matchedStutiSong)}>
-                            ▶ {$language === "ne" ? "सुन्नुहोस्" : "Listen"}
+                            <Icon id="play" size={0.78} white />
+                            <span>{$language === "ne" ? "सुन्नुहोस्" : "Listen"}</span>
                         </button>
                         <button type="button" class="stutiYtBtn" on:click={() => matchedStutiSong && sendMain(Main.URL, matchedStutiSong.watch_url)}>
-                            YouTube ↗
+                            <span>YouTube</span>
                         </button>
                     </div>
                 </div>
@@ -193,9 +196,13 @@
     }
 
     .stutiMatchLabel {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
         font-size: 0.68rem;
-        font-weight: 700;
-        color: #fca5a5;
+        font-weight: 600;
+        color: var(--text);
+        opacity: 0.85;
     }
 
     .stutiMatchTitle {
@@ -216,27 +223,33 @@
     }
 
     .stutiListenBtn {
-        border: 1px solid rgba(239, 68, 68, 0.5);
-        background: rgba(239, 68, 68, 0.25);
-        color: #fee2e2;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
         font-size: 0.7rem;
         font-weight: 600;
-        padding: 2px 8px;
+        padding: 3px 8px;
         border-radius: 5px;
         cursor: pointer;
         font-family: inherit;
     }
 
     .stutiListenBtn:hover {
-        background: rgba(239, 68, 68, 0.4);
+        background: rgba(255, 255, 255, 0.16);
     }
 
     .stutiYtBtn {
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        background: rgba(255, 255, 255, 0.06);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.04);
         color: var(--text);
         font-size: 0.7rem;
-        padding: 2px 7px;
+        padding: 3px 7px;
         border-radius: 5px;
         cursor: pointer;
         font-family: inherit;
@@ -246,7 +259,7 @@
         display: flex;
         flex-direction: column;
         gap: 0.85rem;
-        padding-bottom: 0.75rem;
+        padding-bottom: 48px;
     }
 
     .translit {

@@ -3,6 +3,7 @@
     import type { StutiMediaSong } from "../../../../types/Main"
     import { sendMain } from "../../../IPC/main"
     import { language, playerVideos, stutiMediaActiveVideoId, stutiMediaAutoPlayQueue, stutiMediaFeed } from "../../../stores"
+    import Icon from "../../helpers/Icon.svelte"
     import { setOutput } from "../../helpers/output"
     import { clearSlide } from "../../output/clear"
     import YouTubePlayer from "../player/YouTubePlayer.svelte"
@@ -50,36 +51,27 @@
             {/key}
         </div>
 
-        <div class="songMeta">
-            <h3 class="title">{activeSong.title}</h3>
-            <div class="metaLine">
-                <span>@StutiMediaNepal</span>
-                {#if activeSong.published_label}
-                    <span>• {activeSong.published_label}</span>
-                {/if}
-                {#if activeSong.duration_text}
-                    <span>• {activeSong.duration_text}</span>
-                {/if}
-            </div>
-        </div>
-
         <div class="actions">
             <button type="button" class="btn primary" on:click={() => projectActiveSong(activeSong)}>
-                📺 {isNe ? "प्रोजेक्टरमा देखाउनुहोस्" : "Project on Screen"}
+                <Icon id="display" size={0.88} white />
+                <span>{isNe ? "प्रोजेक्टरमा" : "Project"}</span>
             </button>
 
-            <button type="button" class="btn secondary" on:click={() => openExternal(activeSong.watch_url)}>
-                ↗ {isNe ? "YouTube मा हेर्नुहोस्" : "Watch on YouTube"}
+            <button type="button" class="btn" on:click={() => openExternal(activeSong.watch_url)}>
+                <Icon id="launch" size={0.85} white />
+                <span>YouTube</span>
             </button>
 
-            <button type="button" class="btn subscribe" on:click={() => openExternal(subscribeUrl)}>
-                🔔 {isNe ? "Subscribe" : "Subscribe"}
+            <button type="button" class="btn" on:click={() => openExternal(subscribeUrl)}>
+                <Icon id="youtube" size={0.85} white />
+                <span>Subscribe</span>
             </button>
         </div>
 
         {#if $stutiMediaAutoPlayQueue}
             <div class="queueHint">
-                ▶ {isNe ? "Play All सक्रिय छ — गीत सकिएपछि अर्को गीत स्वतः बज्नेछ।" : "Play All active — next song plays automatically."}
+                <Icon id="play" size={0.78} white />
+                <span>{isNe ? "Play All सक्रिय छ — अर्को गीत स्वतः बज्नेछ।" : "Play All active — auto-advancing."}</span>
             </div>
         {/if}
     </div>
@@ -93,8 +85,8 @@
     .infoWrap {
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        padding: 10px;
+        gap: 8px;
+        padding: 10px 10px 52px;
     }
 
     .playerFrame {
@@ -114,79 +106,57 @@
         border: 0;
     }
 
-    .songMeta {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .title {
-        margin: 0;
-        font-size: 0.88rem;
-        font-weight: 700;
-        line-height: 1.3;
-        color: var(--text);
-    }
-
-    .metaLine {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        font-size: 0.72rem;
-        opacity: 0.7;
-    }
-
     .actions {
         display: flex;
-        flex-direction: column;
         gap: 6px;
+        flex-wrap: wrap;
     }
 
     .btn {
-        width: 100%;
-        padding: 7px 10px;
+        flex: 1 1 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        padding: 6px 9px;
         border-radius: 6px;
-        font-size: 0.78rem;
-        font-weight: 600;
+        font-size: 0.74rem;
+        font-weight: 500;
         cursor: pointer;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.05);
         color: var(--text);
         font-family: inherit;
-        text-align: center;
+        white-space: nowrap;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
     }
 
     .btn:hover {
-        background: rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.24);
     }
 
     .btn.primary {
-        border-color: rgba(56, 189, 248, 0.5);
-        background: rgba(14, 165, 233, 0.25);
+        border-color: rgba(56, 189, 248, 0.45);
+        background: rgba(14, 165, 233, 0.22);
         color: #e0f2fe;
+        font-weight: 600;
     }
 
     .btn.primary:hover {
-        background: rgba(14, 165, 233, 0.38);
-    }
-
-    .btn.subscribe {
-        border-color: rgba(239, 68, 68, 0.5);
-        background: rgba(239, 68, 68, 0.2);
-        color: #fecaca;
-    }
-
-    .btn.subscribe:hover {
-        background: rgba(239, 68, 68, 0.34);
+        background: rgba(14, 165, 233, 0.35);
     }
 
     .queueHint {
-        font-size: 0.72rem;
-        padding: 6px 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.71rem;
+        padding: 5px 8px;
         border-radius: 6px;
-        background: rgba(16, 185, 129, 0.14);
-        border: 1px solid rgba(16, 185, 129, 0.32);
-        color: #a7f3d0;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        opacity: 0.8;
     }
 
     .empty {

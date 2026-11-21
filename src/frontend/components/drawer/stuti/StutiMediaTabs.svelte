@@ -2,25 +2,24 @@
     import { Main } from "../../../../types/IPC/Main"
     import { requestMain, sendMain } from "../../../IPC/main"
     import { language, stutiMediaActiveVideoId, stutiMediaAutoPlayQueue, stutiMediaFavorites, stutiMediaFeed, stutiMediaFilter } from "../../../stores"
+    import Icon from "../../helpers/Icon.svelte"
 
     let refreshing = false
 
     $: isNe = $language === "ne"
     $: videosCount = ($stutiMediaFeed?.videos || []).length
-    $: latestCount = Math.min(6, videosCount)
     $: shortsCount = ($stutiMediaFeed?.shorts || []).length
     $: favoritesCount = ($stutiMediaFavorites || []).length
     $: subscribeUrl = $stutiMediaFeed?.channel?.subscribe_url || "https://www.youtube.com/@stutimedianepal?sub_confirmation=1"
 
-    $: if ($stutiMediaFilter === "shorts" && shortsCount === 0) {
+    $: if ($stutiMediaFilter === "latest" || ($stutiMediaFilter === "shorts" && shortsCount === 0)) {
         stutiMediaFilter.set("all")
     }
 
     $: categories = [
-        { id: "all" as const, icon: "●", label: isNe ? "सबै गीतहरू" : "All Songs", count: videosCount },
-        { id: "latest" as const, icon: "✦", label: isNe ? "नयाँ रिलिज" : "Latest", count: latestCount },
-        { id: "favorites" as const, icon: "★", label: isNe ? "मनपर्ने" : "Favorites", count: favoritesCount },
-        ...(shortsCount > 0 ? [{ id: "shorts" as const, icon: "▶", label: "Shorts", count: shortsCount }] : [])
+        { id: "all" as const, icon: "music", label: isNe ? "सबै गीतहरू" : "All Songs", count: videosCount },
+        { id: "favorites" as const, icon: "star", label: isNe ? "मनपर्ने" : "Favorites", count: favoritesCount },
+        ...(shortsCount > 0 ? [{ id: "shorts" as const, icon: "play", label: "Shorts", count: shortsCount }] : [])
     ]
 
     function toggleAutoPlayQueue() {
@@ -51,14 +50,14 @@
 
 <div class="categories">
     <div class="channelHeader">
-        <span class="dot">●</span>
+        <Icon id="youtube" size={0.85} />
         <span class="channelName">@StutiMediaNepal</span>
     </div>
 
     {#each categories as cat}
         <button type="button" class="item" class:active={$stutiMediaFilter === cat.id} on:click={() => stutiMediaFilter.set(cat.id)}>
             <span class="left">
-                <span class="icon">{cat.icon}</span>
+                <Icon id={cat.icon} size={0.86} white={$stutiMediaFilter !== cat.id} />
                 <span class="label">{cat.label}</span>
             </span>
             <span class="count">{cat.count}</span>
@@ -68,19 +67,19 @@
     <hr class="divider" />
 
     <div class="actionStack">
-        <button type="button" class="actionBtn playAllBtn" class:enabled={$stutiMediaAutoPlayQueue} on:click={toggleAutoPlayQueue}>
-            <span>{$stutiMediaAutoPlayQueue ? "⏸" : "▶"}</span>
-            <span>{isNe ? "Play All (संगति अघिको आराधना)" : "Play All (Pre-Service)"}</span>
+        <button type="button" class="actionBtn" class:enabled={$stutiMediaAutoPlayQueue} on:click={toggleAutoPlayQueue}>
+            <Icon id="play" size={0.82} white={!$stutiMediaAutoPlayQueue} />
+            <span>{isNe ? "Play All (संगति अगाडि)" : "Play All (Pre-Service)"}</span>
         </button>
 
-        <button type="button" class="actionBtn subscribeBtn" on:click={openSubscribe}>
-            <span>🔴</span>
-            <span>{isNe ? "Subscribe @StutiMediaNepal" : "Subscribe @StutiMediaNepal"}</span>
+        <button type="button" class="actionBtn" on:click={openSubscribe}>
+            <Icon id="youtube" size={0.82} white />
+            <span>Subscribe</span>
         </button>
 
-        <button type="button" class="actionBtn refreshBtn" on:click={refreshCatalog} disabled={refreshing}>
-            <span>🔄</span>
-            <span>{refreshing ? (isNe ? "ताजा हुँदैछ..." : "Refreshing...") : isNe ? "ताजा गर्नुहोस् (Refresh)" : "Refresh Catalog"}</span>
+        <button type="button" class="actionBtn" on:click={refreshCatalog} disabled={refreshing}>
+            <Icon id="refresh" size={0.82} white />
+            <span>{refreshing ? (isNe ? "ताजा हुँदैछ..." : "Refreshing...") : isNe ? "ताजा गर्नुहोस्" : "Refresh"}</span>
         </button>
     </div>
 </div>
@@ -98,17 +97,12 @@
     .channelHeader {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 6px 12px 4px;
+        gap: 7px;
+        padding: 6px 12px 5px;
         font-size: 0.76rem;
-        font-weight: 700;
-        color: #fca5a5;
-        letter-spacing: 0.02em;
-    }
-
-    .channelHeader .dot {
-        color: #ef4444;
-        font-size: 0.65rem;
+        font-weight: 600;
+        color: var(--text);
+        opacity: 0.78;
     }
 
     .item {
@@ -134,7 +128,7 @@
 
     .item.active {
         background: var(--primary-darker);
-        border-left-color: #ef4444;
+        border-left-color: var(--secondary);
         font-weight: 600;
     }
 
@@ -143,18 +137,6 @@
         align-items: center;
         gap: 8px;
         min-width: 0;
-    }
-
-    .icon {
-        width: 16px;
-        text-align: center;
-        font-size: 0.78rem;
-        opacity: 0.85;
-    }
-
-    .item.active .icon {
-        color: #f87171;
-        opacity: 1;
     }
 
     .count {
@@ -172,49 +154,40 @@
     .actionStack {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        padding: 0 10px;
+        gap: 4px;
+        padding: 0 8px;
     }
 
     .actionBtn {
         display: flex;
         align-items: center;
-        gap: 7px;
+        gap: 8px;
         width: 100%;
-        padding: 7px 9px;
+        padding: 6px 10px;
         border-radius: 6px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.025);
         color: var(--text);
         font-family: inherit;
-        font-size: 0.77rem;
-        font-weight: 600;
+        font-size: 0.78rem;
+        font-weight: 500;
         cursor: pointer;
         text-align: left;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
     }
 
     .actionBtn:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.18);
     }
 
     .actionBtn:disabled {
-        opacity: 0.6;
+        opacity: 0.55;
         cursor: default;
     }
 
-    .playAllBtn.enabled {
-        border-color: rgba(16, 185, 129, 0.55);
-        background: rgba(16, 185, 129, 0.2);
-        color: #a7f3d0;
-    }
-
-    .subscribeBtn {
-        border-color: rgba(239, 68, 68, 0.45);
-        background: rgba(239, 68, 68, 0.16);
-        color: #fecaca;
-    }
-
-    .subscribeBtn:hover {
-        background: rgba(239, 68, 68, 0.28);
+    .actionBtn.enabled {
+        border-color: var(--secondary);
+        background: color-mix(in srgb, var(--secondary) 16%, transparent);
     }
 </style>

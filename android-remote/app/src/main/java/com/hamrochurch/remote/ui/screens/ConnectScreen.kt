@@ -419,83 +419,57 @@ fun ConnectScreen(
             }
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
 
-        Card(
-            colors = CardDefaults.cardColors(containerColor = SanctuaryCard.copy(alpha = 0.72f)),
-            border = BorderStroke(1.dp, SanctuaryBorder),
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(DangerRed.copy(alpha = 0.14f))
-                        .clickable {
-                            runCatching {
-                                context.startActivity(
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse("https://www.youtube.com/@stutimedianepal?sub_confirmation=1")
-                                    )
-                                )
-                            }
-                        }
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (ne) "🔴 Stuti Media YouTube • Subscribe" else "🔴 Stuti Media YouTube • Subscribe",
-                        fontSize = 12.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        text = "↗",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFCA5A5)
-                    )
+            Icon(
+                imageVector = Icons.Default.Language,
+                contentDescription = null,
+                tint = TextSecondary,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = "Stuti Media YouTube",
+                fontSize = 12.sp,
+                color = TextSecondary,
+                modifier = Modifier.clickable {
+                    runCatching {
+                        context.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://www.youtube.com/@stutimedianepal?sub_confirmation=1")
+                            )
+                        )
+                    }
                 }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(HamroCyan.copy(alpha = 0.14f))
-                        .clickable {
-                            runCatching {
-                                context.startActivity(
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse("https://hamrocms.com/?utm_source=aradhana_remote&utm_medium=connect_dock")
-                                    )
-                                )
-                            }
-                        }
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (ne) "☁️ HamroCMS.com • चर्च व्यवस्थापन सफ्टवेयर" else "☁️ HamroCMS.com • Church Management Cloud",
-                        fontSize = 12.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        text = "↗",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = HamroCyan
-                    )
+            )
+            Text(
+                text = "  ·  ",
+                fontSize = 12.sp,
+                color = TextSecondary
+            )
+            Text(
+                text = "hamrocms.com",
+                fontSize = 12.sp,
+                color = TextSecondary,
+                modifier = Modifier.clickable {
+                    runCatching {
+                        context.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://hamrocms.com/?utm_source=aradhana_remote&utm_medium=connect_dock")
+                            )
+                        )
+                    }
                 }
-            }
+            )
         }
     }
 }

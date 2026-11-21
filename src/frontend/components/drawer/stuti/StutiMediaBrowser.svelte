@@ -1,23 +1,25 @@
 <script lang="ts">
     import type { StutiMediaSong } from "../../../../types/Main"
     import { Main } from "../../../../types/IPC/Main"
-    import { sendMain } from "../../../IPC/main"
-    import { language, playerVideos, stutiMediaActiveVideoId, stutiMediaFavorites, stutiMediaFeed, stutiMediaFilter } from "../../../stores"
+    import { requestMain, sendMain } from "../../../IPC/main"
+    import { language, playerVideos, stutiMediaActiveVideoId, stutiMediaAutoPlayQueue, stutiMediaFavorites, stutiMediaFeed, stutiMediaFilter } from "../../../stores"
+    import Icon from "../../helpers/Icon.svelte"
     import { setOutput } from "../../helpers/output"
     import { clearSlide } from "../../output/clear"
 
     export let searchValue = ""
 
+    let refreshing = false
+
     $: isNe = $language === "ne"
     $: videos = $stutiMediaFeed?.videos || []
     $: shorts = $stutiMediaFeed?.shorts || []
-    $: newestIds = new Set(videos.slice(0, 3).map((s) => s.video_id))
+    $: subscribeUrl = $stutiMediaFeed?.channel?.subscribe_url || "https://www.youtube.com/@stutimedianepal?sub_confirmation=1"
 
     $: baseList = getFilteredSource($stutiMediaFilter, videos, shorts, $stutiMediaFavorites)
 
     function getFilteredSource(filter: "all" | "latest" | "favorites" | "shorts", vidList: StutiMediaSong[], shortList: StutiMediaSong[], favIds: string[]): StutiMediaSong[] {
         if (filter === "shorts") return shortList
-        if (filter === "latest") return vidList.slice(0, 6)
         if (filter === "favorites") {
             const combined = [...vidList, ...shortList]
             return combined.filter((song) => favIds.includes(song.video_id))
@@ -56,6 +58,27 @@
         })
     }
 
+    function toggleAutoPlayQueue() {
+        const next = !$stutiMediaAutoPlayQueue
+        stutiMediaAutoPlayQueue.set(next)
+        if (next && !$stutiMediaActiveVideoId && videos.length > 0) {
+            stutiMediaActiveVideoId.set(videos[0].video_id)
+        }
+    }
+
+    function refreshCatalog() {
+        if (refreshing) return
+        refreshing = true
+        void requestMain(Main.REFRESH_STUTI_MEDIA_SONGS, undefined, (data) => {
+            refreshing = false
+            if (data?.videos) {
+                stutiMediaFeed.set(data)
+            }
+        }).finally(() => {
+            refreshing = false
+        })
+    }
+
     function openExternal(url: string) {
         sendMain(Main.URL, url)
     }
@@ -64,23 +87,45 @@
 <div class="browser">
     <div class="headerBar">
         <div class="headerTitle">
-            <span class="channelBadge">▶ Stuti Media</span>
-            <span class="subMeta">
-                {isNe
-                    ? `${filteredSongs.length} आराधना गीत • क्लिक: पूर्वावलोकन, डबल-क्लिक: प्रोजेक्टर`
-                    : `${filteredSongs.length} worship songs • Click: preview, Double-click: project`}
-            </span>
+            <Icon id="youtube" size={0.95} />
+            <span class="titleText">Stuti Media</span>
+            <span class="countMeta">{filteredSongs.length}</span>
         </div>
-        <button type="button" class="subscribeChip" on:click={() => openExternal($stutiMediaFeed?.channel?.subscribe_url || "https://www.youtube.com/@stutimedianepal?sub_confirmation=1")}>
-            🔔 {isNe ? "Subscribe गर्नुहोस्" : "Subscribe"}
-        </button>
+
+        <div class="headerActions">
+            <button
+                type="button"
+                class="headerBtn"
+                class:active={$stutiMediaAutoPlayQueue}
+                title={isNe ? "Play All (संगति अगाडि लगातार बजाउनुहोस्)" : "Play All (Pre-Service Worship)"}
+                on:click={toggleAutoPlayQueue}
+            >
+                <Icon id="play" size={0.85} white={!$stutiMediaAutoPlayQueue} />
+                <span>Play All</span>
+            </button>
+
+            <button
+                type="button"
+                class="headerBtn iconOnly"
+                title={isNe ? "गीत सूची ताजा गर्नुहोस्" : "Refresh catalog"}
+                disabled={refreshing}
+                on:click={refreshCatalog}
+            >
+                <Icon id="refresh" size={0.85} white />
+            </button>
+
+            <button type="button" class="headerBtn" on:click={() => openExternal(subscribeUrl)}>
+                <Icon id="youtube" size={0.85} white />
+                <span>Subscribe</span>
+            </button>
+        </div>
     </div>
 
     {#if filteredSongs.length === 0}
         <div class="emptyState">
             <p>
                 {#if $stutiMediaFilter === "favorites"}
-                    {isNe ? "कुनै मनपर्ने गीत छैन। गीतको ★ आइकन थिचेर थप्नुहोस्।" : "No favorite songs yet. Click the ★ button on any song card."}
+                    {isNe ? "कुनै मनपर्ने गीत छैन। गीतको तारा आइकन थिचेर थप्नुहोस्।" : "No favorite songs yet. Click the star icon on any song card."}
                 {:else if normalizedSearch}
                     {isNe ? `"${searchValue}" सँग मिल्ने गीत फेला परेन।` : `No songs matching "${searchValue}".`}
                 {:else}
@@ -93,7 +138,6 @@
             {#each filteredSongs as song (song.video_id)}
                 {@const isActive = $stutiMediaActiveVideoId === song.video_id}
                 {@const isFav = $stutiMediaFavorites.includes(song.video_id)}
-                {@const isNew = song.video_type !== "short" && newestIds.has(song.video_id)}
 
                 <div
                     class="card"
@@ -111,14 +155,26 @@
                 >
                     <div class="thumbWrap">
                         <img src={song.thumbnail_url} alt={song.title} loading="lazy" />
-                        {#if isNew}
-                            <span class="newBadge">NEW</span>
-                        {:else if song.video_type === "short"}
-                            <span class="shortBadge">SHORT</span>
-                        {/if}
+
+                        <div class="hoverOverlay">
+                            <span class="playCenter">
+                                <Icon id="play" size={1.15} white />
+                            </span>
+
+                            <button
+                                type="button"
+                                class="projectHoverBtn"
+                                title={isNe ? "प्रोजेक्टरमा देखाउनुहोस्" : "Project to Output"}
+                                on:click|stopPropagation={() => projectSong(song)}
+                            >
+                                <Icon id="display" size={0.82} white />
+                            </button>
+                        </div>
+
                         {#if song.duration_text}
                             <span class="durationBadge">{song.duration_text}</span>
                         {/if}
+
                         <button
                             type="button"
                             class="favBtn"
@@ -126,23 +182,12 @@
                             title={isNe ? "मनपर्नेमा राख्नुहोस्" : "Toggle favorite"}
                             on:click|stopPropagation={() => toggleFavorite(song.video_id)}
                         >
-                            {isFav ? "★" : "☆"}
+                            <Icon id="star" size={0.82} white={!isFav} />
                         </button>
                     </div>
 
                     <div class="cardBody">
                         <div class="songTitle" title={song.title}>{song.title}</div>
-                        <div class="metaRow">
-                            <span class="metaText">{song.published_label || song.view_count_text || "@StutiMediaNepal"}</span>
-                            <button
-                                type="button"
-                                class="outputBtn"
-                                title={isNe ? "प्रोजेक्टरमा देखाउनुहोस्" : "Send to Output"}
-                                on:click|stopPropagation={() => projectSong(song)}
-                            >
-                                📺 Output
-                            </button>
-                        </div>
                     </div>
                 </div>
             {/each}
@@ -164,7 +209,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        padding: 8px 12px;
+        padding: 7px 12px;
         border-bottom: 1px solid var(--primary-lighter);
         background: var(--primary-darker);
         flex-shrink: 0;
@@ -173,48 +218,66 @@
     .headerTitle {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         min-width: 0;
-        flex-wrap: wrap;
     }
 
-    .channelBadge {
+    .titleText {
+        font-size: 0.84rem;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .countMeta {
+        font-size: 0.72rem;
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        opacity: 0.75;
+    }
+
+    .headerActions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .headerBtn {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
-        padding: 2px 8px;
-        border-radius: 999px;
-        font-size: 0.72rem;
-        font-weight: 700;
-        background: rgba(239, 68, 68, 0.2);
-        color: #fca5a5;
-        border: 1px solid rgba(239, 68, 68, 0.4);
-    }
-
-    .subMeta {
-        font-size: 0.76rem;
+        gap: 5px;
+        height: 27px;
+        padding: 0 9px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
         color: var(--text);
-        opacity: 0.72;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .subscribeChip {
-        border: 1px solid rgba(239, 68, 68, 0.5);
-        background: rgba(239, 68, 68, 0.22);
-        color: #fee2e2;
-        border-radius: 999px;
-        padding: 4px 10px;
-        font-size: 0.74rem;
-        font-weight: 600;
-        cursor: pointer;
-        flex-shrink: 0;
         font-family: inherit;
+        font-size: 0.74rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
     }
 
-    .subscribeChip:hover {
-        background: rgba(239, 68, 68, 0.36);
+    .headerBtn.iconOnly {
+        padding: 0 7px;
+    }
+
+    .headerBtn:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.24);
+    }
+
+    .headerBtn:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+
+    .headerBtn.active {
+        border-color: var(--secondary);
+        background: color-mix(in srgb, var(--secondary) 18%, transparent);
     }
 
     .emptyState {
@@ -233,7 +296,7 @@
         overflow-y: auto;
         padding: 10px 12px 14px;
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(186px, 1fr));
         gap: 10px;
         align-content: start;
     }
@@ -274,26 +337,51 @@
         display: block;
     }
 
-    .newBadge,
-    .shortBadge {
+    .hoverOverlay {
         position: absolute;
-        top: 6px;
-        left: 6px;
-        font-size: 0.62rem;
-        font-weight: 800;
-        letter-spacing: 0.04em;
-        padding: 2px 6px;
-        border-radius: 4px;
-        color: #fff;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.34);
+        opacity: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.15s ease;
     }
 
-    .newBadge {
-        background: #dc2626;
+    .card:hover .hoverOverlay,
+    .card:focus-within .hoverOverlay {
+        opacity: 1;
     }
 
-    .shortBadge {
-        background: rgba(15, 23, 42, 0.86);
+    .playCenter {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.68);
         border: 1px solid rgba(255, 255, 255, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .projectHoverBtn {
+        position: absolute;
+        left: 6px;
+        bottom: 6px;
+        width: 26px;
+        height: 24px;
+        border-radius: 5px;
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        background: rgba(0, 0, 0, 0.72);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    .projectHoverBtn:hover {
+        background: var(--secondary);
+        border-color: var(--secondary);
     }
 
     .durationBadge {
@@ -306,84 +394,49 @@
         border-radius: 4px;
         background: rgba(0, 0, 0, 0.82);
         color: #fff;
+        z-index: 2;
     }
 
     .favBtn {
         position: absolute;
-        top: 5px;
-        right: 5px;
+        top: 6px;
+        right: 6px;
         width: 24px;
         height: 24px;
         border-radius: 999px;
         border: none;
-        background: rgba(0, 0, 0, 0.62);
-        color: rgba(255, 255, 255, 0.78);
-        font-size: 0.85rem;
-        line-height: 1;
+        background: rgba(0, 0, 0, 0.65);
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
+        opacity: 0;
+        transition: opacity 0.15s ease, background-color 0.15s ease;
+        z-index: 2;
+    }
+
+    .card:hover .favBtn,
+    .card:focus-within .favBtn,
+    .favBtn.starred {
+        opacity: 1;
     }
 
     .favBtn:hover {
-        background: rgba(0, 0, 0, 0.85);
-        color: #fde047;
-    }
-
-    .favBtn.starred {
-        color: #facc15;
+        background: rgba(0, 0, 0, 0.88);
     }
 
     .cardBody {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        padding: 8px;
-        flex: 1;
-        justify-content: space-between;
+        padding: 7px 9px;
     }
 
     .songTitle {
-        font-size: 0.8rem;
-        font-weight: 600;
+        font-size: 0.79rem;
+        font-weight: 500;
         line-height: 1.3;
         color: var(--text);
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
-    }
-
-    .metaRow {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 6px;
-    }
-
-    .metaText {
-        font-size: 0.69rem;
-        opacity: 0.65;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .outputBtn {
-        flex-shrink: 0;
-        border: 1px solid rgba(56, 189, 248, 0.4);
-        background: rgba(14, 165, 233, 0.2);
-        color: #e0f2fe;
-        font-size: 0.68rem;
-        font-weight: 600;
-        padding: 2px 7px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-family: inherit;
-    }
-
-    .outputBtn:hover {
-        background: rgba(14, 165, 233, 0.35);
     }
 </style>
