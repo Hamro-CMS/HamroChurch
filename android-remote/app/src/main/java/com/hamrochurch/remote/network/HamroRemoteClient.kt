@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -105,6 +106,46 @@ class HamroRemoteClient(
             return@withContext Result.failure(SecurityException(msg))
         }
 
+        // Single-IP fast path: open WebSocket & REST verification simultaneously (zero sequential wait)
+        if (candidates.size == 1) {
+            val singleIp = candidates.first()
+            activeProfile = profile.copy(preferredIp = singleIp)
+            activeIp = singleIp
+            _connectedHost.value = "$singleIp:${profile.wsPort}"
+
+            val wsLatch = CompletableDeferred<Boolean>()
+            openSocketIoConnection(singleIp, profile.wsPort, profile.token, wsLatch)
+
+            val probeDeferred = async {
+                pingRestOnce(singleIp, profile.restPort, profile.token, System.nanoTime())
+            }
+
+            val socketConnected = withTimeoutOrNull(2200L) { wsLatch.await() } ?: false
+            if (socketConnected) {
+                return@withContext Result.success(singleIp)
+            }
+
+            val probe = probeDeferred.await()
+            if (probe.verifiedAuthRejection) {
+                _status.value = ConnectionStatus.ERROR
+                val msg = "Invalid security token (401 Unauthorized). Re-scan QR code on PC."
+                _lastError.value = msg
+                disconnectInternal(resetStatus = false)
+                return@withContext Result.failure(IllegalStateException(msg))
+            }
+
+            if (probe.verifiedAradhanaServer || probe.statusCode in 200..299) {
+                _status.value = ConnectionStatus.CONNECTED
+                return@withContext Result.success(singleIp)
+            }
+
+            val detail = _lastError.value ?: "Could not reach $singleIp on port ${profile.wsPort}. Check Wi-Fi/Hotspot & Windows Firewall."
+            _status.value = ConnectionStatus.ERROR
+            _lastError.value = detail
+            disconnectInternal(resetStatus = false)
+            return@withContext Result.failure(IllegalStateException(detail))
+        }
+
         val probeOutcome = probeReachableHost(candidates, profile.restPort, profile.token)
         if (probeOutcome.authRejected) {
             _status.value = ConnectionStatus.ERROR
@@ -118,19 +159,13 @@ class HamroRemoteClient(
         activeIp = chosenIp
         _connectedHost.value = "$chosenIp:${profile.wsPort}"
 
-        openSocketIoConnection(chosenIp, profile.wsPort, profile.token)
+        val wsLatch = CompletableDeferred<Boolean>()
+        openSocketIoConnection(chosenIp, profile.wsPort, profile.token, wsLatch)
 
-        // Wait up to 3.5s for Socket.IO connect OR verify REST reachability
-        val socketConnected = withTimeoutOrNull(3500L) {
-            while (_status.value == ConnectionStatus.CONNECTING) {
-                kotlinx.coroutines.delay(60)
-            }
-            _status.value == ConnectionStatus.CONNECTED
-        } ?: false
+        val socketConnected = withTimeoutOrNull(2200L) { wsLatch.await() } ?: false
 
         if (socketConnected || probeOutcome.reachableIp != null) {
             if (!socketConnected) {
-                // REST works even if WS is still handshaking
                 _status.value = ConnectionStatus.CONNECTED
             }
             Result.success(chosenIp)
@@ -161,28 +196,39 @@ class HamroRemoteClient(
         restPort: Int,
         token: String
     ): ProbeOutcome = coroutineScope {
-        val results = ips.map { ip ->
-            async {
-                val start = System.nanoTime()
-                pingRestOnce(ip, restPort, token, start)
+        val fastWinner = CompletableDeferred<String>()
+        val probeScope = CoroutineScope(coroutineContext + SupervisorJob())
+
+        val jobs = ips.map { ip ->
+            probeScope.async {
+                val res = pingRestOnce(ip, restPort, token, System.nanoTime())
+                if (res.verifiedAradhanaServer) {
+                    fastWinner.complete(res.ip)
+                }
+                res
             }
-        }.awaitAll()
-
-        // Always prefer a verified Aradhana Studio 200 OK response first, even if another
-        // virtual/foreign subnet IP (such as Hyper-V/WSL 172.x.x.x) returned 401/403 from a router!
-        val fastestVerifiedOk = results
-            .filter { it.verifiedAradhanaServer }
-            .minByOrNull { it.elapsedNanos }
-            ?.ip
-            ?: results
-                .filter { it.statusCode in 200..299 }
-                .minByOrNull { it.elapsedNanos }
-                ?.ip
-
-        if (fastestVerifiedOk != null) {
-            return@coroutineScope ProbeOutcome(reachableIp = fastestVerifiedOk, authRejected = false)
         }
 
+        // Watchdog: if all probes finish without a verified winner, close fastWinner so we don't wait
+        probeScope.launch {
+            val all = jobs.awaitAll()
+            if (!fastWinner.isCompleted) {
+                val fallback2xx = all.filter { it.statusCode in 200..299 }.minByOrNull { it.elapsedNanos }?.ip
+                if (fallback2xx != null) {
+                    fastWinner.complete(fallback2xx)
+                } else {
+                    fastWinner.complete("")
+                }
+            }
+        }
+
+        val winnerIp = fastWinner.await()
+        if (winnerIp.isNotEmpty()) {
+            probeScope.coroutineContext.cancelChildren()
+            return@coroutineScope ProbeOutcome(reachableIp = winnerIp, authRejected = false)
+        }
+
+        val results = jobs.awaitAll()
         if (results.any { it.verifiedAuthRejection }) {
             return@coroutineScope ProbeOutcome(reachableIp = null, authRejected = true)
         }
@@ -220,20 +266,27 @@ class HamroRemoteClient(
         }
     }
 
-    private fun openSocketIoConnection(ip: String, wsPort: Int, token: String) {
+    private fun openSocketIoConnection(
+        ip: String,
+        wsPort: Int,
+        token: String,
+        connectLatch: CompletableDeferred<Boolean>? = null
+    ) {
         if (!LanSecurityValidator.isAllowedLocalHost(ip) || !LanSecurityValidator.isValidPort(wsPort)) {
             _status.value = ConnectionStatus.ERROR
             _lastError.value = "Refused non-LAN connection target."
+            connectLatch?.complete(false)
             return
         }
 
         val options = IO.Options.builder()
             .setForceNew(true)
+            .setTransports(arrayOf("websocket", "polling"))
             .setReconnection(true)
             .setReconnectionAttempts(Int.MAX_VALUE)
-            .setReconnectionDelay(800)
-            .setReconnectionDelayMax(4000)
-            .setTimeout(5000)
+            .setReconnectionDelay(500)
+            .setReconnectionDelayMax(3000)
+            .setTimeout(3500)
             .setAuth(
                 mapOf(
                     "token" to token,
@@ -254,6 +307,7 @@ class HamroRemoteClient(
             _status.value = ConnectionStatus.CONNECTED
             _lastError.value = null
             _connectedHost.value = "$ip:$wsPort"
+            connectLatch?.complete(true)
         }
 
         newSocket.on(Socket.EVENT_DISCONNECT) {
@@ -270,6 +324,7 @@ class HamroRemoteClient(
                 _lastError.value = "Unauthorized: Security token rejected by Aradhana Studio PC."
                 _status.value = ConnectionStatus.ERROR
                 newSocket.disconnect()
+                connectLatch?.complete(false)
             } else if (_status.value != ConnectionStatus.CONNECTED) {
                 _lastError.value = errMsg
             }

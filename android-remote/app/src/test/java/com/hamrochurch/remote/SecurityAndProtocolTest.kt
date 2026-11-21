@@ -105,6 +105,14 @@ class SecurityAndProtocolTest {
         val parsedUri = QrPairingParser.parse(uriValid)
         assertTrue(parsedUri is QrParseResult.Success)
         assertEquals("Main Hall", (parsedUri as QrParseResult.Success).payload.name)
+
+        val compactAradhanaUri = "aradhanaremote://pair?host=192.168.0.20&token=abcdef0123456789abcdef0123456789&alt=192.168.1.5,8.8.8.8"
+        val parsedCompact = QrPairingParser.parse(compactAradhanaUri)
+        assertTrue(parsedCompact is QrParseResult.Success)
+        val compactPayload = (parsedCompact as QrParseResult.Success).payload
+        assertEquals(listOf("192.168.0.20", "192.168.1.5"), compactPayload.ips)
+        assertEquals(5505, compactPayload.wsPort)
+        assertEquals(5506, compactPayload.restPort)
     }
 
     @Test

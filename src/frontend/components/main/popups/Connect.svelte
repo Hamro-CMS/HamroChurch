@@ -56,18 +56,17 @@
     $: lanIps = allIps.filter((addr) => addr && addr !== "localhost" && addr !== "127.0.0.1")
     $: mobileEnabled = $companion?.enabled === true && $companion?.allowLan === true && typeof $companion?.token === "string" && $companion.token.trim().length >= 16
 
-    $: mobileQrPayload =
-        mobileEnabled && lanIps.length
-            ? JSON.stringify({
-                  v: 1,
-                  app: "aradhanastudio-remote",
-                  name: $os.name || "Aradhana Studio PC",
-                  ips: lanIps.slice(0, 5),
-                  ws: port,
-                  rest: port + 1,
-                  token: ($companion?.token || "").trim()
-              })
-            : ""
+    $: mobileQrPayload = (() => {
+        if (!mobileEnabled || !lanIps.length) return ""
+        const cleanToken = ($companion?.token || "").trim()
+        const primaryIp = lanIps[0]
+        const altIps = lanIps.slice(1, 3).join(",")
+        const params = [`host=${encodeURIComponent(primaryIp)}`]
+        if (port !== 5505) params.push(`port=${port}`)
+        params.push(`token=${encodeURIComponent(cleanToken)}`)
+        if (altIps) params.push(`alt=${encodeURIComponent(altIps)}`)
+        return `aradhanaremote://pair?${params.join("&")}`
+    })()
 
     $: if (id === "mobile") {
         if (mobileEnabled) {
@@ -94,7 +93,7 @@
         const qr = qrcode(0, "L")
         qr.addData(text)
         qr.make()
-        qrImg = qr.createImgTag(8, 8)
+        qrImg = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true })
     }
 
     function generateMobileQR(payload: string) {
@@ -103,10 +102,10 @@
             return
         }
 
-        const qr = qrcode(0, "M")
+        const qr = qrcode(0, "L")
         qr.addData(payload)
         qr.make()
-        mobileQrImg = qr.createImgTag(4, 8)
+        mobileQrImg = qr.createSvgTag({ cellSize: 6, margin: 4, scalable: true })
     }
 
     async function enableOrDisableMobileRemote(enable: boolean) {
@@ -522,16 +521,19 @@
 
     .qrWhiteFrame {
         background: #ffffff;
-        padding: 8px;
-        border-radius: 10px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+        padding: 10px;
+        border-radius: 12px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
         display: inline-flex;
     }
 
+    .qrWhiteFrame :global(svg),
     .qrWhiteFrame :global(img) {
-        width: 156px;
-        height: 156px;
+        width: 216px;
+        height: 216px;
         display: block;
+        shape-rendering: crispEdges;
+        image-rendering: pixelated;
     }
 
     .qrCaption {

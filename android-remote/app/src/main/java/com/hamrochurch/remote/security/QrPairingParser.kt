@@ -126,12 +126,20 @@ object QrPairingParser {
             return QrParseResult.Invalid("Invalid security token")
         }
 
+        val candidateIps = mutableListOf(host)
+        params["alt"]?.split(",")?.forEach { extra ->
+            val clean = extra.trim()
+            if (LanSecurityValidator.isAllowedLocalHost(clean) && clean !in candidateIps) {
+                candidateIps.add(clean)
+            }
+        }
+
         val name = (params["name"] ?: "Aradhana Studio PC").trim().ifEmpty { "Aradhana Studio PC" }.take(64)
 
         return QrParseResult.Success(
             ParsedPairingPayload(
                 name = name,
-                ips = listOf(host),
+                ips = candidateIps,
                 wsPort = wsPort,
                 restPort = restPort,
                 token = token
