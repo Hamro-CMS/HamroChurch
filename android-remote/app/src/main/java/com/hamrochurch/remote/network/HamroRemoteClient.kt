@@ -71,6 +71,14 @@ class HamroRemoteClient(
         if (model.startsWith(manufacturer, ignoreCase = true)) model else "$manufacturer $model"
     }
 
+    private val headerSafeDeviceName: String by lazy {
+        deviceDisplayName
+            .replace(Regex("[^\\x20-\\x7E]"), "")
+            .trim()
+            .ifEmpty { "Android Remote" }
+            .take(64)
+    }
+
     suspend fun connect(profile: ChurchPcProfile): Result<String> = withContext(Dispatchers.IO) {
         disconnectInternal(resetStatus = false)
         _status.value = ConnectionStatus.CONNECTING
@@ -140,6 +148,14 @@ class HamroRemoteClient(
         val authRejected: Boolean
     )
 
+    private data class ProbeResult(
+        val ip: String,
+        val statusCode: Int,
+        val verifiedAradhanaServer: Boolean,
+        val verifiedAuthRejection: Boolean,
+        val elapsedNanos: Long
+    )
+
     private suspend fun probeReachableHost(
         ips: List<String>,
         restPort: Int,
@@ -148,38 +164,59 @@ class HamroRemoteClient(
         val results = ips.map { ip ->
             async {
                 val start = System.nanoTime()
-                val code = pingRestOnce(ip, restPort, token)
-                Triple(ip, code, System.nanoTime() - start)
+                pingRestOnce(ip, restPort, token, start)
             }
         }.awaitAll()
 
-        if (results.any { it.second == 401 || it.second == 403 }) {
+        // Always prefer a verified Aradhana Studio 200 OK response first, even if another
+        // virtual/foreign subnet IP (such as Hyper-V/WSL 172.x.x.x) returned 401/403 from a router!
+        val fastestVerifiedOk = results
+            .filter { it.verifiedAradhanaServer }
+            .minByOrNull { it.elapsedNanos }
+            ?.ip
+            ?: results
+                .filter { it.statusCode in 200..299 }
+                .minByOrNull { it.elapsedNanos }
+                ?.ip
+
+        if (fastestVerifiedOk != null) {
+            return@coroutineScope ProbeOutcome(reachableIp = fastestVerifiedOk, authRejected = false)
+        }
+
+        if (results.any { it.verifiedAuthRejection }) {
             return@coroutineScope ProbeOutcome(reachableIp = null, authRejected = true)
         }
 
-        val fastestOk = results
-            .filter { it.second in 200..299 }
-            .minByOrNull { it.third }
-            ?.first
-
-        ProbeOutcome(reachableIp = fastestOk, authRejected = false)
+        ProbeOutcome(reachableIp = null, authRejected = false)
     }
 
-    private fun pingRestOnce(ip: String, restPort: Int, token: String): Int {
+    private fun pingRestOnce(ip: String, restPort: Int, token: String, startNanos: Long): ProbeResult {
         if (!LanSecurityValidator.isAllowedLocalHost(ip) || !LanSecurityValidator.isValidPort(restPort)) {
-            return -1
+            return ProbeResult(ip, -1, verifiedAradhanaServer = false, verifiedAuthRejection = false, elapsedNanos = Long.MAX_VALUE)
         }
         return try {
             val bodyJson = JSONObject().put("action", "get_mobile_ping").toString()
             val req = Request.Builder()
                 .url("http://$ip:$restPort/")
                 .header("Authorization", "Bearer $token")
-                .header("X-Device-Name", deviceDisplayName)
+                .header("X-Device-Name", headerSafeDeviceName)
                 .post(bodyJson.toRequestBody(JSON_MEDIA_TYPE))
                 .build()
-            probeHttpClient.newCall(req).execute().use { resp -> resp.code }
+            probeHttpClient.newCall(req).execute().use { resp ->
+                val elapsed = System.nanoTime() - startNanos
+                val bodyText = resp.body?.string().orEmpty()
+                val verifiedOk = resp.code in 200..299 && bodyText.contains("\"get_mobile_ping\"")
+                val verified401 = resp.code == 401 && bodyText.contains("\"Unauthorized\"")
+                ProbeResult(
+                    ip = ip,
+                    statusCode = resp.code,
+                    verifiedAradhanaServer = verifiedOk,
+                    verifiedAuthRejection = verified401,
+                    elapsedNanos = elapsed
+                )
+            }
         } catch (_: Exception) {
-            -1
+            ProbeResult(ip, -1, verifiedAradhanaServer = false, verifiedAuthRejection = false, elapsedNanos = Long.MAX_VALUE)
         }
     }
 
@@ -206,7 +243,7 @@ class HamroRemoteClient(
             .setExtraHeaders(
                 mapOf(
                     "Authorization" to listOf("Bearer $token"),
-                    "X-Device-Name" to listOf(deviceDisplayName)
+                    "X-Device-Name" to listOf(headerSafeDeviceName)
                 )
             )
             .build()
@@ -329,7 +366,7 @@ class HamroRemoteClient(
             val request = Request.Builder()
                 .url("http://$ip:$restPort/")
                 .header("Authorization", "Bearer $token")
-                .header("X-Device-Name", deviceDisplayName)
+                .header("X-Device-Name", headerSafeDeviceName)
                 .post(payload.toString().toRequestBody(JSON_MEDIA_TYPE))
                 .build()
 

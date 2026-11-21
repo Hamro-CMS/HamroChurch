@@ -542,7 +542,7 @@ const saveList: { [key in SaveList]: any } = {
     special,
     timeline: null,
     timecode: null,
-    companion: null,
+    companion,
     globalTags,
     globalRegexes: null,
     customMetadata: null,

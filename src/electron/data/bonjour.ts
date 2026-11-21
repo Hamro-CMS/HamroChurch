@@ -167,5 +167,10 @@ export function getLocalIPs() {
         }
     }
 
-    return [...new Set([...preferred, ...hotspot, ...standard, ...virtual, "localhost"])]
+    const realLan = [...preferred, ...hotspot, ...standard]
+    if (realLan.length > 0) {
+        return [...new Set([...realLan, "localhost"])]
+    }
+
+    return [...new Set([...virtual, "localhost"])]
 }

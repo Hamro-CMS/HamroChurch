@@ -6,6 +6,7 @@
     import { activePage, activePopup, activeShow, activeTriggerFunction, cloudSyncData, companion, connections, contentProviderData, disabledServers, maxConnections, mobileRemoteClients, notFound, outputs, popupData, ports, projectTemplates, providerConnections, serverData, special } from "../../../stores"
     import { triggerClickOnEnterSpace } from "../../../utils/clickable"
     import { translateText } from "../../../utils/language"
+    import { save } from "../../../utils/save"
     import { contentProviderSync } from "../../../utils/startup"
     import { keysToID, sortByName } from "../../helpers/array"
     import Icon from "../../helpers/Icon.svelte"
@@ -52,6 +53,7 @@
         } else {
             sendMain(Main.WEBSOCKET_STOP)
         }
+        save(false, { autosave: true })
     }
 
     function openMobileRemotePopup() {

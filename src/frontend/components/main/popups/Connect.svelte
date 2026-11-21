@@ -6,6 +6,7 @@
     import { requestMain, sendMain } from "../../../IPC/main"
     import { activePopup, companion, maxConnections, mobileRemoteClients, os, outputs, popupData, ports, remotePassword, serverData, special } from "../../../stores"
     import { newToast } from "../../../utils/common"
+    import { save } from "../../../utils/save"
     import { clone, keysToID, sortByName } from "../../helpers/array"
     import Icon from "../../helpers/Icon.svelte"
     import T from "../../helpers/T.svelte"
@@ -69,6 +70,9 @@
             : ""
 
     $: if (id === "mobile") {
+        if (mobileEnabled) {
+            sendMain(Main.WEBSOCKET_START, { port, allowLan: true, token: ($companion?.token || "").trim() })
+        }
         generateMobileQR(mobileQrPayload)
     } else if (url) {
         generateQR(url)
@@ -124,6 +128,7 @@
         } else {
             sendMain(Main.WEBSOCKET_STOP)
         }
+        save(false, { autosave: true })
     }
 
     async function regenerateMobileToken() {
@@ -137,6 +142,7 @@
         }
         companion.set(next)
         sendMain(Main.WEBSOCKET_START, { port, allowLan: true, token })
+        save(false, { autosave: true })
         newToast("New security token generated — old devices disconnected")
     }
 

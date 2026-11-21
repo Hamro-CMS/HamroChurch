@@ -38,6 +38,7 @@ let currentConfig: { port?: number; allowLan: boolean; token: string } = {
     allowLan: false,
     token: ""
 }
+let activeListenState: { wsPort: number; restPort: number; host: string } | null = null
 
 export function generateMobileRemoteToken(): string {
     return crypto.randomBytes(16).toString("hex")
@@ -132,21 +133,34 @@ function extractHttpToken(headers: http.IncomingHttpHeaders): string {
 
 // WebSocket on 5505, REST on +1 (5506), bound to 127.0.0.1 by default unless allowLan + strong token (>= 16 chars) are configured
 export function startWebSocketAndRest(config?: number | CompanionApiConfig) {
-    stopApiListener()
+    const nextConfig =
+        typeof config === "number" || config === undefined
+            ? { port: config, allowLan: false, token: "" }
+            : {
+                  port: config.port,
+                  allowLan: config.allowLan === true,
+                  token: typeof config.token === "string" ? config.token.trim() : ""
+              }
 
-    if (typeof config === "number" || config === undefined) {
-        currentConfig = { port: config, allowLan: false, token: "" }
-    } else {
-        currentConfig = {
-            port: config.port,
-            allowLan: config.allowLan === true,
-            token: typeof config.token === "string" ? config.token.trim() : ""
+    const bindHost = nextConfig.allowLan && nextConfig.token.length >= MIN_LAN_TOKEN_LENGTH ? "0.0.0.0" : "127.0.0.1"
+    const wsPort = nextConfig.port || DEFAULT_PORTS.WebSocket
+    const restPort = nextConfig.port ? nextConfig.port + 1 : DEFAULT_PORTS.REST
+
+    const previousToken = currentConfig.token
+    currentConfig = nextConfig
+
+    // Fast in-place token update if WebSocket & REST servers are already listening on the exact same host & ports
+    const wsListening = !!(servers.WebSocket && (servers.WebSocket as http.Server).listening)
+    const restListening = !!(servers.REST && (servers.REST as http.Server).listening)
+    if (activeListenState && wsListening && restListening && activeListenState.wsPort === wsPort && activeListenState.restPort === restPort && activeListenState.host === bindHost) {
+        if (previousToken && previousToken !== currentConfig.token) {
+            disconnectMobileClient("all")
         }
+        return
     }
 
-    const bindHost = currentConfig.allowLan && currentConfig.token.length >= MIN_LAN_TOKEN_LENGTH ? "0.0.0.0" : "127.0.0.1"
-    const wsPort = currentConfig.port || DEFAULT_PORTS.WebSocket
-    const restPort = currentConfig.port ? currentConfig.port + 1 : DEFAULT_PORTS.REST
+    stopApiListener()
+    activeListenState = { wsPort, restPort, host: bindHost }
 
     startRestListener(restPort, bindHost)
     startWebSocket(wsPort, bindHost)
@@ -504,6 +518,10 @@ export function stopApiListener(specificId = "") {
         }
     }
 
+    if (!specificId) {
+        activeListenState = null
+    }
+
     if (specificId) {
         stop(specificId)
     } else {
@@ -515,6 +533,7 @@ export function stopApiListener(specificId = "") {
 
         try {
             if (servers[id]) {
+                ;(servers[id] as any).closeAllConnections?.()
                 servers[id].close()
                 delete servers[id]
             }
