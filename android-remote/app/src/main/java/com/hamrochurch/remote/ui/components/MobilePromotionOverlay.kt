@@ -10,39 +10,31 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -57,47 +49,31 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hamrochurch.remote.model.MobilePromotion
 import com.hamrochurch.remote.model.PromotionSanitizer
 import com.hamrochurch.remote.ui.theme.HamroCyan
 import com.hamrochurch.remote.ui.theme.HamroPink
-import com.hamrochurch.remote.ui.theme.HamroPinkDark
-import com.hamrochurch.remote.ui.theme.LiveGreen
+import com.hamrochurch.remote.ui.theme.SanctuaryBorder
 import com.hamrochurch.remote.ui.theme.SanctuaryCard
+import com.hamrochurch.remote.ui.theme.SanctuarySurface
 import com.hamrochurch.remote.ui.theme.TextPrimary
 import com.hamrochurch.remote.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
-private enum class MobileFlipAngle {
-    FLIP_Y,
-    FLIP_X,
-    FLIP_DIAG_A,
-    SWING_3D,
-    FLIP_DIAG_B
-}
-
-private val MIX_ANGLES = listOf(
-    MobileFlipAngle.FLIP_Y,
-    MobileFlipAngle.FLIP_X,
-    MobileFlipAngle.FLIP_DIAG_A,
-    MobileFlipAngle.SWING_3D,
-    MobileFlipAngle.FLIP_DIAG_B
-)
-
+/**
+ * Slim, non-intrusive bottom-docked promotion strip for Aradhana Studio Remote.
+ * Docked inside Scaffold's bottomBar so it never covers buttons, inputs, or slide controls,
+ * and never overflows behind the Android system navigation bar.
+ */
 @Composable
 fun MobilePromotionOverlay(
     promotions: List<MobilePromotion>,
@@ -134,7 +110,6 @@ fun MobilePromotionOverlay(
         return tick - anchor >= delayMs
     }
 
-    // Tick once per second only while at least one campaign is waiting on delaySeconds
     LaunchedEffect(promotions) {
         while (isActive) {
             val current = System.currentTimeMillis()
@@ -151,10 +126,7 @@ fun MobilePromotionOverlay(
     if (eligiblePromos.isEmpty()) return
 
     var activeIndex by remember { mutableIntStateOf(0) }
-    var angleCounter by remember { mutableIntStateOf(0) }
-    var currentAngle by remember { mutableStateOf(MobileFlipAngle.FLIP_Y) }
     var rotateElapsedMs by remember { mutableLongStateOf(0L) }
-    var isDragging by remember { mutableStateOf(false) }
     var isFlipping by remember { mutableStateOf(false) }
     val flipAnim = remember { Animatable(0f) }
 
@@ -168,25 +140,7 @@ fun MobilePromotionOverlay(
         onImpression(promo)
     }
 
-    fun pickNextAngle(style: String): MobileFlipAngle {
-        return when (style) {
-            "flip_y" -> MobileFlipAngle.FLIP_Y
-            "flip_x" -> MobileFlipAngle.FLIP_X
-            "swing_3d" -> MobileFlipAngle.SWING_3D
-            "flip_diagonal" -> {
-                val chosen = if (angleCounter % 2 == 0) MobileFlipAngle.FLIP_DIAG_A else MobileFlipAngle.FLIP_DIAG_B
-                angleCounter += 1
-                chosen
-            }
-            else -> {
-                val chosen = MIX_ANGLES[angleCounter % MIX_ANGLES.size]
-                angleCounter += 1
-                chosen
-            }
-        }
-    }
-
-    suspend fun animateFlipTo(targetIdx: Int) {
+    suspend fun animateSlideTo(targetIdx: Int) {
         if (eligiblePromos.size <= 1 || isFlipping) return
         val total = eligiblePromos.size
         val normalized = ((targetIdx % total) + total) % total
@@ -194,18 +148,16 @@ fun MobilePromotionOverlay(
 
         isFlipping = true
         rotateElapsedMs = 0L
-        currentAngle = pickNextAngle(promo.transitionStyle)
-
         try {
             flipAnim.animateTo(
                 targetValue = 1f,
-                animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing)
+                animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing)
             )
             activeIndex = normalized
             flipAnim.snapTo(-1f)
             flipAnim.animateTo(
                 targetValue = 0f,
-                animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
+                animationSpec = tween(durationMillis = 210, easing = FastOutSlowInEasing)
             )
         } finally {
             flipAnim.snapTo(0f)
@@ -217,14 +169,14 @@ fun MobilePromotionOverlay(
         rotateElapsedMs = 0L
         if (eligiblePromos.size <= 1) return@LaunchedEffect
 
-        val intervalMs = promo.rotateIntervalSeconds.coerceIn(3, 300) * 1000L
+        val intervalMs = promo.rotateIntervalSeconds.coerceIn(4, 300) * 1000L
         while (isActive) {
             delay(250L)
-            if (isDragging || isFlipping) continue
+            if (isFlipping) continue
             rotateElapsedMs += 250L
             if (rotateElapsedMs >= intervalMs) {
                 rotateElapsedMs = 0L
-                animateFlipTo(activeIndex + 1)
+                animateSlideTo(activeIndex + 1)
             }
         }
     }
@@ -242,290 +194,181 @@ fun MobilePromotionOverlay(
         }
     }
 
-    var dragOffsetX by remember { mutableFloatStateOf(0f) }
-    var dragOffsetY by remember { mutableFloatStateOf(0f) }
-    var cardSize by remember { mutableStateOf(IntSize.Zero) }
-
-    val bottomClearance = if (hasBottomNavBar) 88.dp else 18.dp
     val progressFraction = if (eligiblePromos.size > 1) {
-        val intervalMs = (promo.rotateIntervalSeconds.coerceIn(3, 300) * 1000L).toFloat()
+        val intervalMs = (promo.rotateIntervalSeconds.coerceIn(4, 300) * 1000L).toFloat()
         (rotateElapsedMs.toFloat() / intervalMs).coerceIn(0f, 1f)
     } else {
         0f
     }
 
-    BoxWithConstraints(
-        modifier = Modifier.fillMaxSize()
+    fun triggerOpenUrl() {
+        val safeUrl = PromotionSanitizer.sanitizeHttpsUrl(promo.ctaUrl, null)
+        onClickPromotion(promo)
+        if (safeUrl != null) {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(safeUrl)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            } catch (_: Exception) {
+                // Ignore if device has no browser installed
+            }
+        }
+    }
+
+    val flipFraction = flipAnim.value
+    val absFlip = kotlin.math.abs(flipFraction)
+
+    val containerModifier = if (hasBottomNavBar) {
+        Modifier.fillMaxWidth()
+    } else {
+        Modifier
+            .fillMaxWidth()
+            .background(SanctuarySurface)
+            .navigationBarsPadding()
+    }
+
+    Surface(
+        modifier = containerModifier,
+        color = SanctuarySurface,
+        border = BorderStroke(0.8.dp, SanctuaryBorder.copy(alpha = 0.85f)),
+        shadowElevation = 6.dp
     ) {
-        val maxWidthPx = constraints.maxWidth.toFloat()
-        val maxHeightPx = constraints.maxHeight.toFloat()
-        val bottomPadPx = with(density) { bottomClearance.toPx() }
-        val edgePadPx = with(density) { 12.dp.toPx() }
-
-        val flipFraction = flipAnim.value
-        val absFlip = kotlin.math.abs(flipFraction)
-
-        Card(
-            modifier = Modifier
-                .align(
-                    if (promo.position == "bottom_left") Alignment.BottomStart else Alignment.BottomEnd
-                )
-                .padding(
-                    start = 12.dp,
-                    end = 12.dp,
-                    bottom = bottomClearance,
-                    top = 12.dp
-                )
-                .widthIn(max = 340.dp)
-                .fillMaxWidth(0.92f)
-                .onSizeChanged { cardSize = it }
-                .offset {
-                    IntOffset(dragOffsetX.roundToInt(), dragOffsetY.roundToInt())
-                }
-                .pointerInput(maxWidthPx, maxHeightPx, cardSize) {
-                    detectDragGestures(
-                        onDragStart = { isDragging = true },
-                        onDragEnd = { isDragging = false },
-                        onDragCancel = { isDragging = false },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            val cardW = cardSize.width.takeIf { it > 0 }?.toFloat() ?: (maxWidthPx * 0.85f)
-                            val cardH = cardSize.height.takeIf { it > 0 }?.toFloat() ?: 220f
-                            val maxUp = -(maxHeightPx - cardH - bottomPadPx - edgePadPx).coerceAtLeast(0f)
-                            val maxDown = (bottomPadPx - edgePadPx).coerceAtLeast(0f)
-                            val maxHoriz = (maxWidthPx - cardW - edgePadPx * 2f).coerceAtLeast(0f)
-
-                            dragOffsetX = if (promo.position == "bottom_left") {
-                                (dragOffsetX + dragAmount.x).coerceIn(0f, maxHoriz)
-                            } else {
-                                (dragOffsetX + dragAmount.x).coerceIn(-maxHoriz, 0f)
-                            }
-                            dragOffsetY = (dragOffsetY + dragAmount.y).coerceIn(maxUp, maxDown)
-                        }
-                    )
-                }
-                .graphicsLayer {
-                    cameraDistance = 14f * density.density
-                    scaleX = 1f - 0.08f * absFlip
-                    scaleY = 1f - 0.08f * absFlip
-                    alpha = (1f - 0.55f * absFlip).coerceIn(0.25f, 1f)
-                    when (currentAngle) {
-                        MobileFlipAngle.FLIP_Y -> {
-                            rotationY = flipFraction * 85f
-                        }
-                        MobileFlipAngle.FLIP_X -> {
-                            rotationX = -flipFraction * 85f
-                        }
-                        MobileFlipAngle.FLIP_DIAG_A -> {
-                            rotationX = flipFraction * 55f
-                            rotationY = flipFraction * 65f
-                        }
-                        MobileFlipAngle.FLIP_DIAG_B -> {
-                            rotationX = -flipFraction * 55f
-                            rotationY = flipFraction * 65f
-                        }
-                        MobileFlipAngle.SWING_3D -> {
-                            rotationY = -flipFraction * 78f
-                            rotationZ = -flipFraction * 7f
-                        }
-                    }
-                },
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = SanctuaryCard.copy(alpha = 0.98f)),
-            border = BorderStroke(1.2.dp, HamroPink.copy(alpha = 0.55f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                // Header Strip: Drag Handle + HamroCMS.com + Counter + Close (×)
-                Row(
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (eligiblePromos.size > 1) {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.32f))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .height(2.dp)
+                        .background(Color.White.copy(alpha = 0.08f))
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.DragIndicator,
-                            contentDescription = null,
-                            tint = HamroPink.copy(alpha = 0.85f),
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "HamroCMS.com",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFFFBBF24)
-                        )
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (eligiblePromos.size > 1) {
-                            Text(
-                                text = "${safeIndex + 1}/${eligiblePromos.size}",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = LiveGreen
-                            )
-                        }
-
-                        Surface(
-                            onClick = { onDismissAll(promotions) },
-                            shape = CircleShape,
-                            color = Color.Black.copy(alpha = 0.55f),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = if (nepaliLanguage) "बन्द गर्नुहोस्" else "Close advertisement",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Multi-ad progress strip
-                if (eligiblePromos.size > 1) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.5.dp)
-                            .background(Color.White.copy(alpha = 0.1f))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(progressFraction)
-                                .height(2.5.dp)
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(HamroPink, HamroCyan)
-                                    )
-                                )
-                        )
-                    }
+                            .fillMaxWidth(progressFraction)
+                            .height(2.dp)
+                            .background(Brush.horizontalGradient(listOf(HamroPink, HamroCyan)))
+                    )
                 }
+            }
 
-                // Optional Verified Raster Banner Image
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { triggerOpenUrl() }
+                    .padding(horizontal = 10.dp, vertical = 7.dp)
+                    .graphicsLayer {
+                        cameraDistance = 12f * density.density
+                        rotationX = -flipFraction * 65f
+                        alpha = (1f - 0.65f * absFlip).coerceIn(0.2f, 1f)
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
                 if (decodedBitmap != null) {
                     Image(
                         bitmap = decodedBitmap,
                         contentDescription = promo.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(118.dp)
-                            .background(Color.Black.copy(alpha = 0.4f))
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(SanctuaryCard)
                     )
                 }
 
-                // Plain-text Title, Body & Action CTA
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 13.dp, vertical = 11.dp)
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "HamroCMS.com",
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFFBBF24),
+                            maxLines = 1
+                        )
+                        if (eligiblePromos.size > 1) {
+                            Text(
+                                text = "• ${safeIndex + 1}/${eligiblePromos.size}",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextSecondary,
+                                modifier = Modifier.clickable {
+                                    scope.launch { animateSlideTo(activeIndex + 1) }
+                                }
+                            )
+                        }
+                    }
+
                     Text(
                         text = promo.title,
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
                         color = TextPrimary,
-                        lineHeight = 18.sp,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
 
                     if (!promo.body.isNullOrBlank()) {
-                        Spacer(Modifier.height(4.dp))
                         Text(
                             text = promo.body,
-                            fontSize = 11.5.sp,
+                            fontSize = 10.5.sp,
                             color = TextSecondary,
-                            lineHeight = 16.sp,
-                            maxLines = 3,
+                            maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
+                }
 
-                    Spacer(Modifier.height(9.dp))
+                Button(
+                    onClick = { triggerOpenUrl() },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = HamroPink,
+                        contentColor = Color.White
+                    ),
+                    contentPadding = PaddingValues(horizontal = 9.dp, vertical = 4.dp),
+                    modifier = Modifier.height(29.dp)
+                ) {
+                    val rawLabel = promo.ctaLabel?.trim().orEmpty()
+                    val compactLabel = when {
+                        rawLabel.isEmpty() -> if (nepaliLanguage) "हेर्नुहोस्" else "Open"
+                        rawLabel.length > 12 -> if (nepaliLanguage) "हेर्नुहोस्" else "Visit"
+                        else -> rawLabel
+                    }
+                    Text(
+                        text = compactLabel,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                    Spacer(Modifier.width(3.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = Color.White
+                    )
+                }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = {
-                                val safeUrl = PromotionSanitizer.sanitizeHttpsUrl(promo.ctaUrl, null)
-                                onClickPromotion(promo)
-                                if (safeUrl != null) {
-                                    try {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(safeUrl)).apply {
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        context.startActivity(intent)
-                                    } catch (_: Exception) {
-                                        // Ignore if device has no browser installed
-                                    }
-                                }
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = HamroPink,
-                                contentColor = Color.White
-                            ),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            modifier = Modifier.height(32.dp)
-                        ) {
-                            Text(
-                                text = promo.ctaLabel?.takeIf { it.isNotBlank() }
-                                    ?: if (nepaliLanguage) "थप जान्नुहोस्" else "Learn More",
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(Modifier.width(5.dp))
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                                contentDescription = null,
-                                modifier = Modifier.size(13.dp),
-                                tint = Color.White
-                            )
-                        }
-
-                        if (eligiblePromos.size > 1) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                eligiblePromos.forEachIndexed { idx, _ ->
-                                    val selected = idx == safeIndex
-                                    Box(
-                                        modifier = Modifier
-                                            .height(6.dp)
-                                            .width(if (selected) 14.dp else 6.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                if (selected) HamroPink else Color.White.copy(alpha = 0.28f)
-                                            )
-                                            .clickable {
-                                                scope.launch { animateFlipTo(idx) }
-                                            }
-                                    )
-                                }
-                            }
-                        } else {
-                            Spacer(Modifier.width(2.dp))
-                        }
+                Surface(
+                    onClick = { onDismissAll(promotions) },
+                    shape = CircleShape,
+                    color = SanctuaryCard,
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
+                    modifier = Modifier.size(26.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = if (nepaliLanguage) "बन्द गर्नुहोस्" else "Dismiss ad",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(14.dp)
+                        )
                     }
                 }
             }

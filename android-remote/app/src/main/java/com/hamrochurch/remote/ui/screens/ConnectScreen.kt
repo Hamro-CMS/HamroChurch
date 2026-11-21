@@ -90,7 +90,8 @@ fun ConnectScreen(
     onConnectManual: (name: String, ip: String, port: String, token: String) -> Unit,
     onConnectProfile: (ChurchPcProfile) -> Unit,
     onDeleteProfile: (String) -> Unit,
-    onShowError: (String) -> Unit
+    onShowError: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val ne = state.nepaliLanguage
     val context = LocalContext.current
@@ -115,7 +116,7 @@ fun ConnectScreen(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())

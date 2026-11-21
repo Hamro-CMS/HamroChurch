@@ -108,6 +108,7 @@ class MainActivity : ComponentActivity() {
                             setPrompt(AppStrings.scanQr(state.nepaliLanguage))
                             setBeepEnabled(true)
                             setOrientationLocked(false)
+                            setBarcodeImageEnabled(false)
                             setCaptureActivity(QrCaptureActivity::class.java)
                         }
                         qrLauncher.launch(options)
@@ -156,7 +157,19 @@ private fun HamroRemoteRoot(
         state.connectionStatus == ConnectionStatus.RECONNECTING
 
     if (!isActiveSession) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                MobilePromotionOverlay(
+                    promotions = state.promotions,
+                    nepaliLanguage = ne,
+                    hasBottomNavBar = false,
+                    onDismissAll = viewModel::dismissPromotions,
+                    onImpression = viewModel::recordPromotionImpression,
+                    onClickPromotion = viewModel::recordPromotionClick
+                )
+            }
+        ) { innerPadding ->
             ConnectScreen(
                 state = state,
                 onToggleLanguage = viewModel::toggleLanguage,
@@ -164,15 +177,8 @@ private fun HamroRemoteRoot(
                 onConnectManual = viewModel::connectManual,
                 onConnectProfile = viewModel::connectWithProfile,
                 onDeleteProfile = viewModel::deleteSavedProfile,
-                onShowError = viewModel::showToast
-            )
-            MobilePromotionOverlay(
-                promotions = state.promotions,
-                nepaliLanguage = ne,
-                hasBottomNavBar = false,
-                onDismissAll = viewModel::dismissPromotions,
-                onImpression = viewModel::recordPromotionImpression,
-                onClickPromotion = viewModel::recordPromotionClick
+                onShowError = viewModel::showToast,
+                modifier = Modifier.padding(innerPadding)
             )
         }
         return
@@ -248,29 +254,39 @@ private fun HamroRemoteRoot(
             }
         },
         bottomBar = {
-            NavigationBar(containerColor = SanctuarySurface) {
-                val tabs = listOf(
-                    Triple(MainTab.LIVE, AppStrings.tabLive(ne), Icons.Default.PresentToAll),
-                    Triple(MainTab.HYMNS, AppStrings.tabHymns(ne), Icons.Default.MusicNote),
-                    Triple(MainTab.BIBLE, AppStrings.tabBible(ne), Icons.AutoMirrored.Filled.MenuBook),
-                    Triple(MainTab.SCHEDULE, AppStrings.tabSchedule(ne), Icons.AutoMirrored.Filled.QueueMusic),
-                    Triple(MainTab.STAGE, AppStrings.tabStage(ne), Icons.Default.Tune)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                MobilePromotionOverlay(
+                    promotions = state.promotions,
+                    nepaliLanguage = ne,
+                    hasBottomNavBar = true,
+                    onDismissAll = viewModel::dismissPromotions,
+                    onImpression = viewModel::recordPromotionImpression,
+                    onClickPromotion = viewModel::recordPromotionClick
                 )
-
-                tabs.forEach { (tab, label, icon) ->
-                    NavigationBarItem(
-                        selected = state.activeTab == tab,
-                        onClick = { viewModel.selectTab(tab) },
-                        icon = { Icon(icon, contentDescription = label) },
-                        label = { Text(label, fontSize = 11.sp, maxLines = 1) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.White,
-                            selectedTextColor = HamroPink,
-                            indicatorColor = HamroPink.copy(alpha = 0.25f),
-                            unselectedIconColor = TextSecondary,
-                            unselectedTextColor = TextSecondary
-                        )
+                NavigationBar(containerColor = SanctuarySurface) {
+                    val tabs = listOf(
+                        Triple(MainTab.LIVE, AppStrings.tabLive(ne), Icons.Default.PresentToAll),
+                        Triple(MainTab.HYMNS, AppStrings.tabHymns(ne), Icons.Default.MusicNote),
+                        Triple(MainTab.BIBLE, AppStrings.tabBible(ne), Icons.AutoMirrored.Filled.MenuBook),
+                        Triple(MainTab.SCHEDULE, AppStrings.tabSchedule(ne), Icons.AutoMirrored.Filled.QueueMusic),
+                        Triple(MainTab.STAGE, AppStrings.tabStage(ne), Icons.Default.Tune)
                     )
+
+                    tabs.forEach { (tab, label, icon) ->
+                        NavigationBarItem(
+                            selected = state.activeTab == tab,
+                            onClick = { viewModel.selectTab(tab) },
+                            icon = { Icon(icon, contentDescription = label) },
+                            label = { Text(label, fontSize = 11.sp, maxLines = 1) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color.White,
+                                selectedTextColor = HamroPink,
+                                indicatorColor = HamroPink.copy(alpha = 0.25f),
+                                unselectedIconColor = TextSecondary,
+                                unselectedTextColor = TextSecondary
+                            )
+                        )
+                    }
                 }
             }
         }

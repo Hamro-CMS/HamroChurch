@@ -266,7 +266,7 @@
                         <div class="qrWhiteFrame">
                             {@html mobileQrImg}
                         </div>
-                        <p class="qrCaption">Scan from <b>Aradhana Studio Remote</b> Android App</p>
+                        <p class="qrCaption">Scan from <b>Aradhana Studio Remote</b></p>
                     {:else}
                         <div class="noNetworkBox">
                             <p style="margin: 0;font-weight: 700;color: #fbbf24;">No Wi-Fi / Hotspot Detected</p>
@@ -276,23 +276,25 @@
                 </div>
 
                 <div class="manualPanel">
-                    <div class="fieldGroup">
-                        <span class="fieldLabel">LAN IP Address (एउटै Wi-Fi / Hotspot)</span>
-                        <div class="fieldValueRow">
-                            <code class="monoValue">{lanIps[0] || "Not connected"}</code>
-                            {#if lanIps[0]}
-                                <MaterialButton icon="copy" title="Copy IP" on:click={() => copyValue(lanIps[0], "IP Address")} />
+                    <div class="ipPortRow">
+                        <div class="fieldGroup ipField">
+                            <span class="fieldLabel">LAN IP Address (एउटै Wi-Fi / Hotspot)</span>
+                            <div class="fieldValueRow">
+                                <code class="monoValue">{lanIps[0] || "Not connected"}</code>
+                                {#if lanIps[0]}
+                                    <MaterialButton style="padding: 5px 7px;min-height: 28px;" icon="copy" title="Copy IP" on:click={() => copyValue(lanIps[0], "IP Address")} />
+                                {/if}
+                            </div>
+                            {#if lanIps.length > 1}
+                                <span class="altIps">Other IPs: {lanIps.slice(1).join(", ")}</span>
                             {/if}
                         </div>
-                        {#if lanIps.length > 1}
-                            <span class="altIps">Other IPs: {lanIps.slice(1).join(", ")}</span>
-                        {/if}
-                    </div>
 
-                    <div class="fieldGroup">
-                        <span class="fieldLabel">Port (WebSocket / REST)</span>
-                        <div class="fieldValueRow">
-                            <code class="monoValue">{port} / {port + 1}</code>
+                        <div class="fieldGroup portField">
+                            <span class="fieldLabel">Port</span>
+                            <div class="fieldValueRow" style="min-height: 28px;">
+                                <code class="monoValue">{port} / {port + 1}</code>
+                            </div>
                         </div>
                     </div>
 
@@ -301,48 +303,48 @@
                         <div class="fieldValueRow">
                             <code class="monoValue tokenText">{showTokenPlain ? $companion?.token : "••••••••••••••••"}</code>
                             <div class="tokenActions">
-                                <MaterialButton on:click={() => (showTokenPlain = !showTokenPlain)} title="Show/Hide Token">
+                                <MaterialButton style="padding: 5px 9px;min-height: 28px;" on:click={() => (showTokenPlain = !showTokenPlain)} title="Show/Hide Token">
                                     <span style="font-size: 0.8em;white-space: nowrap;">{showTokenPlain ? "Hide" : "Show"}</span>
                                 </MaterialButton>
-                                <MaterialButton icon="copy" title="Copy Token" on:click={() => copyValue($companion?.token || "", "Token")} />
+                                <MaterialButton style="padding: 5px 7px;min-height: 28px;" icon="copy" title="Copy Token" on:click={() => copyValue($companion?.token || "", "Token")} />
                             </div>
                         </div>
                         <div style="margin-top: 6px;display: flex;justify-content: flex-start;flex-wrap: wrap;">
-                            <MaterialButton icon="refresh" style="font-size: 0.8em;padding: 4px 10px;" on:click={regenerateMobileToken}>
+                            <MaterialButton icon="refresh" style="font-size: 0.8em;padding: 5px 10px;min-height: 28px;border: 1px solid var(--primary-lighter);border-radius: 6px;" on:click={regenerateMobileToken}>
                                 Reset Token & Revoke Old Phones
                             </MaterialButton>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="connectedSection">
-                <div class="connectedHeader">
-                    <span>Connected Phones ({$mobileRemoteClients.length})</span>
-                    {#if $mobileRemoteClients.length > 1}
-                        <MaterialButton style="font-size: 0.78em;padding: 2px 8px;" on:click={() => disconnectClient("all")}>Disconnect All</MaterialButton>
-                    {/if}
-                </div>
-                {#if $mobileRemoteClients.length === 0}
-                    <p style="margin: 6px 0 0;font-size: 0.82em;opacity: 0.68;text-align: start;">कुनै मोबाइल जोडिएको छैन — Aradhana Studio Remote एप खोलेर QR स्क्यान गर्नुहोस्।</p>
-                {:else}
-                    <div class="clientList">
-                        {#each $mobileRemoteClients as client (client.id)}
-                            <div class="clientRow">
-                                <div style="display: flex;align-items: center;gap: 8px;">
-                                    <span class="onlineDot" />
-                                    <b style="font-size: 0.88em;">{client.deviceName}</b>
-                                    <code style="font-size: 0.78em;opacity: 0.7;">{client.ip}</code>
-                                </div>
-                                <MaterialButton icon="close" title="Disconnect" on:click={() => disconnectClient(client.id)} />
+                    <div class="connectedSection">
+                        <div class="connectedHeader">
+                            <span>Connected Phones ({$mobileRemoteClients.length})</span>
+                            {#if $mobileRemoteClients.length > 1}
+                                <MaterialButton style="font-size: 0.78em;padding: 2px 8px;" on:click={() => disconnectClient("all")}>Disconnect All</MaterialButton>
+                            {/if}
+                        </div>
+                        {#if $mobileRemoteClients.length === 0}
+                            <p style="margin: 5px 0 0;font-size: 0.8em;opacity: 0.72;text-align: start;line-height: 1.35;">कुनै मोबाइल जोडिएको छैन — फोनमा <b>Aradhana Studio Remote</b> खोलेर बाँयाको QR स्क्यान गर्नुहोस्।</p>
+                        {:else}
+                            <div class="clientList">
+                                {#each $mobileRemoteClients as client (client.id)}
+                                    <div class="clientRow">
+                                        <div style="display: flex;align-items: center;gap: 8px;min-width: 0;">
+                                            <span class="onlineDot" />
+                                            <b style="font-size: 0.86em;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;">{client.deviceName}</b>
+                                            <code style="font-size: 0.76em;opacity: 0.7;">{client.ip}</code>
+                                        </div>
+                                        <MaterialButton icon="close" style="padding: 4px;" title="Disconnect" on:click={() => disconnectClient(client.id)} />
+                                    </div>
+                                {/each}
                             </div>
-                        {/each}
+                        {/if}
                     </div>
-                {/if}
+                </div>
             </div>
 
             <p class="firewallHint">
-                Tip: यदि QR स्क्यान गर्दा जोडिएन भने मोबाइल र कम्प्युटर एउटै Wi-Fi वा Mobile Hotspot मा रहेको र Windows Firewall मा "Private Network" अनुमति दिइएको जाँच गर्नुहोस्।
+                Tip: मोबाइल र कम्प्युटर एउटै Wi-Fi वा Mobile Hotspot मा जोड्नुहोस् र Windows Firewall मा "Private Network" अनुमति दिनुहोस्।
             </p>
         {/if}
     </div>
@@ -434,10 +436,11 @@
     .mobileModal {
         display: flex;
         flex-direction: column;
-        gap: 12px;
-        width: min(590px, 76vw);
+        gap: 14px;
+        width: min(650px, 82vw);
         max-width: 100%;
         min-width: 0;
+        padding: 2px 4px;
         box-sizing: border-box;
         text-align: start;
         font-size: 0.88em;
@@ -505,9 +508,9 @@
 
     .pairingGrid {
         display: grid;
-        grid-template-columns: 176px minmax(0, 1fr);
-        gap: 14px;
-        align-items: start;
+        grid-template-columns: 232px minmax(0, 1fr);
+        gap: 18px;
+        align-items: stretch;
         min-width: 0;
     }
 
@@ -515,22 +518,38 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 6px;
+        justify-content: center;
+        gap: 10px;
+        width: 232px;
+        max-width: 100%;
+        padding: 14px;
+        border-radius: 12px;
+        background: var(--primary-darker);
+        border: 1px solid color-mix(in srgb, var(--secondary) 32%, var(--primary-lighter) 68%);
+        box-sizing: border-box;
         min-width: 0;
     }
 
     .qrWhiteFrame {
+        width: 192px;
+        height: 192px;
         background: #ffffff;
         padding: 10px;
         border-radius: 12px;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
-        display: inline-flex;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.42);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        flex-shrink: 0;
     }
 
     .qrWhiteFrame :global(svg),
     .qrWhiteFrame :global(img) {
-        width: 216px;
-        height: 216px;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 172px;
+        max-height: 172px;
         display: block;
         shape-rendering: crispEdges;
         image-rendering: pixelated;
@@ -538,26 +557,35 @@
 
     .qrCaption {
         margin: 0;
-        font-size: 0.76em;
-        opacity: 0.8;
+        font-size: 0.78em;
+        opacity: 0.9;
         text-align: center;
-        line-height: 1.3;
+        line-height: 1.35;
     }
 
     .noNetworkBox {
-        max-width: 176px;
+        width: 100%;
         padding: 12px;
         border-radius: 10px;
         background: rgba(251, 191, 36, 0.1);
         border: 1px solid rgba(251, 191, 36, 0.35);
         text-align: start;
+        box-sizing: border-box;
     }
 
     .manualPanel {
         display: flex;
         flex-direction: column;
-        gap: 9px;
+        justify-content: space-between;
+        gap: 10px;
         text-align: start;
+        min-width: 0;
+    }
+
+    .ipPortRow {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 128px;
+        gap: 10px;
         min-width: 0;
     }
 
@@ -566,8 +594,8 @@
         flex-direction: column;
         gap: 4px;
         background: var(--primary-darker);
-        padding: 8px 10px;
-        border-radius: 8px;
+        padding: 9px 12px;
+        border-radius: 10px;
         border: 1px solid var(--primary-lighter);
         min-width: 0;
         box-sizing: border-box;
@@ -678,6 +706,12 @@
             width: 100%;
         }
         .pairingGrid {
+            grid-template-columns: 1fr;
+        }
+        .qrPanel {
+            width: 100%;
+        }
+        .ipPortRow {
             grid-template-columns: 1fr;
         }
         .noNetworkBox {
