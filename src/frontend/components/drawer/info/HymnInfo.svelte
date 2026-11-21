@@ -1,9 +1,87 @@
 <script lang="ts">
-    import { activePopup, language } from "../../../stores"
+    import { Main } from "../../../../types/IPC/Main"
+    import type { StutiMediaSong } from "../../../../types/Main"
+    import { activeDrawerTab, activePopup, drawer, language, stutiMediaActiveVideoId, stutiMediaFeed } from "../../../stores"
+    import { sendMain } from "../../../IPC/main"
+    import { DEFAULT_DRAWER_HEIGHT } from "../../../utils/common"
     import { copySelectedHymnToClipboard, formatHymnNumber, getHymnCategoryDisplay, hymnEditTarget, hymnFavoriteIds, hymnItems, hymnSelectedId, hymnSourceDates, toggleFavorite, insertSelectedHymnIntoSlides } from "../hymns/hymns"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import T from "../../helpers/T.svelte"
     import InfoMetadata from "./InfoMetadata.svelte"
+
+    const GENERIC_TOKENS = new Set([
+        "nepali",
+        "christian",
+        "worship",
+        "song",
+        "songs",
+        "gospel",
+        "official",
+        "video",
+        "music",
+        "stuti",
+        "media",
+        "new",
+        "bhajan",
+        "chorus",
+        "lyrics",
+        "with"
+    ])
+
+    function normalizeTitleText(input: string): string {
+        return (input || "")
+            .toLowerCase()
+            .replace(/[()[\]|।,.\-_:;!?"“”‘’/]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+    }
+
+    function extractMeaningfulTokens(input: string): string[] {
+        return normalizeTitleText(input)
+            .split(" ")
+            .filter((token) => {
+                if (!token || GENERIC_TOKENS.has(token)) return false
+                if (/[\u0900-\u097F]/.test(token)) return token.length >= 2
+                return token.length >= 3
+            })
+    }
+
+    function findMatchingStutiSong(title: string, transliteration: string, videos: StutiMediaSong[]): StutiMediaSong | null {
+        if (!videos.length) return null
+        const normTitle = normalizeTitleText(title)
+        const normTranslit = normalizeTitleText(transliteration)
+        const hymnTokens = new Set([...extractMeaningfulTokens(title), ...extractMeaningfulTokens(transliteration)])
+
+        for (const video of videos) {
+            const normVideoTitle = normalizeTitleText(video.title)
+            if (normTitle.length >= 6 && normVideoTitle.includes(normTitle)) {
+                return video
+            }
+            if (normTranslit.length >= 6 && normVideoTitle.includes(normTranslit)) {
+                return video
+            }
+            if (hymnTokens.size >= 2) {
+                const videoTokens = new Set(extractMeaningfulTokens(video.title))
+                let matches = 0
+                for (const t of hymnTokens) {
+                    if (videoTokens.has(t)) matches++
+                }
+                if (matches >= 2) {
+                    return video
+                }
+            }
+        }
+
+        return null
+    }
+
+    function openMatchedStutiVideo(song: StutiMediaSong) {
+        if ($drawer.height <= 40) {
+            drawer.set({ height: $drawer.stored || DEFAULT_DRAWER_HEIGHT, stored: null })
+        }
+        stutiMediaActiveVideoId.set(song.video_id)
+        activeDrawerTab.set("stuti")
+    }
 
     function handleFavorite() {
         if (!hymn) return
@@ -17,6 +95,7 @@
     }
 
     $: hymn = $hymnItems.find((item) => item.id === $hymnSelectedId) || null
+    $: matchedStutiSong = hymn ? findMatchingStutiSong(hymn.title, hymn.transliteration || "", $stutiMediaFeed?.videos || []) : null
     $: info = hymn
         ? [
               { label: "info.created", value: $hymnSourceDates.created, type: "date" },
@@ -51,6 +130,26 @@
             </MaterialButton>
         </div>
 
+        {#if matchedStutiSong}
+            <div class="stutiMatchCard">
+                <img src={matchedStutiSong.thumbnail_url} alt={matchedStutiSong.title} loading="lazy" />
+                <div class="stutiMatchMeta">
+                    <span class="stutiMatchLabel">
+                        🎧 {$language === "ne" ? "यो भजनको आधिकारिक भिडियो (Stuti Media)" : "Official Worship Video (Stuti Media)"}
+                    </span>
+                    <div class="stutiMatchTitle">{matchedStutiSong.title}</div>
+                    <div class="stutiMatchActions">
+                        <button type="button" class="stutiListenBtn" on:click={() => matchedStutiSong && openMatchedStutiVideo(matchedStutiSong)}>
+                            ▶ {$language === "ne" ? "सुन्नुहोस्" : "Listen"}
+                        </button>
+                        <button type="button" class="stutiYtBtn" on:click={() => matchedStutiSong && sendMain(Main.URL, matchedStutiSong.watch_url)}>
+                            YouTube ↗
+                        </button>
+                    </div>
+                </div>
+            </div>
+        {/if}
+
         <div class="lyricsCard">
             <h3><T id="hymns.lyrics" /></h3>
             {#each hymn.verses as verse, index}
@@ -66,6 +165,83 @@
 {/if}
 
 <style>
+    .stutiMatchCard {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 8px;
+        border-radius: 8px;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .stutiMatchCard img {
+        width: 78px;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+        border-radius: 5px;
+        flex-shrink: 0;
+        background: #000;
+    }
+
+    .stutiMatchMeta {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .stutiMatchLabel {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: #fca5a5;
+    }
+
+    .stutiMatchTitle {
+        font-size: 0.76rem;
+        font-weight: 600;
+        line-height: 1.25;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .stutiMatchActions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 2px;
+    }
+
+    .stutiListenBtn {
+        border: 1px solid rgba(239, 68, 68, 0.5);
+        background: rgba(239, 68, 68, 0.25);
+        color: #fee2e2;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .stutiListenBtn:hover {
+        background: rgba(239, 68, 68, 0.4);
+    }
+
+    .stutiYtBtn {
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        font-size: 0.7rem;
+        padding: 2px 7px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
     .infoPanel {
         display: flex;
         flex-direction: column;

@@ -23,6 +23,7 @@ import { isDraggableAreaVisible, isWithinDisplayBounds, mainWindowInitialize, op
 import { template } from "./utils/menuTemplate"
 import { initSoftwareTelemetry, stopSoftwareHeartbeat } from "./utils/softwareHeartbeat"
 import { startSoftwarePromotions, stopSoftwarePromotions } from "./utils/softwarePromotions"
+import { startStutiMediaSync, stopStutiMediaSync } from "./utils/stutiMedia"
 import { spellcheck } from "./utils/spellcheck"
 import { loadingOptions, mainOptions } from "./utils/windowOptions"
 
@@ -231,6 +232,7 @@ function mainWindowLoaded() {
 
     revealMainWindowShell()
     startSoftwarePromotions()
+    startStutiMediaSync()
 
     if (RECORD_STARTUP_TIME) console.timeEnd("Full startup")
 }
@@ -444,6 +446,7 @@ process.on("SIGTERM", () => {
 function cleanupBeforeQuit() {
     ipcMain.removeAllListeners()
     stopSoftwarePromotions()
+    stopStutiMediaSync()
     stopSoftwareHeartbeat()
 
     // Remove window listeners and destroy windows if not already destroyed

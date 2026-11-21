@@ -32,6 +32,7 @@ import { getMachineId } from "../utils/helpers"
 import { fetchNepaliTransliteration } from "../utils/nepaliTransliteration"
 import { deleteAnalyticsServerData, getPrivacySettings, setAnalyticsConsent } from "../utils/softwareHeartbeat"
 import { dismissSoftwarePromotion, getActiveSoftwarePromotions, openSoftwarePromotionLink, recordSoftwarePromotionImpression } from "../utils/softwarePromotions"
+import { getStutiMediaFeed } from "../utils/stutiMedia"
 import { LyricSearch } from "../utils/LyricSearch"
 import { closeMidiInPorts, getMidiInputs, getMidiOutputs, receiveMidi, sendMidi } from "../utils/midi"
 import { deleteShows, deleteShowsNotIndexed, getAllShows, getEmptyShows, refreshAllShows } from "../utils/shows"
@@ -261,7 +262,10 @@ export const mainResponses: MainResponses = {
     [Main.GET_SOFTWARE_PROMOTION]: () => getActiveSoftwarePromotions(),
     [Main.DISMISS_SOFTWARE_PROMOTION]: (data) => dismissSoftwarePromotion(data),
     [Main.OPEN_SOFTWARE_PROMOTION]: (data) => openSoftwarePromotionLink(data),
-    [Main.RECORD_SOFTWARE_PROMOTION_IMPRESSION]: (data) => recordSoftwarePromotionImpression(data)
+    [Main.RECORD_SOFTWARE_PROMOTION_IMPRESSION]: (data) => recordSoftwarePromotionImpression(data),
+    // Stuti Media YouTube Worship Catalog
+    [Main.GET_STUTI_MEDIA_SONGS]: () => getStutiMediaFeed(false),
+    [Main.REFRESH_STUTI_MEDIA_SONGS]: () => getStutiMediaFeed(true)
 }
 
 /// ///////

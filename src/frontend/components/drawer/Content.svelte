@@ -7,6 +7,7 @@
     import Calendar from "./calendar/Calendar.svelte"
     import HymnsTab from "./hymns/HymnsTab.svelte"
     import Media from "./media/Media.svelte"
+    import StutiMediaBrowser from "./stuti/StutiMediaBrowser.svelte"
     import Actions from "./pages/Actions.svelte"
     import OBS from "./pages/OBS.svelte"
     import Overlays from "./pages/Overlays.svelte"
@@ -54,6 +55,8 @@
         <Shows {active} {searchValue} bind:firstMatch />
     {:else if id === "hymns"}
         <HymnsTab />
+    {:else if id === "stuti"}
+        <StutiMediaBrowser {searchValue} />
     {:else if id === "media"}
         <Media {active} {searchValue} bind:streams />
     {:else if id === "audio"}

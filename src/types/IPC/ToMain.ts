@@ -1,6 +1,6 @@
 import type { ICommonTagsResult } from "music-metadata"
 import type { ContentProviderId } from "../../electron/contentProviders/base/types"
-import type { SoftwarePromotionPayload } from "../Main"
+import type { SoftwarePromotionPayload, StutiMediaFeedPayload } from "../Main"
 import type { TrimmedShows } from "../Show"
 
 export enum ToMain {
@@ -36,7 +36,8 @@ export enum ToMain {
     RECEIVE_MIDI2 = "RECEIVE_MIDI2",
     SOFTWARE_PROMOTION = "SOFTWARE_PROMOTION",
     MOBILE_SOFTWARE_PROMOTIONS = "MOBILE_SOFTWARE_PROMOTIONS",
-    MOBILE_CLIENTS_UPDATED = "MOBILE_CLIENTS_UPDATED"
+    MOBILE_CLIENTS_UPDATED = "MOBILE_CLIENTS_UPDATED",
+    STUTI_MEDIA_SONGS = "STUTI_MEDIA_SONGS"
 }
 export interface ToMainSendPayloads {
     [ToMain.ALERT]: string
@@ -122,6 +123,7 @@ export interface ToMainSendPayloads {
         connectedAt: number
         lastSeenAt: number
     }[]
+    [ToMain.STUTI_MEDIA_SONGS]: StutiMediaFeedPayload
 }
 
 export interface ToMainReturnPayloads {

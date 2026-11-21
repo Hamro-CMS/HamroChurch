@@ -10,7 +10,7 @@ import type { Event } from "../types/Calendar"
 import type { Draw, DrawLine, DrawSettings, DrawTools } from "../types/Draw"
 import type { Effects } from "../types/Effects"
 import type { History, HistoryNew } from "../types/History"
-import type { ActiveEdit, Clipboard, Media, MediaOptions, NumberObject, OS, Popups, Profiles, Selected, SlidesOptions, SoftwarePromotionPayload, Variable } from "../types/Main"
+import type { ActiveEdit, Clipboard, Media, MediaOptions, NumberObject, OS, Popups, Profiles, Selected, SlidesOptions, SoftwarePromotionPayload, StutiMediaFeedPayload, Variable } from "../types/Main"
 import type { Folders, Projects, ShowRef } from "../types/Projects"
 import type { Dictionary, Styles, Themes } from "../types/Settings"
 import type { Action, Emitter, ID, Overlays, ShowGroups, ShowList, Shows, ShowType, SlideTimer, Tag, Templates, Timer, Transition, TrimmedShows } from "../types/Show"
@@ -48,6 +48,59 @@ export const nepaliTypingEnabled: Writable<boolean> = writable(false)
 export const softwarePromotion: Writable<SoftwarePromotionPayload | null> = writable(null)
 export const softwarePromotions: Writable<SoftwarePromotionPayload[]> = writable([])
 export const mobileSoftwarePromotions: Writable<SoftwarePromotionPayload[]> = writable([])
+
+export function createDefaultStutiMediaFeed(): StutiMediaFeedPayload {
+    return {
+        channel: {
+            id: "UCV5kuMrCz2CsIochHVXc23A",
+            name: "Stuti Media",
+            handle: "@stutimedianepal",
+            url: "https://www.youtube.com/@stutimedianepal",
+            subscribe_url: "https://www.youtube.com/@stutimedianepal?sub_confirmation=1"
+        },
+        videos: [
+            {
+                video_id: "oY3o5rQwDNw",
+                title: "तृषित छ मेरो हृदय (Trishit Cha Mero Hriday) | New Nepali Christian Worship Song | Stuti Media",
+                video_type: "video",
+                thumbnail_url: "https://i.ytimg.com/vi/oY3o5rQwDNw/hqdefault.jpg",
+                thumbnail_hd_url: "https://i.ytimg.com/vi/oY3o5rQwDNw/hqdefault.jpg",
+                duration_text: "2:58",
+                duration_seconds: 178,
+                published_at: "2026-11-08T12:43:13+00:00",
+                watch_url: "https://www.youtube.com/watch?v=oY3o5rQwDNw",
+                is_featured: true
+            }
+        ],
+        shorts: [],
+        updated_at: null
+    }
+}
+
+function readSavedStutiFavorites(): string[] {
+    try {
+        if (typeof localStorage === "undefined") return []
+        const parsed = JSON.parse(localStorage.getItem("aradhana_stuti_favorites") || "[]")
+        return Array.isArray(parsed) ? parsed.filter((v) => typeof v === "string") : []
+    } catch {
+        return []
+    }
+}
+
+export const stutiMediaFeed: Writable<StutiMediaFeedPayload> = writable(createDefaultStutiMediaFeed())
+export const stutiMediaActiveVideoId: Writable<string | null> = writable(null)
+export const stutiMediaAutoPlayQueue: Writable<boolean> = writable(false)
+export const stutiMediaFilter: Writable<"all" | "latest" | "favorites" | "shorts"> = writable("all")
+export const stutiMediaFavorites: Writable<string[]> = writable(readSavedStutiFavorites())
+stutiMediaFavorites.subscribe((ids) => {
+    try {
+        if (typeof localStorage !== "undefined") {
+            localStorage.setItem("aradhana_stuti_favorites", JSON.stringify(ids))
+        }
+    } catch {
+        // ignore storage errors
+    }
+})
 export interface MobileRemoteClientInfo {
     id: string
     deviceName: string

@@ -1,7 +1,9 @@
 package com.hamrochurch.remote.ui.screens
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -412,6 +414,85 @@ fun ConnectScreen(
                         fontSize = 12.sp,
                         color = TextSecondary,
                         lineHeight = 17.sp
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = SanctuaryCard.copy(alpha = 0.72f)),
+            border = BorderStroke(1.dp, SanctuaryBorder),
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(DangerRed.copy(alpha = 0.14f))
+                        .clickable {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://www.youtube.com/@stutimedianepal?sub_confirmation=1")
+                                    )
+                                )
+                            }
+                        }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (ne) "🔴 Stuti Media YouTube • Subscribe" else "🔴 Stuti Media YouTube • Subscribe",
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = "↗",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFCA5A5)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(HamroCyan.copy(alpha = 0.14f))
+                        .clickable {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://hamrocms.com/?utm_source=aradhana_remote&utm_medium=connect_dock")
+                                    )
+                                )
+                            }
+                        }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (ne) "☁️ HamroCMS.com • चर्च व्यवस्थापन सफ्टवेयर" else "☁️ HamroCMS.com • Church Management Cloud",
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = "↗",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = HamroCyan
                     )
                 }
             }

@@ -76,6 +76,7 @@ import {
     softwarePromotions,
     spellcheck,
     stageShows,
+    stutiMediaFeed,
     templates,
     textCache,
     theme,
@@ -596,5 +597,10 @@ export const mainResponses: MainResponses = {
     },
     [ToMain.MOBILE_CLIENTS_UPDATED]: (data) => {
         mobileRemoteClients.set(Array.isArray(data) ? data : [])
+    },
+    [ToMain.STUTI_MEDIA_SONGS]: (data) => {
+        if (data && typeof data === "object" && (Array.isArray(data.videos) || Array.isArray(data.shorts))) {
+            stutiMediaFeed.set(data)
+        }
     }
 }

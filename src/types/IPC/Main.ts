@@ -6,7 +6,7 @@ import type { SyncProviderId } from "../../electron/cloud/syncManager"
 import type { ContentFile, ContentLibraryCategory, ContentProviderId, MediaLicense } from "../../electron/contentProviders/base/types"
 import type { _store } from "../../electron/data/store"
 import type { TimecodeMode } from "../../electron/timecode/timecode"
-import type { AppUpdateDownloadResult, AppUpdateInfo, DeleteAnalyticsResult, ErrorLog, FileFolder, LessonsData, LyricSearchResult, MainFilePaths, Media, OS, PrivacySettings, SoftwarePromotionPayload, SpotifyState, Subtitle } from "../Main"
+import type { AppUpdateDownloadResult, AppUpdateInfo, DeleteAnalyticsResult, ErrorLog, FileFolder, LessonsData, LyricSearchResult, MainFilePaths, Media, OS, PrivacySettings, SoftwarePromotionPayload, SpotifyState, StutiMediaFeedPayload, Subtitle } from "../Main"
 import type { Output } from "../Output"
 import type { Folders, Projects } from "../Projects"
 import type { Dictionary, Resolution, Themes } from "../Settings"
@@ -183,7 +183,10 @@ export enum Main {
     GET_SOFTWARE_PROMOTION = "GET_SOFTWARE_PROMOTION",
     DISMISS_SOFTWARE_PROMOTION = "DISMISS_SOFTWARE_PROMOTION",
     OPEN_SOFTWARE_PROMOTION = "OPEN_SOFTWARE_PROMOTION",
-    RECORD_SOFTWARE_PROMOTION_IMPRESSION = "RECORD_SOFTWARE_PROMOTION_IMPRESSION"
+    RECORD_SOFTWARE_PROMOTION_IMPRESSION = "RECORD_SOFTWARE_PROMOTION_IMPRESSION",
+    // Stuti Media YouTube Worship Catalog
+    GET_STUTI_MEDIA_SONGS = "GET_STUTI_MEDIA_SONGS",
+    REFRESH_STUTI_MEDIA_SONGS = "REFRESH_STUTI_MEDIA_SONGS"
 }
 
 export interface MainSendPayloads {
@@ -414,6 +417,8 @@ export interface MainSendPayloads {
         event?: "impression" | "click"
         source?: "desktop" | "mobile"
     }
+    [Main.GET_STUTI_MEDIA_SONGS]?: undefined
+    [Main.REFRESH_STUTI_MEDIA_SONGS]?: undefined
 }
 
 export interface MainReturnPayloads {
@@ -575,6 +580,9 @@ export interface MainReturnPayloads {
     [Main.DISMISS_SOFTWARE_PROMOTION]: boolean
     [Main.OPEN_SOFTWARE_PROMOTION]: Promise<boolean>
     [Main.RECORD_SOFTWARE_PROMOTION_IMPRESSION]: boolean
+    // Stuti Media YouTube Worship Catalog
+    [Main.GET_STUTI_MEDIA_SONGS]: Promise<StutiMediaFeedPayload>
+    [Main.REFRESH_STUTI_MEDIA_SONGS]: Promise<StutiMediaFeedPayload>
     // Mobile Remote
     [Main.MOBILE_CLIENTS_GET]: {
         id: string

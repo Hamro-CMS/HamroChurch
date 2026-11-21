@@ -58,6 +58,6 @@ export interface DrawerTabs {
     }
 }
 
-export type DrawerTabIds = "shows" | "hymns" | "media" | "overlays" | "audio" | "scripture" | "calendar" | "timers" | "templates" | "functions"
+export type DrawerTabIds = "shows" | "hymns" | "stuti" | "media" | "overlays" | "audio" | "scripture" | "calendar" | "timers" | "templates" | "functions"
 export type SettingsTabs = "general" | "files" | "display_settings" | "styles" | "connection" | "profiles" | "theme" | "privacy" | "other" // "calendar"
 export type TopViews = "show" | "edit" | "reflow" | "draw" | "stage" | "calendar" | "settings"

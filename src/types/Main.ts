@@ -49,6 +49,35 @@ export interface SoftwarePromotionPayload {
     updated_at: string | null
 }
 
+export interface StutiMediaSong {
+    video_id: string
+    title: string
+    description?: string | null
+    video_type: "video" | "short"
+    thumbnail_url: string
+    thumbnail_hd_url?: string | null
+    duration_text?: string | null
+    duration_seconds?: number | null
+    view_count_text?: string | null
+    published_label?: string | null
+    published_at?: string | null
+    watch_url: string
+    is_featured?: boolean
+}
+
+export interface StutiMediaFeedPayload {
+    channel: {
+        id: string
+        name: string
+        handle: string
+        url: string
+        subscribe_url: string
+    }
+    videos: StutiMediaSong[]
+    shorts: StutiMediaSong[]
+    updated_at: string | null
+}
+
 export interface PrivacySettings {
     consent: boolean | null
     anonymousDeviceId: string

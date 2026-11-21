@@ -4,13 +4,14 @@
     import CalendarTabs from "./navigation/CalendarTabs.svelte"
     import FunctionsTabs from "./navigation/FunctionsTabs.svelte"
     import HymnCategoryFilter from "./hymns/HymnCategoryFilter.svelte"
+    import StutiMediaTabs from "./stuti/StutiMediaTabs.svelte"
     import MediaTabs from "./navigation/MediaTabs.svelte"
     import OverlaysTabs from "./navigation/OverlaysTabs.svelte"
     import ScriptureTabs from "./navigation/ScriptureTabs.svelte"
     import ShowsTabs from "./navigation/ShowsTabs.svelte"
     import TemplatesTabs from "./navigation/TemplatesTabs.svelte"
 
-    export let id: "shows" | "hymns" | "media" | "overlays" | "audio" | "effects" | "scripture" | "calendar" | "functions" | "templates" | "timers"
+    export let id: "shows" | "hymns" | "stuti" | "media" | "overlays" | "audio" | "effects" | "scripture" | "calendar" | "functions" | "templates" | "timers"
 </script>
 
 <div class="main">
@@ -19,6 +20,8 @@
             <ScriptureTabs />
         {:else if id === "hymns"}
             <HymnCategoryFilter />
+        {:else if id === "stuti"}
+            <StutiMediaTabs />
         {:else if id === "calendar"}
             <CalendarTabs />
         {:else if id === "functions"}

@@ -1,6 +1,9 @@
 <script lang="ts">
     import { onMount } from "svelte"
-    import { activePopup, activeProject, language, projects, projectView, quickSearchActive, showRecentlyUsedProjects, shows, special, version } from "../../stores"
+    import { Main } from "../../../types/IPC/Main"
+    import { activeDrawerTab, activePopup, activeProject, drawer, language, projects, projectView, quickSearchActive, showRecentlyUsedProjects, shows, softwarePromotion, special, stutiMediaActiveVideoId, stutiMediaFeed, version } from "../../stores"
+    import { sendMain } from "../../IPC/main"
+    import { DEFAULT_DRAWER_HEIGHT } from "../../utils/common"
     import { history } from "../helpers/history"
     import Icon from "../helpers/Icon.svelte"
     import T from "../helpers/T.svelte"
@@ -8,6 +11,33 @@
     import MaterialButton from "../inputs/MaterialButton.svelte"
     import Center from "../system/Center.svelte"
     import { getVOTD } from "./votd"
+
+    const DEFAULT_SUBSCRIBE_URL = "https://www.youtube.com/@stutimedianepal?sub_confirmation=1"
+    const HAMROCMS_SPLASH_URL = "https://hamrocms.com/register?utm_source=aradhana_studio&utm_medium=splash_hub"
+
+    $: latestStutiSong = ($stutiMediaFeed?.videos || [])[0] || null
+    $: splashSubscribeUrl = $stutiMediaFeed?.channel?.subscribe_url || DEFAULT_SUBSCRIBE_URL
+
+    function openStutiFromSplash(videoId: string) {
+        if ($drawer.height <= 40) {
+            drawer.set({ height: $drawer.stored || DEFAULT_DRAWER_HEIGHT, stored: null })
+        }
+        stutiMediaActiveVideoId.set(videoId)
+        activeDrawerTab.set("stuti")
+    }
+
+    function openPromoOrHamroCms() {
+        const promo = $softwarePromotion
+        if (promo) {
+            sendMain(Main.OPEN_SOFTWARE_PROMOTION, {
+                id: promo.id,
+                url: promo.cta_url || "https://hamrocms.com",
+                eventUrl: promo.event_url
+            })
+            return
+        }
+        sendMain(Main.URL, HAMROCMS_SPLASH_URL)
+    }
 
     let logoSrc = "./logo-splash.png"
     let logoFailed = false
@@ -117,6 +147,44 @@
             </MaterialButton>
         </span>
 
+        <div class="studioSpotlightHub">
+            {#if latestStutiSong}
+                <div class="hubCard stutiHubCard">
+                    <button type="button" class="hubThumbBtn" on:click={() => openStutiFromSplash(latestStutiSong.video_id)} title={latestStutiSong.title}>
+                        <img src={latestStutiSong.thumbnail_url} alt={latestStutiSong.title} loading="lazy" />
+                        <span class="hubPlayPill">▶</span>
+                    </button>
+                    <div class="hubContent">
+                        <div class="hubTopLine">
+                            <span class="hubBadge stutiHubBadge">🎵 Stuti Media</span>
+                            <button type="button" class="hubSubBtn" on:click={() => sendMain(Main.URL, splashSubscribeUrl)}>Subscribe ↗</button>
+                        </div>
+                        <button type="button" class="hubTitleBtn" on:click={() => openStutiFromSplash(latestStutiSong.video_id)}>
+                            {latestStutiSong.title}
+                        </button>
+                        <div class="hubSub">
+                            {$language === "ne" ? "आराधना गीत लाइब्रेरी खोल्न क्लिक गर्नुहोस्" : "Open Stuti Media worship library"}
+                        </div>
+                    </div>
+                </div>
+            {/if}
+
+            <button type="button" class="hubCard cmsHubCard" on:click={openPromoOrHamroCms}>
+                <div class="hubContent">
+                    <div class="hubTopLine">
+                        <span class="hubBadge cmsHubBadge">☁️ HamroCMS.com</span>
+                        <span class="hubActionHint">{$softwarePromotion?.cta_label || ($language === "ne" ? "सुरु गर्नुहोस् ↗" : "Explore ↗")}</span>
+                    </div>
+                    <div class="hubTitle">
+                        {$softwarePromotion?.title || ($language === "ne" ? "चर्च सदस्य, भेटी र दशांश व्यवस्थापन" : "All-in-One Church Management")}
+                    </div>
+                    <div class="hubSub">
+                        {$softwarePromotion?.body || ($language === "ne" ? "नेपाली पात्रो, आर्थिक रिपोर्ट र रसिद — एकै ठाउँमा" : "Members, tithes, expenses & Nepali calendar")}
+                    </div>
+                </div>
+            </button>
+        </div>
+
         <div class="securityNotice">
             <span class="shieldBadge">🛡</span>
             <span>
@@ -135,6 +203,161 @@
 </Center>
 
 <style>
+    .studioSpotlightHub {
+        margin-top: 14px;
+        width: min(680px, 92%);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        text-align: left;
+    }
+
+    @media (max-width: 620px) {
+        .studioSpotlightHub {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-height: 580px) {
+        .studioSpotlightHub {
+            display: none;
+        }
+    }
+
+    .hubCard {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 11px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text);
+        font-family: inherit;
+        text-align: left;
+        min-width: 0;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .cmsHubCard {
+        cursor: pointer;
+    }
+
+    .hubCard:hover {
+        background: rgba(255, 255, 255, 0.07);
+        border-color: rgba(255, 255, 255, 0.22);
+    }
+
+    .hubThumbBtn {
+        position: relative;
+        flex-shrink: 0;
+        width: 82px;
+        aspect-ratio: 16 / 9;
+        padding: 0;
+        border: none;
+        border-radius: 6px;
+        overflow: hidden;
+        background: #000;
+        cursor: pointer;
+    }
+
+    .hubThumbBtn img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .hubPlayPill {
+        position: absolute;
+        inset: auto auto 4px 4px;
+        font-size: 0.6rem;
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: rgba(220, 38, 38, 0.9);
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .hubContent {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .hubTopLine {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+    }
+
+    .hubBadge {
+        font-size: 0.66rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 999px;
+    }
+
+    .stutiHubBadge {
+        background: rgba(239, 68, 68, 0.18);
+        color: #fca5a5;
+        border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+
+    .cmsHubBadge {
+        background: rgba(56, 189, 248, 0.18);
+        color: #7dd3fc;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+
+    .hubSubBtn {
+        border: 1px solid rgba(239, 68, 68, 0.45);
+        background: rgba(239, 68, 68, 0.16);
+        color: #fecaca;
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .hubActionHint {
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: #7dd3fc;
+    }
+
+    .hubTitleBtn,
+    .hubTitle {
+        border: none;
+        background: transparent;
+        padding: 0;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.78rem;
+        font-weight: 600;
+        line-height: 1.25;
+        text-align: left;
+        cursor: pointer;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .hubSub {
+        font-size: 0.69rem;
+        opacity: 0.72;
+        line-height: 1.25;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     .splashInner {
         margin: auto 0;
         display: flex;

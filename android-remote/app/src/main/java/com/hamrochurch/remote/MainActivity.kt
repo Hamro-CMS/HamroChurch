@@ -372,14 +372,5 @@ private fun HamroRemoteRoot(
             }
         }
     }
-
-    MobilePromotionOverlay(
-        promotions = state.promotions,
-        nepaliLanguage = ne,
-        hasBottomNavBar = true,
-        onDismissAll = viewModel::dismissPromotions,
-        onImpression = viewModel::recordPromotionImpression,
-        onClickPromotion = viewModel::recordPromotionClick
-    )
     }
 }

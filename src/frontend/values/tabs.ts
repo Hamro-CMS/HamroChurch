@@ -1,6 +1,7 @@
 export const drawerTabs = {
     shows: { name: "tabs.shows", icon: "shows", title: "tabs.shows_info" },
     hymns: { name: "tabs.hymns", icon: "lyrics", title: "tabs.hymns_info" },
+    stuti: { name: "tabs.stuti", icon: "youtube", title: "tabs.stuti_info" },
     scripture: { name: "tabs.scripture", icon: "scripture", title: "" },
 
     media: { name: "tabs.media", icon: "media", title: "" },
