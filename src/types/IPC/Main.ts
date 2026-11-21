@@ -121,6 +121,7 @@ export enum Main {
     MOBILE_CLIENT_DISCONNECT = "MOBILE_CLIENT_DISCONNECT",
     MOBILE_BROADCAST = "MOBILE_BROADCAST",
     MOBILE_GENERATE_TOKEN = "MOBILE_GENERATE_TOKEN",
+    MOBILE_PAIRING_PIN_GET = "MOBILE_PAIRING_PIN_GET",
     GET_MIDI_OUTPUTS = "GET_MIDI_OUTPUTS",
     GET_MIDI_INPUTS = "GET_MIDI_INPUTS",
     SEND_MIDI = "SEND_MIDI",
@@ -274,6 +275,7 @@ export interface MainSendPayloads {
     [Main.MOBILE_CLIENT_DISCONNECT]: { id: string }
     [Main.MOBILE_BROADCAST]: { event: string; data: any }
     [Main.MOBILE_GENERATE_TOKEN]?: undefined
+    [Main.MOBILE_PAIRING_PIN_GET]?: { token?: string } | undefined
     [Main.GET_MIDI_OUTPUTS]: string[]
     [Main.GET_MIDI_INPUTS]: string[]
     [Main.SEND_MIDI]: any
@@ -593,6 +595,7 @@ export interface MainReturnPayloads {
     }[]
     [Main.MOBILE_CLIENT_DISCONNECT]: boolean
     [Main.MOBILE_GENERATE_TOKEN]: string
+    [Main.MOBILE_PAIRING_PIN_GET]: string
 }
 
 ///////////

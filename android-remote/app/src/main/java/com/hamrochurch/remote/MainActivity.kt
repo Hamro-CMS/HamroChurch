@@ -1,5 +1,7 @@
 package com.hamrochurch.remote
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -7,6 +9,7 @@ import android.widget.EditText
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -73,8 +76,6 @@ import com.hamrochurch.remote.ui.theme.TextSecondary
 import com.hamrochurch.remote.ui.theme.WarnAmber
 import com.hamrochurch.remote.viewmodel.RemoteUiState
 import com.hamrochurch.remote.viewmodel.RemoteViewModel
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
 
 class MainActivity : ComponentActivity() {
     private val viewModel: RemoteViewModel by viewModels()
@@ -93,9 +94,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val qrLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-                if (!result.contents.isNullOrBlank()) {
-                    viewModel.handleQrScanResult(result.contents)
+            val qrLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.StartActivityForResult()
+            ) { result ->
+                if (result.resultCode == Activity.RESULT_OK) {
+                    val qrText = result.data?.getStringExtra(QrCaptureActivity.EXTRA_QR_CONTENT)
+                    if (!qrText.isNullOrBlank()) {
+                        viewModel.handleQrScanResult(qrText)
+                    }
                 }
             }
 
@@ -103,15 +109,10 @@ class MainActivity : ComponentActivity() {
                 HamroRemoteRoot(
                     state = state,
                     onLaunchQrScanner = {
-                        val options = ScanOptions().apply {
-                            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                            setPrompt(AppStrings.scanQr(state.nepaliLanguage))
-                            setBeepEnabled(true)
-                            setOrientationLocked(false)
-                            setBarcodeImageEnabled(false)
-                            setCaptureActivity(QrCaptureActivity::class.java)
+                        val scanIntent = Intent(this@MainActivity, QrCaptureActivity::class.java).apply {
+                            putExtra(QrCaptureActivity.EXTRA_NEPALI, state.nepaliLanguage)
                         }
-                        qrLauncher.launch(options)
+                        qrLauncher.launch(scanIntent)
                     },
                     viewModel = viewModel
                 )
@@ -177,6 +178,8 @@ private fun HamroRemoteRoot(
                 onConnectManual = viewModel::connectManual,
                 onConnectProfile = viewModel::connectWithProfile,
                 onDeleteProfile = viewModel::deleteSavedProfile,
+                onRefreshNearbyPcs = viewModel::refreshNearbyPcs,
+                onPairDiscoveredPc = viewModel::pairDiscoveredPcWithPin,
                 onShowError = viewModel::showToast,
                 modifier = Modifier.padding(innerPadding)
             )

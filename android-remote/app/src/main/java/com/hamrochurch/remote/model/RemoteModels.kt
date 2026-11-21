@@ -19,6 +19,15 @@ enum class MainTab {
     STAGE
 }
 
+data class DiscoveredChurchPc(
+    val name: String,
+    val ip: String,
+    val ips: List<String>,
+    val wsPort: Int = 5505,
+    val restPort: Int = 5506,
+    val pinEnabled: Boolean = true
+)
+
 data class ChurchPcProfile(
     val id: String,
     val name: String,

@@ -1,11 +1,14 @@
 import crypto from "crypto"
+import dgram from "dgram"
 import { ipcMain } from "electron"
 import express, { type NextFunction, type Request, type Response } from "express"
 import http from "http"
+import os from "os"
 import OSC from "osc-js"
 import { Server, type Socket } from "socket.io"
 import { uid } from "uid"
 import { ToMain } from "../../types/IPC/ToMain"
+import { getLocalIPs } from "../data/bonjour"
 import { requestToMain, sendToMain } from "../IPC/main"
 import { waitUntilValueIsDefined } from "./helpers"
 
@@ -30,7 +33,14 @@ app.disable("x-powered-by")
 
 const servers: { [key: string]: http.Server | OSC } = {}
 let ioServer: Server | null = null
+let discoveryUdpSocket: dgram.Socket | null = null
 const connectedClients = new Map<string, ConnectedMobileClient & { socket: Socket }>()
+const restClients = new Map<string, ConnectedMobileClient>()
+const REST_CLIENT_TTL_MS = 25000
+const PIN_WINDOW_MS = 60000
+const PIN_MAX_FAILURES = 5
+const pinFailuresByIp = new Map<string, number[]>()
+let globalPinFailures: number[] = []
 const DEFAULT_PORTS = { WebSocket: 5505, REST: 5506 }
 
 let currentConfig: { port?: number; allowLan: boolean; token: string } = {
@@ -42,6 +52,61 @@ let activeListenState: { wsPort: number; restPort: number; host: string } | null
 
 export function generateMobileRemoteToken(): string {
     return crypto.randomBytes(16).toString("hex")
+}
+
+export function deriveMobilePairingPin(rawToken: string): string {
+    const clean = typeof rawToken === "string" ? rawToken.trim() : ""
+    if (clean.length < MIN_LAN_TOKEN_LENGTH) return ""
+    const digest = crypto.createHmac("sha256", "aradhana-studio-mobile-pin-v1").update(clean, "utf8").digest()
+    const code = (digest.readUInt32BE(0) % 900000) + 100000
+    return String(code)
+}
+
+export function getMobilePairingPin(tokenOverride?: string): string {
+    const source = typeof tokenOverride === "string" && tokenOverride.trim().length >= MIN_LAN_TOKEN_LENGTH ? tokenOverride : currentConfig.token
+    return deriveMobilePairingPin(source)
+}
+
+function isPrivateLanIp(rawIp: string): boolean {
+    const ip = normalizeRemoteIp(rawIp)
+    if (ip === "::1" || ip === "localhost") return true
+    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip)
+    if (!m) return false
+    const octets = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])]
+    if (octets.some((n) => Number.isNaN(n) || n < 0 || n > 255)) return false
+    const [a, b] = octets
+    return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 100 && b >= 64 && b <= 127)
+}
+
+function pruneStaleRestClients(now = Date.now()): boolean {
+    let changed = false
+    restClients.forEach((entry, key) => {
+        if (now - entry.lastSeenAt > REST_CLIENT_TTL_MS) {
+            restClients.delete(key)
+            changed = true
+        }
+    })
+    return changed
+}
+
+function trackRestMobileClient(ip: string, rawDeviceName: unknown) {
+    const now = Date.now()
+    pruneStaleRestClients(now)
+    const deviceName = sanitizeClientLabel(rawDeviceName)
+    const key = `rest:${ip}:${deviceName}`
+    const existing = restClients.get(key)
+    if (existing) {
+        existing.lastSeenAt = now
+        return
+    }
+    restClients.set(key, {
+        id: key,
+        deviceName,
+        ip,
+        connectedAt: now,
+        lastSeenAt: now
+    })
+    notifyClientsUpdated()
 }
 
 function sanitizeClientLabel(raw: unknown): string {
@@ -56,13 +121,17 @@ function normalizeRemoteIp(raw: unknown): string {
 }
 
 export function getConnectedMobileClients(): ConnectedMobileClient[] {
-    return Array.from(connectedClients.values()).map(({ id, deviceName, ip, connectedAt, lastSeenAt }) => ({
+    pruneStaleRestClients()
+    const wsList = Array.from(connectedClients.values()).map(({ id, deviceName, ip, connectedAt, lastSeenAt }) => ({
         id,
         deviceName,
         ip,
         connectedAt,
         lastSeenAt
     }))
+    const wsPeers = new Set(wsList.map((c) => `${c.ip}|${c.deviceName}`))
+    const restOnly = Array.from(restClients.values()).filter((c) => !wsPeers.has(`${c.ip}|${c.deviceName}`))
+    return [...wsList, ...restOnly]
 }
 
 function notifyClientsUpdated() {
@@ -79,6 +148,13 @@ export function disconnectMobileClient(id: string): boolean {
             }
         })
         connectedClients.clear()
+        restClients.clear()
+        notifyClientsUpdated()
+        return true
+    }
+
+    if (restClients.has(id)) {
+        restClients.delete(id)
         notifyClientsUpdated()
         return true
     }
@@ -156,6 +232,9 @@ export function startWebSocketAndRest(config?: number | CompanionApiConfig) {
         if (previousToken && previousToken !== currentConfig.token) {
             disconnectMobileClient("all")
         }
+        if (bindHost === "0.0.0.0" && !discoveryUdpSocket) {
+            startMobileDiscoveryUdp(restPort, wsPort)
+        }
         return
     }
 
@@ -165,6 +244,9 @@ export function startWebSocketAndRest(config?: number | CompanionApiConfig) {
     startRestListener(restPort, bindHost)
     startWebSocket(wsPort, bindHost)
     startOSC(wsPort, bindHost)
+    if (bindHost === "0.0.0.0") {
+        startMobileDiscoveryUdp(restPort, wsPort)
+    }
 }
 
 // WEBSOCKET
@@ -296,13 +378,97 @@ function startRestListener(PORT: number, host: string) {
     if (restHandlersInitialized) return
     restHandlersInitialized = true
 
+    const jsonBodyParser = express.json({ limit: "1mb" })
+
     // Reject browser CSRF drive-by requests before body parsing
     app.use((req: Request, res: Response, next: NextFunction) => {
         if (req.headers.origin !== undefined) {
             res.status(403).json({ error: "Cross-origin browser requests are not permitted" })
             return
         }
+        next()
+    })
 
+    // Zero-token LAN discovery probe (returns non-sensitive host metadata only for private LAN peers)
+    app.get("/mobile-discover", (req: Request, res: Response) => {
+        const remoteIp = normalizeRemoteIp(req.socket.remoteAddress)
+        if (!isPrivateLanIp(remoteIp)) {
+            res.status(403).json({ error: "LAN only" })
+            return
+        }
+        if (!currentConfig.allowLan || currentConfig.token.length < MIN_LAN_TOKEN_LENGTH) {
+            res.status(404).json({ ok: false })
+            return
+        }
+        const wsPort = activeListenState?.wsPort || DEFAULT_PORTS.WebSocket
+        const restPort = activeListenState?.restPort || DEFAULT_PORTS.REST
+        res.json({
+            ok: true,
+            app: "aradhanastudio",
+            name: os.hostname() || "Aradhana Studio PC",
+            wsPort,
+            restPort,
+            pinEnabled: true
+        })
+    })
+
+    // Rate-limited 6-digit PIN pairing exchange (private LAN only, non-browser JSON POST only)
+    app.post("/mobile-pair-pin", jsonBodyParser, (req: Request, res: Response) => {
+        const remoteIp = normalizeRemoteIp(req.socket.remoteAddress)
+        if (!isPrivateLanIp(remoteIp)) {
+            res.status(403).json({ error: "LAN only" })
+            return
+        }
+        if (!req.is("application/json")) {
+            res.status(415).json({ error: "Content-Type must be application/json" })
+            return
+        }
+        if (!currentConfig.allowLan || currentConfig.token.length < MIN_LAN_TOKEN_LENGTH) {
+            res.status(403).json({ error: "Mobile Remote is disabled on PC" })
+            return
+        }
+
+        const now = Date.now()
+        globalPinFailures = globalPinFailures.filter((ts) => now - ts < PIN_WINDOW_MS)
+        const ipList = (pinFailuresByIp.get(remoteIp) || []).filter((ts) => now - ts < PIN_WINDOW_MS)
+        if (ipList.length >= PIN_MAX_FAILURES || globalPinFailures.length >= PIN_MAX_FAILURES * 2) {
+            pinFailuresByIp.set(remoteIp, ipList)
+            res.status(429).json({ error: "Too many PIN attempts. Wait 60 seconds or scan QR code." })
+            return
+        }
+
+        const providedPin = typeof req.body?.pin === "string" ? req.body.pin.replace(/\s+/g, "").trim() : ""
+        const expectedPin = deriveMobilePairingPin(currentConfig.token)
+        const isPinValid =
+            /^\d{6}$/.test(providedPin) &&
+            expectedPin.length === 6 &&
+            crypto.timingSafeEqual(Buffer.from(providedPin, "utf8"), Buffer.from(expectedPin, "utf8"))
+
+        if (!isPinValid) {
+            ipList.push(now)
+            pinFailuresByIp.set(remoteIp, ipList)
+            globalPinFailures.push(now)
+            res.status(401).json({ error: "Invalid 6-digit pairing code" })
+            return
+        }
+
+        pinFailuresByIp.delete(remoteIp)
+        const wsPort = activeListenState?.wsPort || DEFAULT_PORTS.WebSocket
+        const restPort = activeListenState?.restPort || DEFAULT_PORTS.REST
+        const lanIps = getLocalIPs().filter((addr) => addr && addr !== "localhost" && addr !== "127.0.0.1")
+
+        res.json({
+            ok: true,
+            app: "aradhanastudio-remote",
+            name: os.hostname() || "Aradhana Studio PC",
+            ips: lanIps,
+            ws: wsPort,
+            rest: restPort,
+            token: currentConfig.token
+        })
+    })
+
+    app.use((req: Request, res: Response, next: NextFunction) => {
         if (req.method === "POST" && !req.is("application/json")) {
             res.status(415).json({ error: "Content-Type must be application/json" })
             return
@@ -316,7 +482,7 @@ function startRestListener(PORT: number, host: string) {
         next()
     })
 
-    app.use(express.json({ limit: "1mb" }))
+    app.use(jsonBodyParser)
 
     // Handle malformed JSON request bodies cleanly
     app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
@@ -353,6 +519,10 @@ function startRestListener(PORT: number, host: string) {
             data = { action: req.query.action, ...parsedQueryData }
         }
 
+        if (typeof data?.action === "string" && (data.action.startsWith("get_mobile_") || data.action.startsWith("mobile_"))) {
+            trackRestMobileClient(normalizeRemoteIp(req.socket.remoteAddress), req.headers["x-device-name"])
+        }
+
         const returnData = await receivedData(data, (msg: string) => console.info(`REST: ${msg}`))
         if (!returnData) {
             res.status(204).send()
@@ -361,6 +531,49 @@ function startRestListener(PORT: number, host: string) {
 
         res.json(returnData)
     })
+}
+
+function startMobileDiscoveryUdp(udpPort: number, wsPort: number) {
+    stopMobileDiscoveryUdp()
+    try {
+        const sock = dgram.createSocket({ type: "udp4", reuseAddr: true })
+        sock.on("error", (err) => {
+            console.warn("Discovery UDP error:", err.message)
+            stopMobileDiscoveryUdp()
+        })
+        sock.on("message", (msg, rinfo) => {
+            if (!currentConfig.allowLan || currentConfig.token.length < MIN_LAN_TOKEN_LENGTH) return
+            if (!isPrivateLanIp(rinfo.address)) return
+            const text = msg.toString("utf8").trim()
+            if (!text.includes("aradhanastudio") && !text.includes("hamrochurch")) return
+
+            const lanIps = getLocalIPs().filter((addr) => addr && addr !== "localhost" && addr !== "127.0.0.1")
+            const reply = JSON.stringify({
+                ok: true,
+                app: "aradhanastudio",
+                name: os.hostname() || "Aradhana Studio PC",
+                ips: lanIps,
+                wsPort,
+                restPort: udpPort,
+                pinEnabled: true
+            })
+            sock.send(Buffer.from(reply, "utf8"), rinfo.port, rinfo.address)
+        })
+        sock.bind(udpPort, "0.0.0.0")
+        discoveryUdpSocket = sock
+    } catch (err) {
+        console.warn("Discovery UDP failed to bind:", err instanceof Error ? err.message : String(err))
+    }
+}
+
+function stopMobileDiscoveryUdp() {
+    if (!discoveryUdpSocket) return
+    try {
+        discoveryUdpSocket.close()
+    } catch {
+        // ignore
+    }
+    discoveryUdpSocket = null
 }
 
 // Open Sound Control
@@ -504,7 +717,9 @@ export function stopApiListener(specificId = "") {
     }
 
     if (!specificId || specificId === "WebSocket") {
+        stopMobileDiscoveryUdp()
         connectedClients.clear()
+        restClients.clear()
         notifyClientsUpdated()
 
         if (ioServer) {

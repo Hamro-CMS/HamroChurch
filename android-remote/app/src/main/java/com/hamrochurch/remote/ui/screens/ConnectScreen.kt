@@ -35,9 +35,11 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.WifiTethering
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -50,9 +52,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -73,6 +77,7 @@ import androidx.core.content.ContextCompat
 import com.hamrochurch.remote.i18n.AppStrings
 import com.hamrochurch.remote.model.ChurchPcProfile
 import com.hamrochurch.remote.model.ConnectionStatus
+import com.hamrochurch.remote.model.DiscoveredChurchPc
 import com.hamrochurch.remote.ui.theme.DangerRed
 import com.hamrochurch.remote.ui.theme.HamroCyan
 import com.hamrochurch.remote.ui.theme.HamroPink
@@ -90,6 +95,8 @@ fun ConnectScreen(
     onConnectManual: (name: String, ip: String, port: String, token: String) -> Unit,
     onConnectProfile: (ChurchPcProfile) -> Unit,
     onDeleteProfile: (String) -> Unit,
+    onRefreshNearbyPcs: () -> Unit = {},
+    onPairDiscoveredPc: (DiscoveredChurchPc, String) -> Unit = { _, _ -> },
     onShowError: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -97,12 +104,69 @@ fun ConnectScreen(
     val context = LocalContext.current
     val isConnecting = state.connectionStatus == ConnectionStatus.CONNECTING
 
-    var manualExpanded by rememberSaveable { mutableStateOf(state.savedProfiles.isEmpty()) }
+    var manualExpanded by rememberSaveable { mutableStateOf(false) }
     var pcName by rememberSaveable { mutableStateOf("") }
     var ipAddress by rememberSaveable { mutableStateOf("192.168.") }
     var port by rememberSaveable { mutableStateOf("5505") }
     var token by rememberSaveable { mutableStateOf("") }
     var showToken by rememberSaveable { mutableStateOf(false) }
+
+    var pinDialogTarget by remember { mutableStateOf<DiscoveredChurchPc?>(null) }
+    var pinInput by rememberSaveable { mutableStateOf("") }
+
+    if (pinDialogTarget != null) {
+        val targetPc = pinDialogTarget!!
+        AlertDialog(
+            onDismissRequest = {
+                pinDialogTarget = null
+                pinInput = ""
+            },
+            title = {
+                Text(AppStrings.enterPinDialogTitle(ne), fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = AppStrings.enterPinDialogHint(ne, "${targetPc.name} (${targetPc.ip})"),
+                        fontSize = 13.sp,
+                        color = TextSecondary
+                    )
+                    OutlinedTextField(
+                        value = pinInput,
+                        onValueChange = { pinInput = it.filter(Char::isDigit).take(6) },
+                        label = { Text("6-Digit PIN (e.g. 482915)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = pinInput.length == 6 && !isConnecting,
+                    colors = ButtonDefaults.buttonColors(containerColor = HamroPink),
+                    onClick = {
+                        val entered = pinInput
+                        pinDialogTarget = null
+                        pinInput = ""
+                        onPairDiscoveredPc(targetPc, entered)
+                    }
+                ) {
+                    Text(AppStrings.connectNow(ne), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        pinDialogTarget = null
+                        pinInput = ""
+                    }
+                ) {
+                    Text(AppStrings.cancelBtn(ne))
+                }
+            }
+        )
+    }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -221,6 +285,133 @@ fun ConnectScreen(
                     color = TextSecondary,
                     lineHeight = 17.sp
                 )
+            }
+        }
+
+        // Auto-Discovered Church PCs on Active Wi-Fi / Hotspot (Zero-Camera 1-Tap / 6-Digit PIN Pairing)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = SanctuaryCard),
+            border = BorderStroke(
+                1.dp,
+                if (state.discoveredPcs.isNotEmpty()) LiveGreen.copy(alpha = 0.5f) else SanctuaryBorder
+            ),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Icon(
+                            imageVector = Icons.Default.Computer,
+                            contentDescription = null,
+                            tint = if (state.discoveredPcs.isNotEmpty()) LiveGreen else HamroCyan,
+                            modifier = Modifier.size(19.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = AppStrings.nearbyPcsTitle(ne),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    TextButton(
+                        enabled = !state.isDiscoveringPcs && !isConnecting,
+                        onClick = onRefreshNearbyPcs
+                    ) {
+                        if (state.isDiscoveringPcs) {
+                            CircularProgressIndicator(
+                                color = HamroCyan,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(AppStrings.scanningNetwork(ne), fontSize = 12.sp, color = HamroCyan)
+                        } else {
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = HamroCyan, modifier = Modifier.size(15.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(AppStrings.refreshSearch(ne), fontSize = 12.sp, color = HamroCyan)
+                        }
+                    }
+                }
+
+                if (state.discoveredPcs.isEmpty() && !state.isDiscoveringPcs) {
+                    Text(
+                        text = if (ne) {
+                            "कम्प्युटरमा Aradhana Studio खोलेर Mobile आइकन क्लिक गर्नुहोस् र एउटै Wi-Fi मा जोड्नुहोस्।"
+                        } else {
+                            "Open Aradhana Studio on PC, click the Mobile icon, and join the same Wi-Fi."
+                        },
+                        fontSize = 12.sp,
+                        color = TextSecondary,
+                        lineHeight = 16.sp
+                    )
+                } else {
+                    state.discoveredPcs.forEach { pc ->
+                        val matchingSaved = state.savedProfiles.firstOrNull { saved ->
+                            saved.preferredIp == pc.ip || pc.ip in saved.ips
+                        }
+                        Surface(
+                            color = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
+                            border = BorderStroke(1.dp, LiveGreen.copy(alpha = 0.4f)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = !isConnecting) {
+                                    if (matchingSaved != null) {
+                                        onConnectProfile(matchingSaved.copy(preferredIp = pc.ip))
+                                    } else {
+                                        pinInput = ""
+                                        pinDialogTarget = pc
+                                    }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(9.dp)
+                                            .clip(CircleShape)
+                                            .background(LiveGreen)
+                                    )
+                                    Spacer(Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = pc.name,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            text = if (matchingSaved != null) {
+                                                "${pc.ip}:${pc.wsPort} • ${AppStrings.tapToReconnect(ne)}"
+                                            } else {
+                                                "${pc.ip}:${pc.wsPort} • ${AppStrings.pairWithPinBtn(ne)}"
+                                            },
+                                            fontSize = 12.sp,
+                                            color = HamroCyan
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 

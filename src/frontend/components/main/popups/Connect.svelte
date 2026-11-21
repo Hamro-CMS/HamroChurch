@@ -22,6 +22,7 @@
     let ip = "localhost"
     let allIps: string[] = []
     let showTokenPlain = false
+    let pairingPin = ""
 
     $: useHostname = $special.connectionHostname
 
@@ -34,6 +35,10 @@
         const freshIps = (await requestMain(Main.IP)) || ["localhost"]
         allIps = freshIps
         ip = freshIps[0] || ip
+
+        if (id === "mobile" && !(typeof $companion?.token === "string" && $companion.token.trim().length >= 16) && $companion?.userDisabled !== true) {
+            await enableOrDisableMobileRemote(true)
+        }
 
         const clients = await requestMain(Main.MOBILE_CLIENTS_GET)
         if (Array.isArray(clients)) mobileRemoteClients.set(clients)
@@ -70,12 +75,27 @@
 
     $: if (id === "mobile") {
         if (mobileEnabled) {
-            sendMain(Main.WEBSOCKET_START, { port, allowLan: true, token: ($companion?.token || "").trim() })
+            const cleanTok = ($companion?.token || "").trim()
+            sendMain(Main.WEBSOCKET_START, { port, allowLan: true, token: cleanTok })
+            void refreshPairingPin(cleanTok)
+        } else {
+            pairingPin = ""
         }
         generateMobileQR(mobileQrPayload)
     } else if (url) {
         generateQR(url)
     }
+
+    async function refreshPairingPin(token: string) {
+        if (!token || token.length < 16) {
+            pairingPin = ""
+            return
+        }
+        const pin = await requestMain(Main.MOBILE_PAIRING_PIN_GET, { token })
+        pairingPin = typeof pin === "string" ? pin : ""
+    }
+
+    $: formattedPin = pairingPin.length === 6 ? `${pairingPin.slice(0, 3)} ${pairingPin.slice(3)}` : pairingPin
 
     function mouseup(e: any) {
         if (e.target.closest("a")) activePopup.set(null)
@@ -90,10 +110,10 @@
             return
         }
 
-        const qr = qrcode(0, "L")
+        const qr = qrcode(0, "M")
         qr.addData(text)
         qr.make()
-        qrImg = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true })
+        qrImg = qr.createSvgTag({ cellSize: 8, margin: 32, scalable: true })
     }
 
     function generateMobileQR(payload: string) {
@@ -102,10 +122,10 @@
             return
         }
 
-        const qr = qrcode(0, "L")
+        const qr = qrcode(0, "M")
         qr.addData(payload)
         qr.make()
-        mobileQrImg = qr.createSvgTag({ cellSize: 6, margin: 4, scalable: true })
+        mobileQrImg = qr.createSvgTag({ cellSize: 6, margin: 24, scalable: true })
     }
 
     async function enableOrDisableMobileRemote(enable: boolean) {
@@ -117,6 +137,7 @@
         const next = {
             ...($companion || {}),
             enabled: enable,
+            userDisabled: !enable,
             allowLan: enable ? true : ($companion?.allowLan === true),
             token
         }
@@ -136,6 +157,7 @@
         const next = {
             ...($companion || {}),
             enabled: true,
+            userDisabled: false,
             allowLan: true,
             token
         }
@@ -266,7 +288,13 @@
                         <div class="qrWhiteFrame">
                             {@html mobileQrImg}
                         </div>
-                        <p class="qrCaption">Scan from <b>Aradhana Studio Remote</b></p>
+                        {#if formattedPin}
+                            <div class="pinBadge" title="6-Digit Quick Pairing PIN (for Auto-Discovered PC on Mobile)">
+                                <span class="pinLabel">6-Digit PIN:</span>
+                                <code class="pinValue">{formattedPin}</code>
+                            </div>
+                        {/if}
+                        <p class="qrCaption">Scan QR or enter PIN in <b>Aradhana Studio Remote</b></p>
                     {:else}
                         <div class="noNetworkBox">
                             <p style="margin: 0;font-weight: 700;color: #fbbf24;">No Wi-Fi / Hotspot Detected</p>
@@ -531,10 +559,10 @@
     }
 
     .qrWhiteFrame {
-        width: 192px;
-        height: 192px;
+        width: 196px;
+        height: 196px;
         background: #ffffff;
-        padding: 10px;
+        padding: 4px;
         border-radius: 12px;
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.42);
         display: flex;
@@ -548,11 +576,35 @@
     .qrWhiteFrame :global(img) {
         width: 100% !important;
         height: 100% !important;
-        max-width: 172px;
-        max-height: 172px;
+        max-width: 188px;
+        max-height: 188px;
         display: block;
         shape-rendering: crispEdges;
         image-rendering: pixelated;
+    }
+
+    .pinBadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--secondary) 16%, var(--primary-darkest) 84%);
+        border: 1px solid color-mix(in srgb, var(--secondary) 45%, var(--primary-lighter) 55%);
+    }
+
+    .pinLabel {
+        font-size: 0.74em;
+        opacity: 0.85;
+        font-weight: 600;
+    }
+
+    .pinValue {
+        font-family: Consolas, monospace;
+        font-size: 0.96em;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        color: #38bdf8;
     }
 
     .qrCaption {

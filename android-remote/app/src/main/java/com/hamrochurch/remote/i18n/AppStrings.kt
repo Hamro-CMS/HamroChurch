@@ -23,6 +23,15 @@ object AppStrings {
     fun hotspotTipTitle(ne: Boolean) = if (ne) "इन्टरनेट छैन? अफलाइन हटस्पट प्रयोग गर्नुहोस्!" else "No Internet? Use Offline Hotspot!"
     fun hotspotTipBody(ne: Boolean) = if (ne) "ल्यापटपको Windows Mobile Hotspot खोल्नुहोस् वा फोनको Wi-Fi Hotspot मा कम्प्युटर जोड्नुहोस्। राउटर वा इन्टरनेट बिना नै १००% चल्छ।" else "Turn on Windows Mobile Hotspot on your PC or connect the PC to your phone's Hotspot. Works 100% offline without internet."
     fun cameraPermissionDenied(ne: Boolean) = if (ne) "QR स्क्यान गर्न क्यामेरा अनुमति आवश्यक छ। कृपया म्यानुअल IP प्रयोग गर्नुहोस् वा अनुमति दिनुहोस्।" else "Camera permission is required to scan QR codes. Grant permission or use manual IP pairing."
+    fun nearbyPcsTitle(ne: Boolean) = if (ne) "Wi-Fi मा भेटिएका कम्प्युटरहरू" else "Church PCs Found on Wi-Fi"
+    fun scanningNetwork(ne: Boolean) = if (ne) "खोजिँदैछ..." else "Scanning..."
+    fun refreshSearch(ne: Boolean) = if (ne) "फेरि खोज्नुस्" else "Rescan"
+    fun pairWithPinBtn(ne: Boolean) = if (ne) "६-अंकको PIN ले जोड्नुस्" else "Pair with 6-Digit PIN"
+    fun enterPinDialogTitle(ne: Boolean) = if (ne) "६-अंकको Pairing PIN राख्नुहोस्" else "Enter 6-Digit Pairing PIN"
+    fun enterPinDialogHint(ne: Boolean, pcName: String) = if (ne) "$pcName को Connect विन्डोमा QR मुनि देखाइएको ६-अंकको PIN कोड राख्नुहोस्:" else "Enter the 6-digit PIN shown below the QR code on $pcName:"
+    fun cancelBtn(ne: Boolean) = if (ne) "रद्द गर्नुस्" else "Cancel"
+    fun scannerAlignHint(ne: Boolean) = if (ne) "कम्प्युटरको QR कोड बक्सभित्र देखाउनुहोस् (स्वतः तुरुन्त स्क्यान हुन्छ)" else "Point camera at the QR code on Aradhana Studio PC"
+    fun scanFromGallery(ne: Boolean) = if (ne) "फोटोबाट QR छान्नुस्" else "Scan from Photo"
 
     // Bottom Navigation Tabs
     fun tabLive(ne: Boolean) = if (ne) "लाइभ" else "Live"

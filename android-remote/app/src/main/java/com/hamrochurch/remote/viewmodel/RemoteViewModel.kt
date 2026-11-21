@@ -10,6 +10,7 @@ import com.hamrochurch.remote.model.BibleSearchResult
 import com.hamrochurch.remote.model.BibleVerse
 import com.hamrochurch.remote.model.ChurchPcProfile
 import com.hamrochurch.remote.model.ConnectionStatus
+import com.hamrochurch.remote.model.DiscoveredChurchPc
 import com.hamrochurch.remote.model.HymnCategoryCounts
 import com.hamrochurch.remote.model.HymnDetail
 import com.hamrochurch.remote.model.HymnSummary
@@ -51,6 +52,8 @@ data class RemoteUiState(
     val errorMessage: String? = null,
     val statusToast: String? = null,
     val savedProfiles: List<ChurchPcProfile> = emptyList(),
+    val discoveredPcs: List<DiscoveredChurchPc> = emptyList(),
+    val isDiscoveringPcs: Boolean = false,
     val activeTab: MainTab = MainTab.LIVE,
     val swipePadMode: Boolean = false,
     val fullScreenPrompter: Boolean = false,
@@ -123,6 +126,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     val uiState: StateFlow<RemoteUiState> = _uiState.asStateFlow()
 
     private val client = HamroRemoteClient(
+        context = application.applicationContext,
         onLivePush = { pushedLiveState ->
             lastLiveReceivedMs = System.currentTimeMillis()
             _uiState.update { it.copy(live = pushedLiveState) }
@@ -133,6 +137,8 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     )
+
+    private var discoveryJob: Job? = null
 
     private var hymnSearchJob: Job? = null
     private var bibleSearchJob: Job? = null
@@ -182,6 +188,9 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
                 refreshDirectPromotions()
             }
         }
+
+        // Auto-discover Aradhana Studio PCs on Wi-Fi / Hotspot immediately on launch
+        refreshNearbyPcs()
     }
 
     fun showToast(message: String) {
@@ -250,6 +259,52 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     // --- PAIRING & CONNECTION ---
+
+    fun refreshNearbyPcs() {
+        if (_uiState.value.isDiscoveringPcs) return
+        discoveryJob?.cancel()
+        discoveryJob = viewModelScope.launch {
+            _uiState.update { it.copy(isDiscoveringPcs = true) }
+            val found = runCatching { client.discoverChurchPcs() }.getOrDefault(emptyList())
+            _uiState.update {
+                it.copy(
+                    discoveredPcs = found,
+                    isDiscoveringPcs = false
+                )
+            }
+        }
+    }
+
+    fun pairDiscoveredPcWithPin(pc: DiscoveredChurchPc, pin: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(errorMessage = null, connectionStatus = ConnectionStatus.CONNECTING) }
+            val res = client.pairWithPin(pc, pin)
+            res.onSuccess { p ->
+                val existingId = _uiState.value.savedProfiles.firstOrNull {
+                    it.name.equals(p.name, ignoreCase = true) || it.ips.any { ip -> ip in p.ips }
+                }?.id ?: UUID.randomUUID().toString()
+
+                val profile = ChurchPcProfile(
+                    id = existingId,
+                    name = p.name,
+                    ips = p.ips,
+                    preferredIp = p.ips.first(),
+                    wsPort = p.wsPort,
+                    restPort = p.restPort,
+                    token = p.token,
+                    lastConnectedAt = System.currentTimeMillis()
+                )
+                connectWithProfile(profile)
+            }.onFailure { err ->
+                _uiState.update {
+                    it.copy(
+                        connectionStatus = ConnectionStatus.ERROR,
+                        errorMessage = err.message ?: "PIN pairing failed"
+                    )
+                }
+            }
+        }
+    }
 
     fun handleQrScanResult(rawQr: String?) {
         if (rawQr.isNullOrBlank()) return

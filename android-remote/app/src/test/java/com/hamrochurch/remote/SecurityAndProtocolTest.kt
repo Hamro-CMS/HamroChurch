@@ -113,6 +113,19 @@ class SecurityAndProtocolTest {
         assertEquals(listOf("192.168.0.20", "192.168.1.5"), compactPayload.ips)
         assertEquals(5505, compactPayload.wsPort)
         assertEquals(5506, compactPayload.restPort)
+
+        val pinExchangeJson = JSONObject().apply {
+            put("ok", true)
+            put("app", "aradhanastudio-remote")
+            put("name", "Jedon")
+            put("ips", JSONArray(listOf("192.168.0.20")))
+            put("ws", 5505)
+            put("rest", 5506)
+            put("token", "0123456789abcdef0123456789abcdef")
+        }.toString()
+        val parsedPinRes = QrPairingParser.parse(pinExchangeJson)
+        assertTrue(parsedPinRes is QrParseResult.Success)
+        assertEquals("Jedon", (parsedPinRes as QrParseResult.Success).payload.name)
     }
 
     @Test

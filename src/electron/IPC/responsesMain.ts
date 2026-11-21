@@ -25,7 +25,7 @@ import { libreConvert } from "../output/ppt/libreConverter"
 import { getPresentationApplications, presentationControl, startSlideshow } from "../output/ppt/presentation"
 import { closeServers, startServers, updateServerData } from "../servers"
 import { processAudioData, timecodeStart, timecodeStop, updateTimecodeValue } from "../timecode/timecode"
-import { apiReturnData, broadcastMobileData, disconnectMobileClient, emitOSC, generateMobileRemoteToken, getConnectedMobileClients, startWebSocketAndRest, stopApiListener } from "../utils/api"
+import { apiReturnData, broadcastMobileData, disconnectMobileClient, emitOSC, generateMobileRemoteToken, getConnectedMobileClients, getMobilePairingPin, startWebSocketAndRest, stopApiListener } from "../utils/api"
 import { closeMain } from "../utils/close"
 import { addToMediaFolder, bundleMediaFiles, createFolder, getDataFolderPath, getDataFolderRoot, getFileInfo, getMediaCodec, getMediaSyncFolderPath, getMediaTracks, getPaths, getSimularPaths, loadFile, loadShowsAsync, locateMediaFile, openInSystem, readExifData, readFile, readFolder, readFolderContent, selectFiles, selectFilesDialog, selectFolder, setMediaSyncFolderPath, writeFile } from "../utils/files"
 import { getMachineId } from "../utils/helpers"
@@ -150,6 +150,7 @@ export const mainResponses: MainResponses = {
     [Main.MOBILE_CLIENT_DISCONNECT]: (data) => disconnectMobileClient(data?.id || ""),
     [Main.MOBILE_BROADCAST]: (data) => broadcastMobileData(data),
     [Main.MOBILE_GENERATE_TOKEN]: () => generateMobileRemoteToken(),
+    [Main.MOBILE_PAIRING_PIN_GET]: (data) => getMobilePairingPin(data?.token),
     // MIDI
     [Main.GET_MIDI_OUTPUTS]: () => getMidiOutputs(),
     [Main.GET_MIDI_INPUTS]: () => getMidiInputs(),

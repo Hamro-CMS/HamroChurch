@@ -45,6 +45,17 @@
     WriteRegStr SHELL_CONTEXT "${UNINSTALL_REGISTRY_KEY}" "DisplayIcon" "$INSTDIR\resources\aradhanastudio-${VERSION}.ico"
   ${endIf}
 
+  ${if} ${FileExists} "$SYSDIR\netsh.exe"
+    nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="Aradhana Studio Mobile Remote (TCP)"`
+    Pop $0
+    nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="Aradhana Studio Mobile Remote (UDP)"`
+    Pop $0
+    nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall add rule name="Aradhana Studio Mobile Remote (TCP)" dir=in action=allow program="$appExe" protocol=TCP profile=any enable=yes`
+    Pop $0
+    nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall add rule name="Aradhana Studio Mobile Remote (UDP)" dir=in action=allow program="$appExe" protocol=UDP profile=any enable=yes`
+    Pop $0
+  ${endIf}
+
   System::Call 'Shell32::SHChangeNotify(i 0x8000000, i 0, i 0, i 0)'
   ${if} ${FileExists} "$SYSDIR\ie4uinit.exe"
     ExecWait '"$SYSDIR\ie4uinit.exe" -show'
