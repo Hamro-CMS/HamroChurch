@@ -1,5 +1,8 @@
 package com.hamrochurch.remote.ui.components
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -16,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -39,6 +43,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -198,18 +203,14 @@ fun MobilePromotionOverlay(
         0f
     }
 
+    val currentPromo by rememberUpdatedState(promo)
+
     fun triggerOpenUrl() {
-        val safeUrl = PromotionSanitizer.sanitizeHttpsUrl(promo.ctaUrl, null)
-        onClickPromotion(promo)
+        val activePromo = currentPromo
+        val safeUrl = PromotionSanitizer.sanitizeHttpsUrl(activePromo.ctaUrl, null)
+        onClickPromotion(activePromo)
         if (safeUrl != null) {
-            try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(safeUrl)).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(intent)
-            } catch (_: Exception) {
-                // Ignore if device has no browser installed
-            }
+            openPromotionDestination(context, safeUrl)
         }
     }
 
@@ -362,18 +363,19 @@ fun MobilePromotionOverlay(
                                         containerColor = HamroCyan,
                                         contentColor = Color(0xFF04111F)
                                     ),
-                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                                    modifier = Modifier.height(25.dp)
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 3.dp),
+                                    modifier = Modifier.defaultMinSize(minWidth = 1.dp, minHeight = 27.dp)
                                 ) {
                                     val rawLabel = promo.ctaLabel?.trim().orEmpty()
                                     val compactLabel = when {
                                         rawLabel.isEmpty() -> if (nepaliLanguage) "हेर्नुहोस्" else "Open"
-                                        rawLabel.length > 13 -> if (nepaliLanguage) "हेर्नुहोस्" else "Explore"
+                                        rawLabel.length > 14 -> if (nepaliLanguage) "भजन सुन्नुहोस्" else "Explore"
                                         else -> rawLabel
                                     }
                                     Text(
                                         text = compactLabel,
                                         fontSize = 10.5.sp,
+                                        lineHeight = 13.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         maxLines = 1
                                     )
@@ -391,5 +393,86 @@ fun MobilePromotionOverlay(
                 }
             }
         }
+    }
+}
+
+private val YOUTUBE_VIDEO_ID_REGEX = Regex("^[A-Za-z0-9_-]{11}$")
+
+private fun extractYouTubeVideoId(rawUrl: String): String? {
+    return try {
+        val uri = Uri.parse(rawUrl.trim())
+        val host = uri.host?.lowercase()?.removePrefix("www.") ?: return null
+        val candidate = when {
+            host == "youtu.be" -> uri.pathSegments.firstOrNull()
+            host == "youtube.com" || host == "m.youtube.com" || host == "music.youtube.com" -> {
+                val queryVid = uri.getQueryParameter("v")
+                if (!queryVid.isNullOrBlank()) {
+                    queryVid
+                } else {
+                    val segments = uri.pathSegments
+                    if (segments.size >= 2 && segments[0] in setOf("shorts", "live", "embed", "v")) {
+                        segments[1]
+                    } else {
+                        null
+                    }
+                }
+            }
+            else -> null
+        }?.trim()
+
+        if (candidate != null && YOUTUBE_VIDEO_ID_REGEX.matches(candidate)) candidate else null
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun openPromotionDestination(context: Context, safeUrl: String) {
+    val videoId = extractYouTubeVideoId(safeUrl)
+    if (videoId != null) {
+        // Launch YouTube's dedicated video player directly via vnd.youtube:<videoId>
+        // without FLAG_ACTIVITY_NEW_TASK from Activity context so YouTube never drops onto its Home feed.
+        try {
+            val ytVideoIntent = Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
+                putExtra("VIDEO_ID", videoId)
+                putExtra("force_fullscreen", false)
+                if (context !is Activity) {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            }
+            context.startActivity(ytVideoIntent)
+            return
+        } catch (_: ActivityNotFoundException) {
+            // Fall through to standard HTTPS video watch URL
+        } catch (_: Exception) {
+            // Fall through to standard HTTPS video watch URL
+        }
+
+        try {
+            val webWatchIntent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("https://www.youtube.com/watch?v=$videoId")
+            ).apply {
+                addCategory(Intent.CATEGORY_BROWSABLE)
+                if (context !is Activity) {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            }
+            context.startActivity(webWatchIntent)
+        } catch (_: Exception) {
+            // Ignore if device has no browser installed
+        }
+        return
+    }
+
+    try {
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(safeUrl)).apply {
+            addCategory(Intent.CATEGORY_BROWSABLE)
+            if (context !is Activity) {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
+        context.startActivity(browserIntent)
+    } catch (_: Exception) {
+        // Ignore if device has no browser installed
     }
 }

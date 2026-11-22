@@ -24,6 +24,9 @@ import com.hamrochurch.remote.model.RemoteParsers
 import com.hamrochurch.remote.model.SavedShowItem
 import com.hamrochurch.remote.nepali.NepaliPhoneticEngine
 import com.hamrochurch.remote.network.HamroRemoteClient
+import com.hamrochurch.remote.network.MobileAppUpdateState
+import com.hamrochurch.remote.network.MobileAppUpdater
+import com.hamrochurch.remote.network.MobileUpdatePhase
 import com.hamrochurch.remote.network.PromotionClient
 import com.hamrochurch.remote.security.LanSecurityValidator
 import com.hamrochurch.remote.security.QrPairingParser
@@ -102,12 +105,17 @@ data class RemoteUiState(
     val pointerY: Float = 0.5f,
 
     // In-App Popup Promotions (Direct HTTPS + Offline PC LAN Relay)
-    val promotions: List<MobilePromotion> = emptyList()
+    val promotions: List<MobilePromotion> = emptyList(),
+
+    // Mobile App Self-Updater
+    val appUpdate: MobileAppUpdateState = MobileAppUpdateState()
 )
 
 class RemoteViewModel(application: Application) : AndroidViewModel(application) {
     private val profileStore = ProfileStore(application)
     private val promotionClient = PromotionClient()
+    private val appUpdater = MobileAppUpdater(application)
+    private var updateCheckInFlight = false
 
     private val sessionDismissedPromos = mutableSetOf<String>()
     private val recordedPromoImpressions = mutableSetOf<String>()
@@ -189,8 +197,90 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
 
+        // Automatic mobile app self-update check & background APK download
+        viewModelScope.launch {
+            delay(1500L)
+            checkForAppUpdate()
+            while (isActive) {
+                delay(20 * 60_000L)
+                checkForAppUpdate(_uiState.value.pcVersion)
+            }
+        }
+
         // Auto-discover Aradhana Studio PCs on Wi-Fi / Hotspot immediately on launch
         refreshNearbyPcs()
+    }
+
+    fun checkForAppUpdate(pcHintVersion: String? = null) {
+        if (updateCheckInFlight) return
+        val currentUpdate = _uiState.value.appUpdate
+        if (currentUpdate.phase == MobileUpdatePhase.DOWNLOADING ||
+            currentUpdate.phase == MobileUpdatePhase.READY_TO_INSTALL
+        ) {
+            return
+        }
+
+        updateCheckInFlight = true
+        viewModelScope.launch {
+            try {
+                val release = appUpdater.checkLatestRelease(pcHintVersion)
+                if (release == null) {
+                    return@launch
+                }
+
+                _uiState.update {
+                    it.copy(
+                        appUpdate = it.appUpdate.copy(
+                            phase = MobileUpdatePhase.DOWNLOADING,
+                            latestVersion = release.version,
+                            progressPercent = 0
+                        )
+                    )
+                }
+
+                val apkFile = appUpdater.downloadUpdateApk(release) { pct ->
+                    _uiState.update {
+                        it.copy(
+                            appUpdate = it.appUpdate.copy(
+                                phase = MobileUpdatePhase.DOWNLOADING,
+                                latestVersion = release.version,
+                                progressPercent = pct
+                            )
+                        )
+                    }
+                }
+
+                if (apkFile != null && apkFile.exists()) {
+                    _uiState.update {
+                        it.copy(
+                            appUpdate = it.appUpdate.copy(
+                                phase = MobileUpdatePhase.READY_TO_INSTALL,
+                                latestVersion = release.version,
+                                progressPercent = 100,
+                                apkFilePath = apkFile.absolutePath
+                            )
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            appUpdate = it.appUpdate.copy(
+                                phase = MobileUpdatePhase.IDLE,
+                                progressPercent = 0
+                            )
+                        )
+                    }
+                }
+            } finally {
+                updateCheckInFlight = false
+            }
+        }
+    }
+
+    fun markUpdateAutoPrompted(version: String) {
+        _uiState.update {
+            it.copy(appUpdate = it.appUpdate.copy(autoPromptedVersion = version))
+        }
     }
 
     fun showToast(message: String) {
@@ -457,6 +547,10 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
 
             if (relayedPromosArr != null) {
                 ingestRelayedPromotions(relayedPromosArr)
+            }
+
+            if (version.isNotBlank()) {
+                checkForAppUpdate(version)
             }
 
             // Preload initial Hymn list & Bible books so tab switching is instant

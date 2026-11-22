@@ -62,8 +62,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hamrochurch.remote.i18n.AppStrings
 import com.hamrochurch.remote.model.ConnectionStatus
 import com.hamrochurch.remote.model.MainTab
+import com.hamrochurch.remote.network.MobileAppUpdater
+import com.hamrochurch.remote.network.MobileUpdatePhase
 import com.hamrochurch.remote.ui.QrCaptureActivity
 import com.hamrochurch.remote.ui.components.MobilePromotionOverlay
+import com.hamrochurch.remote.ui.components.MobileUpdateBanner
 import com.hamrochurch.remote.ui.screens.BibleScreen
 import com.hamrochurch.remote.ui.screens.ConnectScreen
 import com.hamrochurch.remote.ui.screens.HymnsScreen
@@ -114,6 +117,43 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val installPermissionLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.StartActivityForResult()
+            ) {
+                val apkPath = viewModel.uiState.value.appUpdate.apkFilePath
+                if (!apkPath.isNullOrBlank() && MobileAppUpdater.canInstallPackages(this@MainActivity)) {
+                    MobileAppUpdater.launchPackageInstaller(this@MainActivity, apkPath)
+                }
+            }
+
+            val triggerInstallUpdate: () -> Unit = {
+                val apkPath = state.appUpdate.apkFilePath
+                if (!apkPath.isNullOrBlank()) {
+                    if (MobileAppUpdater.canInstallPackages(this@MainActivity)) {
+                        MobileAppUpdater.launchPackageInstaller(this@MainActivity, apkPath)
+                    } else {
+                        runCatching {
+                            installPermissionLauncher.launch(
+                                MobileAppUpdater.buildUnknownSourcesSettingsIntent(this@MainActivity)
+                            )
+                        }
+                    }
+                }
+            }
+
+            LaunchedEffect(state.appUpdate.phase, state.appUpdate.apkFilePath) {
+                val update = state.appUpdate
+                if (update.phase == MobileUpdatePhase.READY_TO_INSTALL &&
+                    !update.apkFilePath.isNullOrBlank() &&
+                    update.autoPromptedVersion != update.latestVersion
+                ) {
+                    viewModel.markUpdateAutoPrompted(update.latestVersion)
+                    if (MobileAppUpdater.canInstallPackages(this@MainActivity)) {
+                        MobileAppUpdater.launchPackageInstaller(this@MainActivity, update.apkFilePath)
+                    }
+                }
+            }
+
             HamroChurchRemoteTheme {
                 HamroRemoteRoot(
                     state = state,
@@ -123,6 +163,7 @@ class MainActivity : ComponentActivity() {
                         }
                         qrLauncher.launch(scanIntent)
                     },
+                    onInstallAppUpdate = triggerInstallUpdate,
                     viewModel = viewModel
                 )
             }
@@ -160,6 +201,7 @@ class MainActivity : ComponentActivity() {
 private fun HamroRemoteRoot(
     state: RemoteUiState,
     onLaunchQrScanner: () -> Unit,
+    onInstallAppUpdate: () -> Unit,
     viewModel: RemoteViewModel
 ) {
     val ne = state.nepaliLanguage
@@ -169,6 +211,14 @@ private fun HamroRemoteRoot(
     if (!isActiveSession) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                MobileUpdateBanner(
+                    updateState = state.appUpdate,
+                    nepaliLanguage = ne,
+                    onInstallClick = onInstallAppUpdate,
+                    modifier = Modifier.statusBarsPadding()
+                )
+            },
             bottomBar = {
                 MobilePromotionOverlay(
                     promotions = state.promotions,
@@ -307,6 +357,11 @@ private fun HamroRemoteRoot(
                             }
                         }
                         HorizontalDivider(thickness = 0.7.dp, color = SanctuaryBorder.copy(alpha = 0.65f))
+                        MobileUpdateBanner(
+                            updateState = state.appUpdate,
+                            nepaliLanguage = ne,
+                            onInstallClick = onInstallAppUpdate
+                        )
                     }
                 }
             },
