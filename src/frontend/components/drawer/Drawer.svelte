@@ -192,6 +192,13 @@
     $: if ($activeShow?.type === undefined || $activeShow?.type === "show") previousShow.set(JSON.stringify($activeShow))
 
     $: tabs = keysToID(drawerTabs)
+    $: visibleTabs = tabs.filter(
+        (tab) =>
+            (tab.id !== "stuti" || activeTab === "stuti") &&
+            $drawerTabsData[tab.id]?.enabled !== false &&
+            getAccess(tab.id).global !== "none" &&
+            (!$focusMode || !hiddenInFocusMode.includes(tab.id))
+    )
 
     let searchActive = false
     $: if (searchActive) {
@@ -227,15 +234,13 @@
         <!-- role="button"
         tabindex="0" -->
         <span class="tabs">
-            {#each tabs as tab, i}
-                {#if $drawerTabsData[tab.id]?.enabled !== false && getAccess(tab.id).global !== "none" && (!$focusMode || !hiddenInFocusMode.includes(tab.id))}
-                    <MaterialButton id={tab.id} style="border-radius: 7px;margin: 3px 2px;border: 1px solid transparent;padding: 0.2em 0.82em;" class="drawerNavCapsule context #drawer_top" title="<b>{tab.name.split('.')[0]}.{tab.name.split('.')[1]}</b>{tab.title ? `\n${tab.title}` : ''} [Ctrl+{i + 1}]" isActive={activeTab === tab.id} on:click={() => openDrawerTab(tab)} on:dblclick={closeDrawer}>
-                        <Icon id={tab.icon} size={1.25} white={activeTab === tab.id} />
-                        {#if !$labelsDisabled && !$focusMode}
-                            <span><T id={tab.name} /></span>
-                        {/if}
-                    </MaterialButton>
-                {/if}
+            {#each visibleTabs as tab, i}
+                <MaterialButton id={tab.id} style="border-radius: 7px;margin: 3px 2px;border: 1px solid transparent;padding: 0.2em 0.82em;" class="drawerNavCapsule context #drawer_top" title="<b>{tab.name.split('.')[0]}.{tab.name.split('.')[1]}</b>{tab.title ? `\n${tab.title}` : ''} [Ctrl+{i + 1}]" isActive={activeTab === tab.id} on:click={() => openDrawerTab(tab)} on:dblclick={closeDrawer}>
+                    <Icon id={tab.icon} size={1.25} white={activeTab === tab.id} />
+                    {#if !$labelsDisabled && !$focusMode}
+                        <span><T id={tab.name} /></span>
+                    {/if}
+                </MaterialButton>
             {/each}
         </span>
 

@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { AppUpdateInfo } from "../../../../types/Main"
     import { activePopup, popupData, special } from "../../../stores"
-    import { downloadAndInstallUpdate, openReleasePage } from "../../../utils/checkForUpdates"
+    import { cleanReleaseNotes, downloadAndInstallUpdate, openReleasePage } from "../../../utils/checkForUpdates"
     import { newToast } from "../../../utils/common"
     import T from "../../helpers/T.svelte"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
@@ -78,8 +78,8 @@
 
 <div class="changelog">
     <h3 style="color: var(--text);text-decoration: underline solid var(--secondary);"><T id="about.changes" /></h3>
-    {#if $popupData.releaseNotes}
-        <pre class="changelog-content">{$popupData.releaseNotes}</pre>
+    {#if cleanReleaseNotes($popupData.releaseNotes)}
+        <pre class="changelog-content">{cleanReleaseNotes($popupData.releaseNotes)}</pre>
     {:else}
         <p><T id="about.new_update" /></p>
     {/if}

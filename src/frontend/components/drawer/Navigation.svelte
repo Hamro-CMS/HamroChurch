@@ -43,7 +43,7 @@
             </DropArea>
         {/if}
     </div>
-    <DockedStudioSpotlight hidden={id === "stuti" || id === "scripture"} />
+    <DockedStudioSpotlight hidden={id === "stuti"} />
 </div>
 
 <style>

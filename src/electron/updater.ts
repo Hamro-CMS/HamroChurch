@@ -11,11 +11,35 @@ import type { AppUpdateAsset, AppUpdateDownloadResult, AppUpdateInfo } from "../
 import { config } from "./data/store"
 
 const RELEASES_LATEST_URL = "https://api.github.com/repos/Hamro-CMS/HamroChurch/releases/latest"
-const RELEASES_PAGE_URL = "https://github.com/Hamro-CMS/HamroChurch/releases"
+const PUBLIC_DOWNLOAD_PAGE_URL = "https://hamrocms.com/download"
 const RELEASE_DOWNLOAD_BASE_URL = "https://github.com/Hamro-CMS/HamroChurch/releases/download"
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
 const ALLOWED_UPDATE_EXTENSIONS = new Set([".exe", ".dmg", ".zip", ".appimage", ".deb", ".rpm"])
 const SAFE_TAG_RE = /^[A-Za-z0-9._+-]+$/
+
+function sanitizePublicReleaseNotes(rawNotes: unknown): string {
+    if (typeof rawNotes !== "string" || !rawNotes.trim()) return ""
+    return rawNotes
+        .split(/\r?\n/)
+        .filter((line) => {
+            const lower = line.trim().toLowerCase()
+            if (!lower) return true
+            if (lower.includes("full changelog")) return false
+            if (lower.includes("github.com")) return false
+            if (/^##\s*what'?s changed/i.test(lower)) return false
+            return true
+        })
+        .map((line) =>
+            line
+                .replace(/\s+by\s+@[A-Za-z0-9_-]+\s+in\s+https?:\/\/[^\s)]+/gi, "")
+                .replace(/https?:\/\/(?:www\.)?github\.com[^\s)]*/gi, "")
+                .replace(/\*\*([^*]+)\*\*/g, "$1")
+                .trimEnd()
+        )
+        .join("\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim()
+}
 
 function isTrustedGitHubAssetUrl(rawUrl: unknown): boolean {
     if (typeof rawUrl !== "string" || !rawUrl.trim()) return false
@@ -39,19 +63,8 @@ function isTrustedGitHubAssetUrl(rawUrl: unknown): boolean {
     }
 }
 
-function sanitizeReleasePageUrl(rawUrl: unknown): string {
-    if (typeof rawUrl !== "string" || !rawUrl.trim()) return RELEASES_PAGE_URL
-
-    try {
-        const parsed = new URL(rawUrl.trim())
-        if (parsed.protocol === "https:" && parsed.hostname.toLowerCase() === "github.com" && parsed.pathname.toLowerCase().startsWith("/hamro-cms/hamrochurch")) {
-            return parsed.toString()
-        }
-    } catch {
-        // Fall through to official releases page
-    }
-
-    return RELEASES_PAGE_URL
+function sanitizeReleasePageUrl(_rawUrl: unknown): string {
+    return PUBLIC_DOWNLOAD_PAGE_URL
 }
 
 type GitHubRelease = {
@@ -172,7 +185,7 @@ function createBaseResult(currentVersion: string, checkedAt: number): AppUpdateI
         currentVersion,
         latestVersion: currentVersion,
         releaseNotes: "",
-        releaseUrl: RELEASES_PAGE_URL,
+        releaseUrl: PUBLIC_DOWNLOAD_PAGE_URL,
         checkedAt
     }
 }
@@ -205,7 +218,7 @@ export async function checkForUpdates(options: { manual?: boolean; includeBeta?:
             hasUpdate,
             currentVersion,
             latestVersion,
-            releaseNotes: String(release.body || ""),
+            releaseNotes: sanitizePublicReleaseNotes(release.body),
             releaseUrl: sanitizeReleasePageUrl(release.html_url),
             publishedAt: release.published_at,
             asset: hasUpdate ? selectAsset(release) : null,

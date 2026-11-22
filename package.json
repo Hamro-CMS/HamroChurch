@@ -1,6 +1,6 @@
 {
     "name": "aradhana-studio",
-    "version": "1.7.42",
+    "version": "1.7.43",
     "private": true,
     "main": "build/electron/index.js",
     "description": "Aradhana Studio (आराधना स्टुडियो) — Nepali & English church presentation software for worship services.",

@@ -2,7 +2,7 @@
     import { onMount } from "svelte"
     import type { AppUpdateInfo } from "../../../../types/Main"
     import { alertUpdates, language, special, version } from "../../../stores"
-    import { downloadAndInstallUpdate, getUpdateData, notifyManualUpdateResult, openReleasePage } from "../../../utils/checkForUpdates"
+    import { cleanReleaseNotes, downloadAndInstallUpdate, getUpdateData, notifyManualUpdateResult, openReleasePage } from "../../../utils/checkForUpdates"
     import Loader from "../Loader.svelte"
     import T from "../../helpers/T.svelte"
     import Link from "../../inputs/Link.svelte"
@@ -18,7 +18,7 @@
         currentVersion: "",
         latestVersion: "",
         releaseNotes: "",
-        releaseUrl: "https://github.com/Hamro-CMS/HamroChurch/releases"
+        releaseUrl: "https://hamrocms.com/download"
     }
     let errorMessage = ""
 
@@ -70,6 +70,7 @@
     $: currentVersion = updateInfo.currentVersion || $version
     $: latestVersion = updateInfo.latestVersion || currentVersion
     $: hasUpdate = updateInfo.hasUpdate
+    $: sanitizedNotes = cleanReleaseNotes(updateInfo.releaseNotes)
 </script>
 
 <div class="settings">
@@ -141,12 +142,10 @@
             <p class="small">{errorMessage}</p>
         {:else if hasUpdate && !updateInfo.asset}
             <p><T id="updates.asset_missing" /></p>
-        {:else if updateInfo.releaseNotes}
-            <pre class="changelog-content">{updateInfo.releaseNotes}</pre>
+        {:else if hasUpdate && sanitizedNotes}
+            <pre class="changelog-content">{sanitizedNotes}</pre>
         {:else if hasUpdate}
             <p><T id="about.new_update" /></p>
-        {:else}
-            <p><T id="updates.latest" /></p>
         {/if}
 
         {#if $special.autoUpdates !== false}

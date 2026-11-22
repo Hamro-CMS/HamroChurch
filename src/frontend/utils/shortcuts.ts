@@ -169,7 +169,7 @@ export function keydown(e: KeyboardEvent) {
             return
         }
 
-        const drawerMenus = Object.keys(drawerTabs) as DrawerTabIds[]
+        const drawerMenus = (Object.keys(drawerTabs) as DrawerTabIds[]).filter((id) => id !== "stuti")
         if (document.activeElement === document.body && Object.keys(drawerMenus).includes((Number(e.key) - 1).toString())) {
             activeDrawerTab.set(drawerMenus[Number(e.key) - 1])
             // open drawer

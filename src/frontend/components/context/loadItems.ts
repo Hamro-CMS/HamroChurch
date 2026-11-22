@@ -18,7 +18,9 @@ import type { ContextMenuItem } from "./contextMenus"
 const loadActions = {
     enabled_drawer_tabs: (items: ContextMenuItem[]) => {
         const tabsToRemove = 2
-        const tabs = keysToID(clone(drawerTabs)).slice(tabsToRemove)
+        const tabs = keysToID(clone(drawerTabs))
+            .slice(tabsToRemove)
+            .filter((a) => a.id !== "stuti")
         items = tabs.map((a) => {
             const enabled = get(drawerTabsData)[a.id]?.enabled !== false
             return { id: a.id, label: a.name, icon: a.icon, iconColor: "var(--secondary)", enabled }

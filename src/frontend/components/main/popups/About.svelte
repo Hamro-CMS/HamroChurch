@@ -74,8 +74,6 @@
             {/each}
         </div>
     </div>
-
-    <div style="text-align: center;font-size: 0.7em;opacity: 0.5;margin-top: 12px;"><T id="about.made" /></div>
 </div>
 
 <style>

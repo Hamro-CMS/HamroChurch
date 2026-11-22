@@ -5,7 +5,30 @@ import { requestMain, sendMain } from "../IPC/main"
 import { activePopup, alertUpdates, isDev, popupData, special, version } from "./../stores"
 import { newToast } from "./common"
 
-const RELEASES_PAGE_URL = "https://github.com/Hamro-CMS/HamroChurch/releases"
+const RELEASES_PAGE_URL = "https://hamrocms.com/download"
+
+export function cleanReleaseNotes(rawNotes: unknown): string {
+    if (typeof rawNotes !== "string" || !rawNotes.trim()) return ""
+    return rawNotes
+        .split(/\r?\n/)
+        .filter((line) => {
+            const lower = line.trim().toLowerCase()
+            if (!lower) return true
+            if (lower.includes("full changelog") || lower.includes("github.com")) return false
+            if (/^##\s*what'?s changed/i.test(lower)) return false
+            return true
+        })
+        .map((line) =>
+            line
+                .replace(/\s+by\s+@[A-Za-z0-9_-]+\s+in\s+https?:\/\/[^\s)]+/gi, "")
+                .replace(/https?:\/\/(?:www\.)?github\.com[^\s)]*/gi, "")
+                .replace(/\*\*([^*]+)\*\*/g, "$1")
+                .trimEnd()
+        )
+        .join("\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim()
+}
 
 function includeBetaUpdates() {
     const currentVersion = get(version)
