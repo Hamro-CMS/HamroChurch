@@ -174,7 +174,6 @@ private fun HamroRemoteRoot(
                     promotions = state.promotions,
                     nepaliLanguage = ne,
                     hasBottomNavBar = false,
-                    onDismissAll = viewModel::dismissPromotions,
                     onImpression = viewModel::recordPromotionImpression,
                     onClickPromotion = viewModel::recordPromotionClick
                 )
@@ -322,7 +321,6 @@ private fun HamroRemoteRoot(
                             promotions = state.promotions,
                             nepaliLanguage = ne,
                             hasBottomNavBar = true,
-                            onDismissAll = viewModel::dismissPromotions,
                             onImpression = viewModel::recordPromotionImpression,
                             onClickPromotion = viewModel::recordPromotionClick
                         )

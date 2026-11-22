@@ -59,6 +59,7 @@ import { newToast, setStatus, triggerFunction } from "../../utils/common"
 import { translateText } from "../../utils/language"
 import { confirmCustom } from "../../utils/popup"
 import { removeSlide } from "../context/menuClick"
+import { isProtectedSystemBible } from "../drawer/bible/scripture"
 import { deleteTimer } from "../drawer/timers/timers"
 import { updateSortedStageItems } from "../edit/scripts/itemHelpers"
 import { setCaret } from "../edit/scripts/textStyle"
@@ -350,7 +351,9 @@ const selectActions = {
         selected.set({ id: "category_templates", data: newSelection })
     },
     category_scripture: () => {
-        const newSelection: any[] = Object.values(get(scriptures)).map(({ id }) => id)
+        const newSelection: any[] = Object.entries(get(scriptures))
+            .filter(([sId, entry]) => !isProtectedSystemBible(sId, entry))
+            .map(([sId, entry]) => entry.id || sId)
         selected.set({ id: "category_scripture", data: newSelection })
     },
     scripture: () => triggerFunction("scripture_selectAll"),
@@ -1000,7 +1003,7 @@ const deleteActions = {
                     if (value.id === id || sId === id) key = sId
                 })
 
-                if (key) delete a[key]
+                if (key && !isProtectedSystemBible(key, a[key])) delete a[key]
             })
             return a
         })

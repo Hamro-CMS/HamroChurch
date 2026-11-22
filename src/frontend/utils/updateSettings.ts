@@ -422,6 +422,8 @@ const updateList: { [key in SaveListSettings | SaveListSyncedSettings]: any } = 
         companion.set({ ...v, enabled: shouldAutoEnable })
     },
     special: (v: any) => {
+        if (!v || typeof v !== "object") v = {}
+        if (v.autoUpdates === undefined) v.autoUpdates = true
         if (v.capitalize_words === undefined) v.capitalize_words = "Jesus, Lord" // God
         // don't backup when just initialized (or reset)
         if (!v.autoBackupPrevious) v.autoBackupPrevious = Date.now()

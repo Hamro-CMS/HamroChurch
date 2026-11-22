@@ -30,6 +30,9 @@
 
             return a
         })
+        if (key === "autoUpdates" && value !== false && updateInfo.hasUpdate && updateInfo.asset && !installing) {
+            void downloadLatest()
+        }
     }
 
     async function checkUpdates(showToast = false) {
@@ -46,6 +49,10 @@
         }
 
         loading = false
+
+        if (updateInfo.hasUpdate && updateInfo.asset && $special.autoUpdates !== false && !installing) {
+            void downloadLatest()
+        }
     }
 
     async function downloadLatest() {
@@ -117,7 +124,11 @@
     <div class="actions">
         {#if updateInfo.asset}
             <MaterialButton variant="contained" icon="download" disabled={installing} on:click={downloadLatest}>
-                <T id="updates.download_install" />
+                {#if installing}
+                    {$language === "ne" ? "स्वचालित रूपमा डाउनलोड र इन्स्टल हुँदैछ..." : "Downloading & installing update..."}
+                {:else}
+                    <T id="updates.download_install" />
+                {/if}
             </MaterialButton>
         {:else}
             <MaterialButton variant="contained" icon="open_in_new" on:click={openRelease}>

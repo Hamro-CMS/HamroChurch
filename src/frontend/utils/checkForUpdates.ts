@@ -2,10 +2,24 @@ import { get } from "svelte/store"
 import { Main } from "../../types/IPC/Main"
 import type { AppUpdateDownloadResult, AppUpdateInfo } from "../../types/Main"
 import { requestMain, sendMain } from "../IPC/main"
-import { activePopup, alertUpdates, isDev, popupData, special, version } from "./../stores"
+import { activePopup, alertUpdates, isDev, language, outputs, popupData, special, version } from "./../stores"
 import { newToast } from "./common"
 
 const RELEASES_PAGE_URL = "https://hamrocms.com/download"
+const BACKGROUND_CHECK_INTERVAL_MS = 20 * 60 * 1000
+
+let autoInstallInFlight = false
+let backgroundTimerStarted = false
+let pendingOutputUnsubscribe: (() => void) | null = null
+
+export function isAutoUpdateActive(): boolean {
+    return autoInstallInFlight
+}
+
+function isLiveProjectionActive(): boolean {
+    const allOutputs = get(outputs) || {}
+    return Object.values(allOutputs).some((out: any) => !out?.stageOutput && out?.enabled !== false && Boolean(out?.out?.slide || out?.out?.background || out?.out?.overlays?.length))
+}
 
 export function cleanReleaseNotes(rawNotes: unknown): string {
     if (typeof rawNotes !== "string" || !rawNotes.trim()) return ""
@@ -55,16 +69,52 @@ export async function getUpdateData(manual = false): Promise<AppUpdateInfo> {
 }
 
 export async function downloadAndInstallUpdate(): Promise<AppUpdateDownloadResult> {
-    const result = await requestMain(Main.DOWNLOAD_UPDATE, { includeBeta: includeBetaUpdates() }, undefined, 10 * 60 * 1000)
-    return result || { success: false, launched: false, error: "Timed out while downloading the update." }
+    if (autoInstallInFlight) {
+        return { success: true, launched: true }
+    }
+    autoInstallInFlight = true
+    try {
+        const result = await requestMain(Main.DOWNLOAD_UPDATE, { includeBeta: includeBetaUpdates() }, undefined, 10 * 60 * 1000)
+        return result || { success: false, launched: false, error: "Timed out while downloading the update." }
+    } finally {
+        autoInstallInFlight = false
+    }
 }
 
 export function openReleasePage(url?: string) {
     sendMain(Main.URL, url || RELEASES_PAGE_URL)
 }
 
-export function checkForUpdates(_currentVersion: string) {
-    if (get(isDev) || get(alertUpdates) === false || get(special).autoUpdates === false) return
+async function performSilentAutoInstall(updateData: AppUpdateInfo) {
+    if (autoInstallInFlight || !updateData.hasUpdate || !updateData.asset) return
+
+    const isNe = get(language) === "ne"
+    newToast(
+        isNe
+            ? `नयाँ संस्करण v${updateData.latestVersion} स्वचालित रूपमा डाउनलोड र इन्स्टल हुँदैछ...`
+            : `Downloading and installing update v${updateData.latestVersion} automatically...`
+    )
+
+    const result = await downloadAndInstallUpdate()
+    if (!result.success && get(alertUpdates) !== false && get(activePopup) === null) {
+        popupData.set(updateData)
+        activePopup.set("new_update")
+    }
+}
+
+export function checkForUpdates(_currentVersion?: string) {
+    if (get(isDev)) return
+
+    const autoEnabled = get(special).autoUpdates !== false
+    const alertEnabled = get(alertUpdates) !== false
+    if (!autoEnabled && !alertEnabled) return
+
+    if (!backgroundTimerStarted) {
+        backgroundTimerStarted = true
+        setInterval(() => {
+            checkForUpdates(get(version))
+        }, BACKGROUND_CHECK_INTERVAL_MS)
+    }
 
     getUpdateData(false)
         .then((updateData) => {
@@ -73,10 +123,32 @@ export function checkForUpdates(_currentVersion: string) {
                 return
             }
 
-            if (get(activePopup) !== null || !updateData.hasUpdate) return
+            if (!updateData.hasUpdate) return
 
-            popupData.set(updateData)
-            activePopup.set("new_update")
+            if (get(special).autoUpdates !== false && updateData.asset) {
+                if (!isLiveProjectionActive()) {
+                    void performSilentAutoInstall(updateData)
+                } else if (!pendingOutputUnsubscribe) {
+                    // Defer auto-restart until live projection screen is cleared so worship is never interrupted
+                    pendingOutputUnsubscribe = outputs.subscribe(() => {
+                        if (!isLiveProjectionActive()) {
+                            if (pendingOutputUnsubscribe) {
+                                pendingOutputUnsubscribe()
+                                pendingOutputUnsubscribe = null
+                            }
+                            if (get(special).autoUpdates !== false) {
+                                void performSilentAutoInstall(updateData)
+                            }
+                        }
+                    })
+                }
+                return
+            }
+
+            if (get(alertUpdates) !== false && get(activePopup) === null) {
+                popupData.set(updateData)
+                activePopup.set("new_update")
+            }
         })
         .catch((error) => {
             console.warn(error)

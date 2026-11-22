@@ -5,6 +5,7 @@
     import Icon from "../../helpers/Icon.svelte"
     import T from "../../helpers/T.svelte"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
+    import { isProtectedSystemBible } from "../bible/scripture"
     import NavigationSections from "./NavigationSections.svelte"
 
     const profile = getAccess("scripture")
@@ -39,7 +40,8 @@
         return ordered.map((a: any) => {
             const icon = a.api ? "scripture_alt" : a.collection ? "collection" : "scripture"
             const count = a.collection?.versions?.length || 0
-            return { id: a.id, label: a.customName || a.name, icon, count, onDoubleClick: () => startScripture(), boxedIcon: true }
+            const isSystemReadOnly = readOnly || isProtectedSystemBible(a.id, a)
+            return { id: a.id, label: a.customName || a.name, icon, count, readOnly: isSystemReadOnly, onDoubleClick: () => startScripture(), boxedIcon: true }
         })
     }
 
@@ -54,6 +56,7 @@
     function updateName(e: any) {
         const { id, value } = e.detail
         scriptures.update((a) => {
+            if (!a[id] || isProtectedSystemBible(id, a[id])) return a
             a[id].customName = value
             return a
         })

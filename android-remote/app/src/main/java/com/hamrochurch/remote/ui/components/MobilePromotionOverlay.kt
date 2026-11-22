@@ -22,11 +22,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -79,7 +77,6 @@ fun MobilePromotionOverlay(
     promotions: List<MobilePromotion>,
     nepaliLanguage: Boolean,
     hasBottomNavBar: Boolean,
-    onDismissAll: (List<MobilePromotion>) -> Unit,
     onImpression: (MobilePromotion) -> Unit,
     onClickPromotion: (MobilePromotion) -> Unit
 ) {
@@ -326,23 +323,6 @@ fun MobilePromotionOverlay(
                                             modifier = Modifier.clickable {
                                                 scope.launch { animateSlideTo(activeIndex + 1) }
                                             }
-                                        )
-                                    }
-                                }
-
-                                Surface(
-                                    onClick = { onDismissAll(promotions) },
-                                    shape = CircleShape,
-                                    color = SanctuaryCard.copy(alpha = 0.9f),
-                                    border = BorderStroke(0.8.dp, Color.White.copy(alpha = 0.16f)),
-                                    modifier = Modifier.size(21.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = if (nepaliLanguage) "बन्द गर्नुहोस्" else "Dismiss ad",
-                                            tint = TextSecondary,
-                                            modifier = Modifier.size(12.dp)
                                         )
                                     }
                                 }

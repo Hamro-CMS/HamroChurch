@@ -104,7 +104,7 @@
         <div style="max-width: 85%;{boxedIcon ? 'gap: 9px;' : ''}" data-title={translateText(label)}>
             <Icon id={icon} size={isSubmenu ? 0.85 : 1} color={isSubmenu ? category.color : boxedIcon ? customIconsColors[icon] || "" : ""} white custom={customIcon} boxed={isSubmenu || boxedIcon} />
 
-            {#if noEdit || isSubmenu}
+            {#if noEdit || isSubmenu || readOnly}
                 <p style="margin: {isSubmenu ? 3 : 5}px;">
                     {#if label}
                         {translateText(label)}

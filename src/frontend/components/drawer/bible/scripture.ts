@@ -28,6 +28,17 @@ import { checkName } from "../../helpers/show"
 const SCRIPTURE_API_URL = "https://api.churchapps.org/content/bibles"
 export const ENGLISH_KJV_API_ID = "de4e12af7f28f599-02"
 
+export function isProtectedSystemBible(keyOrId: string, entry?: any): boolean {
+    const allScriptures = get(scriptures) || {}
+    const resolved = entry || allScriptures[keyOrId] || Object.values(allScriptures).find((s: any) => s?.id === keyOrId)
+    if (resolved?.collection) return false
+    if (keyOrId === "kjv" || keyOrId === ENGLISH_KJV_API_ID) return true
+    if (!resolved) return false
+    if (resolved.id === ENGLISH_KJV_API_ID) return true
+    const rawName = String(resolved.name || resolved.customName || "").replace(/\.fsb$/i, "").trim()
+    return /nepali|नेपाली|\b(english|kjv|king james|niv|esv|nkjv)\b/i.test(rawName)
+}
+
 export function sanitizeAllowedScriptures(raw: Record<string, any> | null | undefined): Record<string, any> {
     const input = raw && typeof raw === "object" ? raw : {}
     const kept: Record<string, any> = {}

@@ -1114,15 +1114,13 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun recomputeVisiblePromotions() {
-        val persistedDismissed = profileStore.getDismissedPromotions()
-        val today = PromotionSanitizer.todayLocalStamp()
         val mergedByKey = LinkedHashMap<String, MobilePromotion>()
 
         // Direct HTTPS promotions take precedence; relayed PC promotions fill in when phone is offline
         for (p in latestDirectPromos) {
             mergedByKey[p.campaignKey] = p
         }
-        for (relayed in latestRelayedPromos) {
+        for (relayed in latestRelayedPromotionsList()) {
             val existing = mergedByKey[relayed.campaignKey]
             if (existing == null) {
                 mergedByKey[relayed.campaignKey] = relayed
@@ -1134,19 +1132,12 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
 
-        val visible = mergedByKey.values
-            .filterNot { promo ->
-                PromotionSanitizer.isDismissed(
-                    promo = promo,
-                    sessionDismissedKeys = sessionDismissedPromos,
-                    persistedMap = persistedDismissed,
-                    todayStamp = today
-                )
-            }
-            .sortedBy { it.sortOrder }
+        val visible = mergedByKey.values.sortedBy { it.sortOrder }
 
         _uiState.update { it.copy(promotions = visible) }
     }
+
+    private fun latestRelayedPromotionsList(): List<MobilePromotion> = latestRelayedPromos
 
     fun dismissPromotions(items: List<MobilePromotion>) {
         if (items.isEmpty()) return

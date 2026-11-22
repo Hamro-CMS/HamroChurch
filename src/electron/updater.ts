@@ -13,7 +13,7 @@ import { config } from "./data/store"
 const RELEASES_LATEST_URL = "https://api.github.com/repos/Hamro-CMS/HamroChurch/releases/latest"
 const PUBLIC_DOWNLOAD_PAGE_URL = "https://hamrocms.com/download"
 const RELEASE_DOWNLOAD_BASE_URL = "https://github.com/Hamro-CMS/HamroChurch/releases/download"
-const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
+const CHECK_INTERVAL_MS = 5 * 60 * 1000
 const ALLOWED_UPDATE_EXTENSIONS = new Set([".exe", ".dmg", ".zip", ".appimage", ".deb", ".rpm"])
 const SAFE_TAG_RE = /^[A-Za-z0-9._+-]+$/
 
@@ -482,17 +482,52 @@ async function launchDetachedExecutable(command: string, args: string[] = []) {
     })
 }
 
+async function launchWindowsSilentInstaller(filePath: string): Promise<boolean> {
+    return await new Promise<boolean>((resolve) => {
+        const child = spawn(
+            "powershell.exe",
+            [
+                "-NoProfile",
+                "-NonInteractive",
+                "-WindowStyle",
+                "Hidden",
+                "-Command",
+                "Start-Process -FilePath $env:ARADHANA_UPDATE_EXE -ArgumentList '--updated','--force-run','/S'"
+            ],
+            {
+                stdio: "ignore",
+                windowsHide: true,
+                env: { ...process.env, ARADHANA_UPDATE_EXE: filePath }
+            }
+        )
+
+        let settled = false
+        const finish = (ok: boolean) => {
+            if (settled) return
+            settled = true
+            resolve(ok)
+        }
+
+        child.once("error", () => finish(false))
+        child.once("exit", (code) => finish(code === 0))
+        setTimeout(() => finish(true), 8000)
+    })
+}
+
 async function launchInstaller(filePath: string) {
     const extension = path.extname(filePath).toLowerCase()
 
     if (process.platform === "win32") {
-        // Prefer shell launch so elevation/UAC prompts are handled by Windows.
-        const openResult = await shell.openPath(filePath)
-        if (openResult) {
-            await launchDetachedExecutable(filePath)
+        // Launch NSIS silently (/S) with --updated --force-run so it installs automatically and relaunches Aradhana Studio.
+        const launchedSilently = await launchWindowsSilentInstaller(filePath)
+        if (!launchedSilently) {
+            const openResult = await shell.openPath(filePath)
+            if (openResult) {
+                await launchDetachedExecutable(filePath)
+            }
         }
 
-        setTimeout(() => app.quit(), 1000)
+        setTimeout(() => app.quit(), 800)
         return
     }
 
@@ -523,21 +558,33 @@ async function launchInstaller(filePath: string) {
     setTimeout(() => app.quit(), 1000)
 }
 
+let activeDownloadPromise: Promise<AppUpdateDownloadResult> | null = null
+
 export async function downloadAndInstallUpdate(options: { includeBeta?: boolean } = {}): Promise<AppUpdateDownloadResult> {
-    const current = cachedUpdateInfo?.hasUpdate ? cachedUpdateInfo : await checkForUpdates({ manual: true, includeBeta: options.includeBeta })
-    if (!current.hasUpdate || !current.asset) {
-        return { success: false, launched: false, error: "No downloadable update is available for this platform." }
-    }
+    if (activeDownloadPromise) return activeDownloadPromise
+
+    activeDownloadPromise = (async () => {
+        const current = cachedUpdateInfo?.hasUpdate ? cachedUpdateInfo : await checkForUpdates({ manual: true, includeBeta: options.includeBeta })
+        if (!current.hasUpdate || !current.asset) {
+            return { success: false, launched: false, error: "No downloadable update is available for this platform." }
+        }
+
+        try {
+            const filePath = await downloadAsset(current.asset)
+            await launchInstaller(filePath)
+            return { success: true, launched: true, filePath }
+        } catch (error) {
+            return {
+                success: false,
+                launched: false,
+                error: error instanceof Error ? error.message : String(error)
+            }
+        }
+    })()
 
     try {
-        const filePath = await downloadAsset(current.asset)
-        await launchInstaller(filePath)
-        return { success: true, launched: true, filePath }
-    } catch (error) {
-        return {
-            success: false,
-            launched: false,
-            error: error instanceof Error ? error.message : String(error)
-        }
+        return await activeDownloadPromise
+    } finally {
+        activeDownloadPromise = null
     }
 }

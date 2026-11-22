@@ -267,6 +267,7 @@ export const contextMenuLayouts: { [key: string]: string[] } = {
     category_media_button: ["GROUP_rename_only", "delete_remove", "SEPARATOR", "media_type", "SEPARATOR", "system_open"],
     category_audio_button: ["GROUP_rename_only", "delete_remove", "SEPARATOR", "system_open"],
     category_scripture_button: ["GROUP_rename_only", "delete", "SEPARATOR", "favourite"],
+    category_scripture_button_readonly: ["favourite"],
     playlist: ["GROUP_rename_only", "delete"],
     // CONTENT
     drawer_show: ["newShowPopup", "SEPARATOR", "manage_show_tags", "display_tags", "tag_filter", "sort_shows_by", "SEPARATOR", "selectAll"],

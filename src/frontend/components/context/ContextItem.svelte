@@ -11,6 +11,7 @@
     import T from "../helpers/T.svelte"
     import { ContextMenuItem, contextMenuItems } from "./contextMenus"
     import { menuClick } from "./menuClick"
+    import { isProtectedSystemBible } from "../drawer/bible/scripture"
     import { hymnFavoriteIds, hymnSelectedId } from "../drawer/hymns/hymns"
 
     export let contextElem: HTMLDivElement | null = null
@@ -34,9 +35,15 @@
         view_lyrics: () => ($slidesOptions.mode === "lyrics" ? (enabled = true) : ""),
         rename: () => {
             disabled = !!$shows[$selected.data[0]?.id]?.locked // hide
+            if ($selected.id?.includes("category_scripture") && ($selected.data || []).some((sId: string) => isProtectedSystemBible(sId))) {
+                hide = true
+            }
         },
         delete: () => {
             hide = !!$shows[$selected.data[0]?.id]?.locked
+            if ($selected.id?.includes("category_scripture") && ($selected.data || []).some((sId: string) => isProtectedSystemBible(sId))) {
+                hide = true
+            }
         },
         private: () => {
             let show = $shows[$selected.data[0]?.id]
