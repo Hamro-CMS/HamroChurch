@@ -259,7 +259,7 @@ export const contextMenuLayouts: { [key: string]: string[] } = {
     category_templates: ["newCategory"],
     category_media: ["newFolder"],
     category_audio: ["newFolder"],
-    category_scripture: ["newScripture", "createCollection"],
+    category_scripture: ["createCollection"],
     category_shows_button: ["GROUP_rename_icon", "category_action", "category_template", "metadata_display", "SEPARATOR", "delete", "SEPARATOR", "use_as_archive"],
     category_shows_button_readonly: [],
     category_overlays_button: ["GROUP_rename_icon", "delete", "SEPARATOR", "use_as_archive"],

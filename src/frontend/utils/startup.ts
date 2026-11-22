@@ -126,25 +126,29 @@ async function maybePromptAnalyticsConsent() {
 }
 
 async function ensureBundledNepaliBibleRegistered() {
+    await waitUntilValueIsDefined(() => get(loadedState).includes("settings"), 80, 5000)
     const localBibles = (await requestMain(Main.READ_BIBLES_FOLDER)) || []
     const nepaliBible = localBibles.find((bible) => bible.name === "Nepali Bible")
-    if (!nepaliBible) return
 
-    const existingEntry = Object.entries(get(scriptures)).find(([, value]: any) => value?.name?.replace(/\.fsb$/i, "") === nepaliBible.name)
-    if (existingEntry) {
-        drawerTabsData.update((tabs) => {
-            tabs.scripture = { ...tabs.scripture, activeSubTab: tabs.scripture?.activeSubTab || existingEntry[0] }
-            return tabs
-        })
-        return
+    const sanitized = sanitizeAllowedScriptures(get(scriptures))
+    let nepaliKey = Object.entries(sanitized).find(([, value]: any) => !value?.api && value?.name?.replace(/\.fsb$/i, "") === "Nepali Bible")?.[0] || ""
+
+    if (!nepaliKey && nepaliBible) {
+        nepaliKey = uid()
+        sanitized[nepaliKey] = { name: nepaliBible.name, id: nepaliKey }
     }
 
-    const id = uid()
-    scriptures.update((current) => ({ ...current, [id]: { name: nepaliBible.name, id } }))
-    drawerTabsData.update((tabs) => {
-        tabs.scripture = { ...tabs.scripture, activeSubTab: tabs.scripture?.activeSubTab || id }
-        return tabs
-    })
+    scriptures.set(sanitized)
+
+    const fallbackKey = nepaliKey || Object.keys(sanitized)[0] || ""
+    if (fallbackKey) {
+        drawerTabsData.update((tabs) => {
+            const currentActive = tabs.scripture?.activeSubTab || ""
+            const validActive = currentActive && sanitized[currentActive] ? currentActive : fallbackKey
+            tabs.scripture = { ...(tabs.scripture || { enabled: true }), activeSubTab: validActive }
+            return tabs
+        })
+    }
 }
 
 async function checkRamUsage() {

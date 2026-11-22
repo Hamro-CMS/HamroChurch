@@ -38,7 +38,7 @@ import {
     timers,
     version
 } from "../../stores"
-import { createScriptureShow, formatBibleText, loadJsonBible, moveSelection, outputIsScripture, playScripture } from "../drawer/bible/scripture"
+import { createScriptureShow, formatBibleText, loadJsonBible, moveSelection, outputIsScripture, playScripture, sanitizeAllowedScriptures } from "../drawer/bible/scripture"
 import { applyHymnToExistingShow, buildHymnShow, getCategoryCounts, getFilteredHymns, hymnItems, inferSlideGroup, loadHymns, type HymnCategoryId, type HymnRecord } from "../drawer/hymns/hymns"
 import { pauseAllTimers } from "../drawer/timers/timers"
 import { getTextLines } from "../edit/scripts/textStyle"
@@ -685,18 +685,19 @@ export async function mobileProjectHymn(data: { id?: string; number?: string; ca
 // --- SCRIPTURE (BIBLE) ---
 
 async function ensureLocalBiblesRegistered() {
-    const current = get(scriptures)
-    if (Object.keys(current).length > 0) return current
-
-    const localBibles = (await requestMain(Main.READ_BIBLES_FOLDER)) || []
-    for (const b of localBibles) {
-        const exists = Object.values(get(scriptures)).some((entry: any) => entry?.name?.replace(/\.fsb$/i, "") === b.name)
-        if (!exists) {
+    let sanitized = sanitizeAllowedScriptures(get(scriptures))
+    const hasNepali = Object.values(sanitized).some((entry: any) => !entry?.api && /nepali|नेपाली/i.test(String(entry?.name || "")))
+    if (!hasNepali) {
+        const localBibles = (await requestMain(Main.READ_BIBLES_FOLDER)) || []
+        const nepali = localBibles.find((b) => /nepali|नेपाली/i.test(String(b?.name || "")))
+        if (nepali) {
             const id = uid()
-            scriptures.update((s) => ({ ...s, [id]: { name: b.name, id } }))
+            sanitized[id] = { name: nepali.name, id }
         }
     }
-    return get(scriptures)
+    sanitized = sanitizeAllowedScriptures(sanitized)
+    scriptures.set(sanitized)
+    return sanitized
 }
 
 function resolveDefaultBibleId(preferredId?: string): string {
@@ -715,12 +716,20 @@ function resolveDefaultBibleId(preferredId?: string): string {
 export async function getMobileBibles() {
     const all = await ensureLocalBiblesRegistered()
     const activeBibleId = resolveDefaultBibleId()
-    const bibles = Object.entries(all).map(([id, entry]: [string, any]) => ({
-        id,
-        name: String(entry?.customName || entry?.name || id).replace(/\.fsb$/i, ""),
-        isApi: !!entry?.api,
-        isCollection: !!entry?.collection?.versions?.length
-    }))
+    const bibles = Object.entries(all)
+        .map(([id, entry]: [string, any]) => ({
+            id,
+            name: String(entry?.customName || entry?.name || id).replace(/\.fsb$/i, ""),
+            isApi: !!entry?.api,
+            isCollection: !!entry?.collection?.versions?.length
+        }))
+        .sort((a, b) => {
+            if (a.isCollection !== b.isCollection) return a.isCollection ? 1 : -1
+            const aNepali = /nepali|नेपाली/i.test(a.name) ? 0 : 1
+            const bNepali = /nepali|नेपाली/i.test(b.name) ? 0 : 1
+            if (aNepali !== bNepali) return aNepali - bNepali
+            return a.name.localeCompare(b.name)
+        })
 
     return { activeBibleId, bibles }
 }

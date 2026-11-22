@@ -15,30 +15,36 @@
     $: scripturesList = keysToID($scriptures)
 
     $: collections = scripturesList.filter((a) => a.collection)
-    $: apiBibles = scripturesList.filter((a) => a.api)
-    $: localBibles = scripturesList.filter((a) => !a.collection && !a.api)
+    $: allBibles = scripturesList
+        .filter((a) => !a.collection)
+        .sort((a, b) => {
+            const aNepali = /nepali|नेपाली/i.test(String(a.customName || a.name || "")) ? 0 : 1
+            const bNepali = /nepali|नेपाली/i.test(String(b.customName || b.name || "")) ? 0 : 1
+            if (aNepali !== bNepali) return aNepali - bNepali
+            return String(a.customName || a.name || "").localeCompare(String(b.customName || b.name || ""))
+        })
     $: favoritesList = scripturesList.filter((a) => a.favorite)
 
     let sections: any[] = []
-    $: sections = [...(favoritesList.length ? [[{ id: "TITLE", label: "category.favourites" }, ...convertToButton(favoritesList)]] : []), [{ id: "TITLE", label: "scripture.collections" }, ...convertToButton(collections)], [{ id: "TITLE", label: "scripture.bibles_section" }, ...convertToButton(localBibles), ...(localBibles.length && apiBibles.length ? [{ id: "SEPARATOR", label: "API" }] : []), ...convertToButton(apiBibles)]]
+    $: sections = [
+        ...(favoritesList.length ? [[{ id: "TITLE", label: "category.favourites" }, ...convertToButton(favoritesList, false)]] : []),
+        [{ id: "TITLE", label: "scripture.bibles_section" }, ...convertToButton(allBibles, false)],
+        ...(collections.length ? [[{ id: "TITLE", label: "scripture.collections" }, ...convertToButton(collections, true)]] : [])
+    ]
 
-    function convertToButton(categories: any[]) {
-        return categories
-            .sort((a, b) => (b.customName || b.name).localeCompare(a.customName || a.name))
-            .reverse()
-            .map((a: any) => {
-                const icon = a.api ? "scripture_alt" : a.collection ? "collection" : "scripture"
-                const count = a.collection?.versions?.length || 0
-                return { id: a.id, label: a.customName || a.name, icon, count, onDoubleClick: () => startScripture(), boxedIcon: true }
-            })
+    function convertToButton(categories: any[], shouldSort = true) {
+        const ordered = shouldSort
+            ? [...categories].sort((a, b) => (a.customName || a.name).localeCompare(b.customName || b.name))
+            : categories
+        return ordered.map((a: any) => {
+            const icon = a.api ? "scripture_alt" : a.collection ? "collection" : "scripture"
+            const count = a.collection?.versions?.length || 0
+            return { id: a.id, label: a.customName || a.name, icon, count, onDoubleClick: () => startScripture(), boxedIcon: true }
+        })
     }
 
     function startScripture() {
         openScripture.set({ play: true, book: Number($activeScripture.reference?.book || 1), chapter: $activeScripture.reference?.chapters[0], verses: $activeScripture.reference?.verses })
-    }
-
-    function newScripture() {
-        activePopup.set("import_scripture")
     }
 
     function createCollection() {
@@ -55,32 +61,19 @@
 </script>
 
 <NavigationSections {sections} active={activeSubTab} on:rename={updateName}>
-    <div slot="section_0" style={favoritesList.length ? "" : "padding: 8px;{collections.length ? 'padding-top: 12px;' : ''}"}>
-        {#if !favoritesList.length}
-            <MaterialButton disabled={readOnly || (!apiBibles.length && !localBibles.length)} style="width: 100%;" title="popup.import_scripture" variant="outlined" on:click={createCollection} small>
+    <div slot="section_0" style={favoritesList.length ? "" : "padding: 8px;{allBibles.length ? 'padding-top: 10px;' : ''}"}>
+        {#if !favoritesList.length && allBibles.length >= 2}
+            <MaterialButton disabled={readOnly} style="width: 100%;" title="new.collection" variant="outlined" on:click={createCollection} small>
                 <Icon id="add" size={$labelsDisabled ? 0.9 : 1} white={$labelsDisabled} />
                 {#if !$labelsDisabled}<T id="new.collection" />{/if}
             </MaterialButton>
         {/if}
     </div>
-    <div slot="section_1" style="padding: 8px;{apiBibles.length || localBibles.length ? 'padding-top: 12px;' : ''}">
-        {#if favoritesList.length}
-            <MaterialButton disabled={readOnly || (!apiBibles.length && !localBibles.length)} style="width: 100%;" title="popup.import_scripture" variant="outlined" on:click={createCollection} small>
+    <div slot="section_1" style="padding: 8px;{allBibles.length ? 'padding-top: 10px;' : ''}">
+        {#if favoritesList.length && allBibles.length >= 2}
+            <MaterialButton disabled={readOnly} style="width: 100%;" title="new.collection" variant="outlined" on:click={createCollection} small>
                 <Icon id="add" size={$labelsDisabled ? 0.9 : 1} white={$labelsDisabled} />
                 {#if !$labelsDisabled}<T id="new.collection" />{/if}
-            </MaterialButton>
-        {:else}
-            <MaterialButton style="width: 100%;" title="popup.import_scripture" variant="outlined" disabled={readOnly} on:click={newScripture} small>
-                <Icon id="add" size={$labelsDisabled ? 0.9 : 1} white={$labelsDisabled} />
-                {#if !$labelsDisabled}<T id="new.scripture" />{/if}
-            </MaterialButton>
-        {/if}
-    </div>
-    <div slot="section_2" style="padding: 8px;{apiBibles.length || localBibles.length ? 'padding-top: 12px;' : ''}">
-        {#if favoritesList.length}
-            <MaterialButton style="width: 100%;" title="popup.import_scripture" variant="outlined" disabled={readOnly} on:click={newScripture} small>
-                <Icon id="add" size={$labelsDisabled ? 0.9 : 1} white={$labelsDisabled} />
-                {#if !$labelsDisabled}<T id="new.scripture" />{/if}
             </MaterialButton>
         {/if}
     </div>

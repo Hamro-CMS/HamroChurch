@@ -231,134 +231,182 @@ fun MobilePromotionOverlay(
     Surface(
         modifier = containerModifier,
         color = SanctuarySurface,
-        border = BorderStroke(0.8.dp, SanctuaryBorder.copy(alpha = 0.85f)),
-        shadowElevation = 6.dp
+        shadowElevation = 8.dp
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            if (eligiblePromos.size > 1) {
-                Box(
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 5.dp)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, HamroCyan.copy(alpha = 0.36f))
+            ) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(2.dp)
-                        .background(Color.White.copy(alpha = 0.08f))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(progressFraction)
-                            .height(2.dp)
-                            .background(Brush.horizontalGradient(listOf(HamroPink, HamroCyan)))
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { triggerOpenUrl() }
-                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                    .graphicsLayer {
-                        cameraDistance = 12f * density.density
-                        rotationX = -flipFraction * 65f
-                        alpha = (1f - 0.65f * absFlip).coerceIn(0.2f, 1f)
-                    },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (decodedBitmap != null) {
-                    Image(
-                        bitmap = decodedBitmap,
-                        contentDescription = promo.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(SanctuaryCard)
-                    )
-                }
-
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(0.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Text(
-                            text = "HamroCMS.com",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFBBF24),
-                            maxLines = 1
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(Color(0xFF112240), Color(0xFF0A1428))
+                            )
                         )
-                        if (eligiblePromos.size > 1) {
-                            Text(
-                                text = "• ${safeIndex + 1}/${eligiblePromos.size}",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = TextSecondary,
-                                modifier = Modifier.clickable {
-                                    scope.launch { animateSlideTo(activeIndex + 1) }
-                                }
+                ) {
+                    if (eligiblePromos.size > 1) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(2.5.dp)
+                                .background(Color.White.copy(alpha = 0.10f))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(progressFraction)
+                                    .height(2.5.dp)
+                                    .background(Brush.horizontalGradient(listOf(HamroPink, HamroCyan)))
                             )
                         }
                     }
 
-                    Text(
-                        text = promo.title,
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { triggerOpenUrl() }
+                            .padding(horizontal = 9.dp, vertical = 7.dp)
+                            .graphicsLayer {
+                                cameraDistance = 12f * density.density
+                                rotationX = -flipFraction * 65f
+                                alpha = (1f - 0.65f * absFlip).coerceIn(0.2f, 1f)
+                            },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        if (decodedBitmap != null) {
+                            Image(
+                                bitmap = decodedBitmap,
+                                contentDescription = promo.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .width(98.dp)
+                                    .height(66.dp)
+                                    .clip(RoundedCornerShape(9.dp))
+                                    .background(SanctuaryCard)
+                            )
+                        }
 
-                Button(
-                    onClick = { triggerOpenUrl() },
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = HamroPink,
-                        contentColor = Color.White
-                    ),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                    modifier = Modifier.height(25.dp)
-                ) {
-                    val rawLabel = promo.ctaLabel?.trim().orEmpty()
-                    val compactLabel = when {
-                        rawLabel.isEmpty() -> if (nepaliLanguage) "हेर्नुहोस्" else "Open"
-                        rawLabel.length > 12 -> if (nepaliLanguage) "हेर्नुहोस्" else "Visit"
-                        else -> rawLabel
-                    }
-                    Text(
-                        text = compactLabel,
-                        fontSize = 10.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1
-                    )
-                    Spacer(Modifier.width(3.dp))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                        contentDescription = null,
-                        modifier = Modifier.size(11.dp),
-                        tint = Color.White
-                    )
-                }
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(66.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Text(
+                                        text = "HamroCMS.com",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFFFBBF24),
+                                        maxLines = 1
+                                    )
+                                    if (eligiblePromos.size > 1) {
+                                        Text(
+                                            text = "• ${safeIndex + 1}/${eligiblePromos.size}",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = TextSecondary,
+                                            modifier = Modifier.clickable {
+                                                scope.launch { animateSlideTo(activeIndex + 1) }
+                                            }
+                                        )
+                                    }
+                                }
 
-                Surface(
-                    onClick = { onDismissAll(promotions) },
-                    shape = CircleShape,
-                    color = SanctuaryCard,
-                    border = BorderStroke(0.8.dp, Color.White.copy(alpha = 0.14f)),
-                    modifier = Modifier.size(22.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = if (nepaliLanguage) "बन्द गर्नुहोस्" else "Dismiss ad",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(12.dp)
-                        )
+                                Surface(
+                                    onClick = { onDismissAll(promotions) },
+                                    shape = CircleShape,
+                                    color = SanctuaryCard.copy(alpha = 0.9f),
+                                    border = BorderStroke(0.8.dp, Color.White.copy(alpha = 0.16f)),
+                                    modifier = Modifier.size(21.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = if (nepaliLanguage) "बन्द गर्नुहोस्" else "Dismiss ad",
+                                            tint = TextSecondary,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = promo.title,
+                                fontSize = 13.sp,
+                                lineHeight = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                maxLines = if (promo.body.isNullOrBlank()) 2 else 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = promo.body?.takeIf { it.isNotBlank() }
+                                        ?: if (nepaliLanguage) "आराधना र चर्च सेवा सामग्री" else "Worship & church ministry updates",
+                                    fontSize = 10.5.sp,
+                                    color = TextSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 6.dp)
+                                )
+
+                                Button(
+                                    onClick = { triggerOpenUrl() },
+                                    shape = RoundedCornerShape(999.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = HamroCyan,
+                                        contentColor = Color(0xFF04111F)
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(25.dp)
+                                ) {
+                                    val rawLabel = promo.ctaLabel?.trim().orEmpty()
+                                    val compactLabel = when {
+                                        rawLabel.isEmpty() -> if (nepaliLanguage) "हेर्नुहोस्" else "Open"
+                                        rawLabel.length > 13 -> if (nepaliLanguage) "हेर्नुहोस्" else "Explore"
+                                        else -> rawLabel
+                                    }
+                                    Text(
+                                        text = compactLabel,
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        maxLines = 1
+                                    )
+                                    Spacer(Modifier.width(3.dp))
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(11.dp),
+                                        tint = Color(0xFF04111F)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

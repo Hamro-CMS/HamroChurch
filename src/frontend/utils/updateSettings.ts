@@ -3,6 +3,7 @@ import { uid } from "uid"
 import type { Output } from "../../types/Output"
 import type { Metadata, Themes } from "../../types/Settings"
 import { clone, keysToID } from "../components/helpers/array"
+import { sanitizeAllowedScriptures } from "../components/drawer/bible/scripture"
 import { checkWindowCapture, setOutput, toggleOutputs } from "../components/helpers/output"
 import { defaultThemes } from "../components/settings/tabs/defaultThemes"
 import {
@@ -368,7 +369,21 @@ const updateList: { [key in SaveListSettings | SaveListSyncedSettings]: any } = 
     overlayCategories: (v: any) => overlayCategories.set(v),
     playerVideos: (v: any) => playerVideos.set(v),
     resized: (v: any) => resized.set(v),
-    scriptures: (v: any) => scriptures.set(v),
+    scriptures: (v: any) => {
+        const sanitized = sanitizeAllowedScriptures(v)
+        scriptures.set(sanitized)
+        drawerTabsData.update((tabs) => {
+            const current = tabs.scripture?.activeSubTab || ""
+            if (current && !sanitized[current]) {
+                const nepaliKey = Object.entries(sanitized).find(([, entry]: any) => !entry?.api && /nepali|नेपाली/i.test(String(entry?.name || "")))?.[0]
+                const nextKey = nepaliKey || Object.keys(sanitized)[0] || ""
+                if (nextKey) {
+                    tabs.scripture = { ...(tabs.scripture || { enabled: true }), activeSubTab: nextKey }
+                }
+            }
+            return tabs
+        })
+    },
     scriptureSettings: (v: any) => scriptureSettings.set(v),
     slidesOptions: (v: any) => slidesOptions.set(v),
     splitLines: (v: any) => splitLines.set(v),

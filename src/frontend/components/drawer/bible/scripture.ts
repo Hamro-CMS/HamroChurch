@@ -26,6 +26,66 @@ import { getAllNormalOutputs, getFirstActiveOutput, setOutput } from "../../help
 import { checkName } from "../../helpers/show"
 
 const SCRIPTURE_API_URL = "https://api.churchapps.org/content/bibles"
+export const ENGLISH_KJV_API_ID = "de4e12af7f28f599-02"
+
+export function sanitizeAllowedScriptures(raw: Record<string, any> | null | undefined): Record<string, any> {
+    const input = raw && typeof raw === "object" ? raw : {}
+    const kept: Record<string, any> = {}
+    let hasEnglishKjv = false
+
+    // Pass 1: Keep Nepali Bible(s) and English Bible (KJV or local English Bible)
+    for (const [key, entry] of Object.entries(input)) {
+        if (!entry || typeof entry !== "object" || entry.collection) continue
+        const rawName = String(entry.name || "").replace(/\.fsb$/i, "").trim()
+        const isNepali = !entry.api && /nepali|नेपाली/i.test(rawName)
+        const isEnglishKjvApi = !!entry.api && (entry.id === ENGLISH_KJV_API_ID || key === "kjv")
+        const isLocalEnglish = !entry.api && !isNepali && /\b(english|kjv|king james|niv|esv|nkjv)\b/i.test(rawName)
+
+        if (isNepali) {
+            kept[key] = { ...entry, name: "Nepali Bible" }
+        } else if (isEnglishKjvApi && !hasEnglishKjv) {
+            hasEnglishKjv = true
+            const targetKey = kept.kjv ? key : "kjv"
+            kept[targetKey] = {
+                ...entry,
+                name: "English Bible (KJV)",
+                customName: entry.customName && !/king james \(authorised\)/i.test(entry.customName) ? entry.customName : undefined,
+                api: true,
+                id: ENGLISH_KJV_API_ID,
+                copyright: entry.copyright || "PUBLIC DOMAIN except in the United Kingdom, where a Crown Copyright applies to printing the KJV."
+            }
+            if (!kept[targetKey].customName) delete kept[targetKey].customName
+        } else if (isLocalEnglish) {
+            kept[key] = { ...entry }
+        }
+    }
+
+    if (!hasEnglishKjv) {
+        kept.kjv = {
+            name: "English Bible (KJV)",
+            api: true,
+            id: ENGLISH_KJV_API_ID,
+            copyright: "PUBLIC DOMAIN except in the United Kingdom, where a Crown Copyright applies to printing the KJV."
+        }
+    }
+
+    // Pass 2: Keep valid Nepali + English collections
+    for (const [key, entry] of Object.entries(input)) {
+        if (!entry?.collection?.versions?.length) continue
+        const validVersions = (entry.collection.versions as string[]).filter((verKey) => !!kept[verKey])
+        if (validVersions.length >= 2) {
+            kept[key] = {
+                ...entry,
+                collection: {
+                    ...entry.collection,
+                    versions: validVersions
+                }
+            }
+        }
+    }
+
+    return kept
+}
 
 export async function getApiBiblesList() {
     try {

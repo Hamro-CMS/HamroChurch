@@ -26,11 +26,16 @@
     async function loadApiBibles() {
         try {
             let bibleList = await getApiBiblesList()
-            bibleList = bibleList.map((a) => {
-                const bible = customBibleData(a)
-                if (bible.description && (bible.description.toLowerCase() === "common" || bible.description === "Holy Bible" || bible.name.includes(bible.description))) bible.description = ""
-                return bible
-            })
+            bibleList = bibleList
+                .map((a) => {
+                    const bible = customBibleData(a)
+                    if (bible.description && (bible.description.toLowerCase() === "common" || bible.description === "Holy Bible" || bible.name.includes(bible.description))) bible.description = ""
+                    return bible
+                })
+                .filter((bible) => {
+                    const lang = String(bible.language || "").toLowerCase()
+                    return lang === "en" || lang === "eng" || lang === "ne" || lang === "nep" || lang === "npi"
+                })
 
             // get list of bibles in language
             let langCode = window.navigator.language.slice(-2).toLowerCase()
