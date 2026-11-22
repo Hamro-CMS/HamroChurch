@@ -2,6 +2,8 @@ package com.hamrochurch.remote.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -48,6 +50,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -86,13 +89,13 @@ fun HymnsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         // Search Bar + Quick Dialer Button
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.Top
         ) {
             NepaliInputField(
@@ -101,7 +104,7 @@ fun HymnsScreen(
                 nepaliTypingEnabled = state.nepaliTypingEnabled,
                 onToggleNepaliTyping = onToggleNepaliTyping,
                 placeholderText = AppStrings.searchHymnPlaceholder(ne),
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 modifier = Modifier.weight(1f)
             )
 
@@ -111,10 +114,11 @@ fun HymnsScreen(
                     containerColor = if (showDialer) HamroPink else SanctuaryCard,
                     contentColor = Color.White
                 ),
-                shape = RoundedCornerShape(14.dp),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 16.dp)
+                border = BorderStroke(1.dp, if (showDialer) HamroPink else SanctuaryBorder),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 13.dp)
             ) {
-                Icon(Icons.Default.Dialpad, contentDescription = AppStrings.quickDialer(ne))
+                Icon(Icons.Default.Dialpad, contentDescription = AppStrings.quickDialer(ne), modifier = Modifier.size(19.dp))
             }
         }
 
@@ -235,68 +239,85 @@ fun HymnsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             categories.forEach { (catId, label) ->
-                FilterChip(
-                    selected = state.hymnCategory == catId,
-                    onClick = { onSelectCategory(catId) },
-                    label = { Text(label, fontSize = 12.sp) }
-                )
+                val selected = state.hymnCategory == catId
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selected) HamroPink.copy(alpha = 0.22f) else SanctuaryCard)
+                        .border(
+                            width = 0.9.dp,
+                            color = if (selected) HamroPink else SanctuaryBorder,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .clickable { onSelectCategory(catId) }
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 11.5.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (selected) Color.White else TextSecondary
+                    )
+                }
             }
         }
 
         // Hymn List
         if (state.hymnLoading && state.hymns.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = HamroPink)
+                CircularProgressIndicator(color = HamroPink, modifier = Modifier.size(28.dp))
             }
         } else if (state.hymns.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(AppStrings.noHymnsFound(ne), color = TextSecondary)
+                Text(AppStrings.noHymnsFound(ne), color = TextSecondary, fontSize = 13.sp)
             }
         } else {
             LazyColumn(
-                contentPadding = PaddingValues(vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(state.hymns, key = { it.id }) { hymn ->
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = SanctuaryCard),
-                        border = BorderStroke(1.dp, SanctuaryBorder),
-                        shape = RoundedCornerShape(12.dp),
+                    Surface(
+                        color = SanctuaryCard,
+                        border = BorderStroke(0.8.dp, SanctuaryBorder),
+                        shape = RoundedCornerShape(9.dp),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clip(RoundedCornerShape(9.dp))
                             .clickable { onOpenHymnDetail(hymn.id, null) }
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                .padding(horizontal = 10.dp, vertical = 7.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (hymn.number.isNotBlank()) {
                                 Surface(
-                                    color = HamroPink.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(8.dp)
+                                    color = HamroPink.copy(alpha = 0.18f),
+                                    shape = RoundedCornerShape(6.dp)
                                 ) {
                                     Text(
                                         text = hymn.number,
                                         color = Color(0xFF7DD3FC),
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                                     )
                                 }
-                                Spacer(Modifier.width(10.dp))
+                                Spacer(Modifier.width(8.dp))
                             }
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = hymn.title,
                                     fontWeight = FontWeight.SemiBold,
-                                    fontSize = 15.sp,
+                                    fontSize = 13.5.sp,
+                                    color = Color.White,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -304,7 +325,7 @@ fun HymnsScreen(
                                 if (sub.isNotBlank()) {
                                     Text(
                                         text = sub,
-                                        fontSize = 12.sp,
+                                        fontSize = 11.5.sp,
                                         color = TextSecondary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -312,22 +333,32 @@ fun HymnsScreen(
                                 }
                             }
 
-                            IconButton(
+                            Surface(
                                 onClick = {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     onProjectHymn(hymn.id, null, 0, true, false)
-                                }
+                                },
+                                color = Color.Transparent,
+                                shape = RoundedCornerShape(7.dp),
+                                modifier = Modifier.size(32.dp)
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = AppStrings.addToSchedule(ne), tint = HamroCyan)
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Add, contentDescription = AppStrings.addToSchedule(ne), tint = HamroCyan, modifier = Modifier.size(18.dp))
+                                }
                             }
 
-                            IconButton(
+                            Surface(
                                 onClick = {
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                     onProjectHymn(hymn.id, null, 0, false, true)
-                                }
+                                },
+                                color = HamroPink.copy(alpha = 0.16f),
+                                shape = RoundedCornerShape(7.dp),
+                                modifier = Modifier.size(32.dp)
                             ) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = AppStrings.goLiveNow(ne), tint = HamroPink)
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.PlayArrow, contentDescription = AppStrings.goLiveNow(ne), tint = HamroPink, modifier = Modifier.size(19.dp))
+                                }
                             }
                         }
                     }

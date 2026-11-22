@@ -255,14 +255,14 @@ fun MobilePromotionOverlay(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { triggerOpenUrl() }
-                    .padding(horizontal = 10.dp, vertical = 7.dp)
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
                     .graphicsLayer {
                         cameraDistance = 12f * density.density
                         rotationX = -flipFraction * 65f
                         alpha = (1f - 0.65f * absFlip).coerceIn(0.2f, 1f)
                     },
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(9.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (decodedBitmap != null) {
                     Image(
@@ -270,32 +270,32 @@ fun MobilePromotionOverlay(
                         contentDescription = promo.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(42.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(6.dp))
                             .background(SanctuaryCard)
                     )
                 }
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Text(
                             text = "HamroCMS.com",
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
                             color = Color(0xFFFBBF24),
                             maxLines = 1
                         )
                         if (eligiblePromos.size > 1) {
                             Text(
                                 text = "• ${safeIndex + 1}/${eligiblePromos.size}",
-                                fontSize = 9.5.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Medium,
                                 color = TextSecondary,
                                 modifier = Modifier.clickable {
                                     scope.launch { animateSlideTo(activeIndex + 1) }
@@ -306,33 +306,23 @@ fun MobilePromotionOverlay(
 
                     Text(
                         text = promo.title,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-
-                    if (!promo.body.isNullOrBlank()) {
-                        Text(
-                            text = promo.body,
-                            fontSize = 10.5.sp,
-                            color = TextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
                 }
 
                 Button(
                     onClick = { triggerOpenUrl() },
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(6.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = HamroPink,
                         contentColor = Color.White
                     ),
-                    contentPadding = PaddingValues(horizontal = 9.dp, vertical = 4.dp),
-                    modifier = Modifier.height(29.dp)
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    modifier = Modifier.height(25.dp)
                 ) {
                     val rawLabel = promo.ctaLabel?.trim().orEmpty()
                     val compactLabel = when {
@@ -342,7 +332,7 @@ fun MobilePromotionOverlay(
                     }
                     Text(
                         text = compactLabel,
-                        fontSize = 11.sp,
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1
                     )
@@ -350,7 +340,7 @@ fun MobilePromotionOverlay(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                         contentDescription = null,
-                        modifier = Modifier.size(12.dp),
+                        modifier = Modifier.size(11.dp),
                         tint = Color.White
                     )
                 }
@@ -359,15 +349,15 @@ fun MobilePromotionOverlay(
                     onClick = { onDismissAll(promotions) },
                     shape = CircleShape,
                     color = SanctuaryCard,
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
-                    modifier = Modifier.size(26.dp)
+                    border = BorderStroke(0.8.dp, Color.White.copy(alpha = 0.14f)),
+                    modifier = Modifier.size(22.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = if (nepaliLanguage) "बन्द गर्नुहोस्" else "Dismiss ad",
                             tint = TextSecondary,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(12.dp)
                         )
                     }
                 }

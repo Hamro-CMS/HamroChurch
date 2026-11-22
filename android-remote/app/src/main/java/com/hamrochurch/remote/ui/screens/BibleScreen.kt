@@ -48,6 +48,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -119,32 +120,35 @@ fun BibleScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(7.dp)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         // Translation Picker + Browse / Search Switch
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(modifier = Modifier.weight(1f)) {
                 OutlinedButton(
                     onClick = { bibleMenuExpanded = true },
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, SanctuaryBorder),
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(9.dp),
+                    border = BorderStroke(0.9.dp, SanctuaryBorder),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(34.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp), tint = HamroCyan)
-                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(14.dp), tint = HamroCyan)
+                    Spacer(Modifier.width(5.dp))
                     Text(
                         text = activeBibleName,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         modifier = Modifier.weight(1f)
                     )
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
 
                 DropdownMenu(
@@ -163,16 +167,24 @@ fun BibleScreen(
                 }
             }
 
-            FilterChip(
-                selected = !state.bibleSearchMode,
-                onClick = { onSetSearchMode(false) },
-                label = { Text(AppStrings.browseBooks(ne), fontSize = 12.sp) }
-            )
-            FilterChip(
-                selected = state.bibleSearchMode,
-                onClick = { onSetSearchMode(true) },
-                label = { Text(AppStrings.searchScripture(ne), fontSize = 12.sp) }
-            )
+            listOf(false to AppStrings.browseBooks(ne), true to AppStrings.searchScripture(ne)).forEach { (isSearch, label) ->
+                val selected = state.bibleSearchMode == isSearch
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selected) HamroPink.copy(alpha = 0.22f) else SanctuaryCard)
+                        .border(0.9.dp, if (selected) HamroPink else SanctuaryBorder, RoundedCornerShape(8.dp))
+                        .clickable { onSetSearchMode(isSearch) }
+                        .padding(horizontal = 9.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 11.5.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (selected) Color.White else TextSecondary
+                    )
+                }
+            }
         }
 
         if (state.bibleSearchMode) {
@@ -240,35 +252,49 @@ fun BibleScreen(
             // Row 1: Book Button + Chapter Horizontal Picker
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
                     onClick = { bookSheetOpen = true },
                     colors = ButtonDefaults.buttonColors(containerColor = SanctuaryCard, contentColor = Color.White),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                    border = BorderStroke(0.9.dp, SanctuaryBorder),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    modifier = Modifier.height(32.dp)
                 ) {
                     Text(
                         text = state.selectedBookName.ifBlank { AppStrings.selectBook(ne) },
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.5.sp
                     )
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
 
                 Row(
                     modifier = Modifier
                         .weight(1f)
                         .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     for (chap in 1..state.selectedBookChapters.coerceAtLeast(1)) {
-                        FilterChip(
-                            selected = state.selectedChapter == chap,
-                            onClick = { onSelectChapter(chap) },
-                            label = { Text("$chap", fontWeight = FontWeight.SemiBold) }
-                        )
+                        val selected = state.selectedChapter == chap
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(if (selected) HamroPink else SanctuaryCard)
+                                .border(0.8.dp, if (selected) HamroPink else SanctuaryBorder, RoundedCornerShape(7.dp))
+                                .clickable { onSelectChapter(chap) }
+                                .padding(horizontal = 9.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = "$chap",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selected) Color.White else TextSecondary
+                            )
+                        }
                     }
                 }
             }
@@ -386,17 +412,16 @@ fun BibleScreen(
                 ) {
                     items(state.chapterVerses, key = { it.number }) { verse ->
                         val isSelected = verse.number in state.selectedVerses
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) HamroPink.copy(alpha = 0.2f) else SanctuaryCard
-                            ),
+                        Surface(
+                            color = if (isSelected) HamroPink.copy(alpha = 0.16f) else SanctuaryCard,
                             border = BorderStroke(
-                                width = if (isSelected) 1.5.dp else 1.dp,
+                                width = if (isSelected) 1.3.dp else 0.8.dp,
                                 color = if (isSelected) HamroPink else SanctuaryBorder
                             ),
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(9.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(9.dp))
                                 .clickable {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     onToggleVerse(verse.number, false)
@@ -405,29 +430,37 @@ fun BibleScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 9.dp),
+                                    .padding(horizontal = 10.dp, vertical = 7.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = "${verse.number}",
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.Bold,
                                     color = if (isSelected) HamroCyan else TextSecondary,
-                                    fontSize = 14.sp,
-                                    modifier = Modifier.width(30.dp)
+                                    fontSize = 12.5.sp,
+                                    modifier = Modifier.width(26.dp)
                                 )
                                 Text(
                                     text = verse.text,
-                                    fontSize = 14.sp,
-                                    lineHeight = 20.sp,
+                                    fontSize = 13.sp,
+                                    lineHeight = 18.5.sp,
+                                    color = Color.White,
                                     modifier = Modifier.weight(1f)
                                 )
-                                IconButton(
+                                Surface(
                                     onClick = {
                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                         onToggleVerse(verse.number, true)
-                                    }
+                                    },
+                                    color = HamroPink.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(6.dp),
+                                    modifier = Modifier
+                                        .padding(start = 6.dp)
+                                        .size(30.dp)
                                 ) {
-                                    Icon(Icons.Default.PlayArrow, contentDescription = null, tint = HamroPink)
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = HamroPink, modifier = Modifier.size(18.dp))
+                                    }
                                 }
                             }
                         }
@@ -437,15 +470,18 @@ fun BibleScreen(
 
             // Project Selected + Prev/Next Verse Stepper Bar
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 OutlinedButton(
                     onClick = { onStepScripture(false) },
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp)
+                    shape = RoundedCornerShape(9.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    modifier = Modifier.height(40.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.NavigateBefore, contentDescription = AppStrings.prevVerse(ne))
+                    Icon(Icons.AutoMirrored.Filled.NavigateBefore, contentDescription = AppStrings.prevVerse(ne), modifier = Modifier.size(20.dp))
                 }
 
                 Button(
@@ -454,10 +490,13 @@ fun BibleScreen(
                         onProjectSelected(false)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = HamroPink),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f)
+                    shape = RoundedCornerShape(9.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(40.dp)
                 ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     val sortedVerses = state.selectedVerses.sorted()
                     val vLabel = if (sortedVerses.size <= 4) {
@@ -467,7 +506,7 @@ fun BibleScreen(
                     }
                     Text(
                         text = AppStrings.projectVerseBtn(ne, vLabel.ifBlank { "1" }),
-                        fontSize = 13.sp,
+                        fontSize = 12.5.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -476,18 +515,20 @@ fun BibleScreen(
 
                 OutlinedButton(
                     onClick = { onProjectSelected(true) },
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp)
+                    shape = RoundedCornerShape(9.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    modifier = Modifier.height(40.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = AppStrings.addToSchedule(ne), tint = HamroCyan)
+                    Icon(Icons.Default.Add, contentDescription = AppStrings.addToSchedule(ne), tint = HamroCyan, modifier = Modifier.size(18.dp))
                 }
 
                 OutlinedButton(
                     onClick = { onStepScripture(true) },
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp)
+                    shape = RoundedCornerShape(9.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    modifier = Modifier.height(40.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.NavigateNext, contentDescription = AppStrings.nextVerse(ne))
+                    Icon(Icons.AutoMirrored.Filled.NavigateNext, contentDescription = AppStrings.nextVerse(ne), modifier = Modifier.size(20.dp))
                 }
             }
         }

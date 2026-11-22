@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -183,9 +184,10 @@ fun ConnectScreen(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 18.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Header + Official Logo + Language Switch
         Row(
@@ -201,18 +203,18 @@ fun ConnectScreen(
                     painter = painterResource(id = R.drawable.hamro_logo_banner),
                     contentDescription = "Aradhana Studio (आराधना स्टुडियो)",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.height(56.dp)
+                    modifier = Modifier.height(44.dp)
                 )
             }
 
             OutlinedButton(
                 onClick = onToggleLanguage,
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 border = BorderStroke(1.dp, SanctuaryBorder)
             ) {
-                Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(if (ne) "EN" else "नेपाली", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.size(15.dp))
+                Spacer(Modifier.width(5.dp))
+                Text(if (ne) "EN" else "नेपाली", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -237,11 +239,11 @@ fun ConnectScreen(
         Card(
             colors = CardDefaults.cardColors(containerColor = SanctuaryCard),
             border = BorderStroke(1.dp, HamroPink.copy(alpha = 0.45f)),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
-                modifier = Modifier.padding(18.dp),
+                modifier = Modifier.padding(14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Button(
@@ -258,32 +260,32 @@ fun ConnectScreen(
                     },
                     enabled = !isConnecting,
                     colors = ButtonDefaults.buttonColors(containerColor = HamroPink),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
+                        .height(46.dp)
                 ) {
                     if (isConnecting) {
                         CircularProgressIndicator(
                             color = Color.White,
-                            strokeWidth = 2.5.dp,
-                            modifier = Modifier.size(22.dp)
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp)
                         )
-                        Spacer(Modifier.width(10.dp))
-                        Text(AppStrings.connecting(ne), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(8.dp))
+                        Text(AppStrings.connecting(ne), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     } else {
-                        Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(24.dp))
-                        Spacer(Modifier.width(10.dp))
-                        Text(AppStrings.scanQr(ne), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(AppStrings.scanQr(ne), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     text = AppStrings.scanQrHint(ne),
-                    fontSize = 12.sp,
+                    fontSize = 11.5.sp,
                     color = TextSecondary,
-                    lineHeight = 17.sp
+                    lineHeight = 16.sp
                 )
             }
         }

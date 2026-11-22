@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -429,7 +430,8 @@ fun StagePrompterOverlay(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF05070C))
-            .padding(16.dp),
+            .systemBarsPadding()
+            .padding(14.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         // Top Header: Clock + Countdown + Touch Lock + Close

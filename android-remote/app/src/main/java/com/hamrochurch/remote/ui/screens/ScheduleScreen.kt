@@ -80,28 +80,28 @@ fun ScheduleScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         // Mode Switch
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             FilterChip(
                 selected = !state.scheduleShowLibrary,
                 onClick = { onSetLibraryMode(false) },
-                label = { Text(AppStrings.activeSchedule(ne), fontSize = 13.sp) }
+                label = { Text(AppStrings.activeSchedule(ne), fontSize = 12.sp) }
             )
             FilterChip(
                 selected = state.scheduleShowLibrary,
                 onClick = { onSetLibraryMode(true) },
-                label = { Text(AppStrings.savedLibrary(ne), fontSize = 13.sp) }
+                label = { Text(AppStrings.savedLibrary(ne), fontSize = 12.sp) }
             )
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = onRefreshProjects) {
-                Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = TextSecondary)
+            IconButton(onClick = onRefreshProjects, modifier = Modifier.size(34.dp)) {
+                Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = TextSecondary, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -150,8 +150,8 @@ fun ScheduleScreen(
                 }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(state.projectItems, key = { "${it.index}_${it.id}" }) { item ->
@@ -165,10 +165,10 @@ fun ScheduleScreen(
 
                         Card(
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isLive) HamroPink.copy(alpha = 0.2f) else SanctuaryCard
+                                containerColor = if (isLive) HamroPink.copy(alpha = 0.16f) else SanctuaryCard
                             ),
-                            border = BorderStroke(1.dp, if (isLive) HamroPink else SanctuaryBorder),
-                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(if (isLive) 1.3.dp else 0.8.dp, if (isLive) HamroPink else SanctuaryBorder),
+                            shape = RoundedCornerShape(9.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -179,29 +179,29 @@ fun ScheduleScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(icon, contentDescription = null, tint = if (isLive) LiveGreen else HamroCyan)
-                                Spacer(Modifier.width(12.dp))
+                                Icon(icon, contentDescription = null, tint = if (isLive) LiveGreen else HamroCyan, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(9.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = "${item.index + 1}. ${item.name}",
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize = 15.sp,
+                                        fontSize = 13.5.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     if (item.notes.isNotBlank()) {
                                         Text(
                                             text = item.notes,
-                                            fontSize = 12.sp,
+                                            fontSize = 11.5.sp,
                                             color = TextSecondary,
                                             maxLines = 1
                                         )
                                     }
                                 }
-                                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = HamroPink)
+                                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = HamroPink, modifier = Modifier.size(19.dp))
                             }
                         }
                     }
@@ -215,20 +215,20 @@ fun ScheduleScreen(
                 nepaliTypingEnabled = state.nepaliTypingEnabled,
                 onToggleNepaliTyping = onToggleNepaliTyping,
                 placeholderText = AppStrings.searchShowsPlaceholder(ne),
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
             LazyColumn(
-                contentPadding = PaddingValues(vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(state.savedShows, key = { it.id }) { show ->
                     Card(
                         colors = CardDefaults.cardColors(containerColor = SanctuaryCard),
-                        border = BorderStroke(1.dp, SanctuaryBorder),
-                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(0.8.dp, SanctuaryBorder),
+                        shape = RoundedCornerShape(9.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
@@ -239,22 +239,22 @@ fun ScheduleScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = if (show.number.isNotBlank()) "#${show.number} — ${show.name}" else show.name,
                                     fontWeight = FontWeight.SemiBold,
-                                    fontSize = 15.sp,
+                                    fontSize = 13.5.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 if (show.category.isNotBlank()) {
-                                    Text(text = show.category, fontSize = 12.sp, color = TextSecondary)
+                                    Text(text = show.category, fontSize = 11.5.sp, color = TextSecondary)
                                 }
                             }
-                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = HamroPink)
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = HamroPink, modifier = Modifier.size(19.dp))
                         }
                     }
                 }

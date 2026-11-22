@@ -3,6 +3,7 @@ package com.hamrochurch.remote.ui.screens
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -10,6 +11,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,17 +35,14 @@ import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Slideshow
 import androidx.compose.material.icons.filled.Swipe
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.TvOff
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -57,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -111,191 +111,140 @@ fun LiveControlScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // 1. Live Output Monitor Card
-        Card(
-            colors = CardDefaults.cardColors(containerColor = SanctuaryCard),
-            border = BorderStroke(
-                1.5.dp,
-                if (!live.cleared.slide && live.currentSlideText.isNotBlank()) LiveGreen.copy(alpha = 0.7f) else SanctuaryBorder
-            ),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+        // 1. Slim Single-Line Active Item Strip (no bulky duplicate live screen box)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Box(
-                            modifier = Modifier
-                                .size(9.dp)
-                                .clip(CircleShape)
-                                .background(if (!live.cleared.all) LiveGreen else TextSecondary)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = live.activeShowName.ifBlank { AppStrings.liveOutput(ne) },
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    if (live.currentGroup.isNotBlank()) {
-                        Surface(
-                            color = HamroPink.copy(alpha = 0.22f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = live.currentGroup,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF7DD3FC),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                Text(
-                    text = live.currentSlideText.ifBlank { AppStrings.noActiveSlide(ne) },
-                    fontSize = 16.sp,
-                    fontWeight = if (live.currentSlideText.isNotBlank()) FontWeight.Medium else FontWeight.Normal,
-                    color = if (live.currentSlideText.isNotBlank()) Color.White else TextSecondary,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 22.sp
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(if (!live.cleared.slide && live.currentSlideIndex >= 0) LiveGreen else TextSecondary)
                 )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = live.activeShowName.ifBlank { AppStrings.noActiveSlide(ne) },
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    color = if (live.activeShowName.isNotBlank()) Color.White else TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
-                if (live.nextSlideText.isNotBlank()) {
-                    Spacer(Modifier.height(6.dp))
+            if (live.slides.isNotEmpty()) {
+                val activeNum = if (live.currentSlideIndex >= 0) live.currentSlideIndex + 1 else 0
+                Surface(
+                    color = SanctuaryCard,
+                    border = BorderStroke(0.8.dp, SanctuaryBorder),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
                     Text(
-                        text = "${AppStrings.nextSlideLabel(ne)}: ${live.nextSlideText.replace('\n', ' ')}",
-                        fontSize = 12.sp,
+                        text = "$activeNum / ${live.slides.size}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
                         color = HamroCyan,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                     )
                 }
             }
         }
 
-        // 2. Output Controls & Mode Row
+        // 2. Unified Compact Control Pill Strip (single 28dp row instead of two huge 48dp chip rows)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            FilterChip(
-                selected = live.isLocked,
-                onClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onToggleLock()
-                },
-                label = { Text(if (live.isLocked) AppStrings.outputLocked(ne) else AppStrings.outputUnlocked(ne), fontSize = 12.sp) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = if (live.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = WarnAmber.copy(alpha = 0.25f),
-                    selectedLabelColor = WarnAmber
-                )
-            )
-
-            FilterChip(
-                selected = live.outputActive,
-                onClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onToggleOutputWindow()
-                },
-                label = { Text(if (live.outputActive) AppStrings.projectorOn(ne) else AppStrings.projectorOff(ne), fontSize = 12.sp) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = if (live.outputActive) Icons.Default.Tv else Icons.Default.TvOff,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = LiveGreen.copy(alpha = 0.22f),
-                    selectedLabelColor = LiveGreen
-                )
-            )
-
-            FilterChip(
-                selected = state.swipePadMode,
-                onClick = onToggleSwipePad,
-                label = { Text(if (state.swipePadMode) AppStrings.slideListMode(ne) else AppStrings.swipePadMode(ne), fontSize = 12.sp) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = if (state.swipePadMode) Icons.AutoMirrored.Filled.ViewList else Icons.Default.Swipe,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            )
-        }
-
-        // 3. Quick Clear Layer Bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            AssistChip(
+            CompactToolPill(
+                label = AppStrings.clearAll(ne),
+                icon = Icons.Default.ClearAll,
+                tint = DangerRed,
+                bgColor = DangerRed.copy(alpha = 0.13f),
+                borderColor = DangerRed.copy(alpha = 0.45f),
                 onClick = {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     onClearLayer("all")
-                },
-                label = { Text(AppStrings.clearAll(ne), fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
-                leadingIcon = { Icon(Icons.Default.ClearAll, contentDescription = null, modifier = Modifier.size(16.dp), tint = DangerRed) },
-                colors = AssistChipDefaults.assistChipColors(containerColor = DangerRed.copy(alpha = 0.14f)),
-                border = BorderStroke(1.dp, DangerRed.copy(alpha = 0.45f))
+                }
+            )
+
+            CompactToolPill(
+                label = if (live.outputActive) AppStrings.projectorOn(ne) else AppStrings.projectorOff(ne),
+                icon = if (live.outputActive) Icons.Default.Tv else Icons.Default.TvOff,
+                tint = if (live.outputActive) LiveGreen else TextSecondary,
+                bgColor = if (live.outputActive) LiveGreen.copy(alpha = 0.15f) else SanctuaryCard,
+                borderColor = if (live.outputActive) LiveGreen.copy(alpha = 0.45f) else SanctuaryBorder,
+                onClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onToggleOutputWindow()
+                }
+            )
+
+            CompactToolPill(
+                label = if (live.isLocked) AppStrings.outputLocked(ne) else AppStrings.outputUnlocked(ne),
+                icon = if (live.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                tint = if (live.isLocked) WarnAmber else TextSecondary,
+                bgColor = if (live.isLocked) WarnAmber.copy(alpha = 0.16f) else SanctuaryCard,
+                borderColor = if (live.isLocked) WarnAmber.copy(alpha = 0.5f) else SanctuaryBorder,
+                onClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggleLock()
+                }
+            )
+
+            CompactToolPill(
+                label = if (state.swipePadMode) AppStrings.slideListMode(ne) else AppStrings.swipePadMode(ne),
+                icon = if (state.swipePadMode) Icons.AutoMirrored.Filled.ViewList else Icons.Default.Swipe,
+                tint = if (state.swipePadMode) HamroCyan else TextSecondary,
+                bgColor = if (state.swipePadMode) HamroCyan.copy(alpha = 0.16f) else SanctuaryCard,
+                borderColor = if (state.swipePadMode) HamroCyan.copy(alpha = 0.5f) else SanctuaryBorder,
+                onClick = onToggleSwipePad
             )
 
             val clearActions = listOf(
-                "restore" to AppStrings.clearRestore(ne),
                 "slide" to AppStrings.clearSlide(ne),
+                "restore" to AppStrings.clearRestore(ne),
                 "background" to AppStrings.clearBg(ne),
                 "overlays" to AppStrings.clearOverlays(ne),
                 "audio" to AppStrings.clearAudio(ne),
                 "timers" to AppStrings.clearTimers(ne)
             )
-
             clearActions.forEach { (layerKey, label) ->
-                AssistChip(
+                CompactToolPill(
+                    label = label,
+                    icon = null,
+                    tint = TextSecondary,
+                    bgColor = SanctuaryCard,
+                    borderColor = SanctuaryBorder,
                     onClick = {
                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onClearLayer(layerKey)
-                    },
-                    label = { Text(label, fontSize = 12.sp) },
-                    border = BorderStroke(1.dp, SanctuaryBorder)
+                    }
                 )
             }
         }
 
-        // 4. Main Slide Deck OR Blind Swipe Pad
+        // 3. Clean, Spacious Slide List OR Swipe Pad
         Box(modifier = Modifier.weight(1f)) {
             if (state.swipePadMode) {
                 var dragDelta by remember { mutableFloatStateOf(0f) }
                 Card(
                     colors = CardDefaults.cardColors(containerColor = SanctuarySurface),
-                    border = BorderStroke(1.5.dp, HamroPink.copy(alpha = 0.4f)),
-                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, HamroPink.copy(alpha = 0.4f)),
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .fillMaxSize()
                         .pointerInput(Unit) {
@@ -324,20 +273,75 @@ fun LiveControlScreen(
                         }
                 ) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(20.dp)) {
                             Icon(
                                 imageVector = Icons.Default.Swipe,
                                 contentDescription = null,
                                 tint = HamroPink,
-                                modifier = Modifier.size(52.dp)
+                                modifier = Modifier.size(38.dp)
                             )
-                            Spacer(Modifier.height(14.dp))
+                            Spacer(Modifier.height(10.dp))
                             Text(
                                 text = AppStrings.swipeHint(ne),
                                 textAlign = TextAlign.Center,
                                 color = TextSecondary,
-                                fontSize = 14.sp,
-                                lineHeight = 22.sp
+                                fontSize = 13.sp,
+                                lineHeight = 19.sp
+                            )
+                        }
+                    }
+                }
+            } else if (live.slides.isEmpty()) {
+                // If scripture/temp verse has live text without slide deck, show compact single card; else clean empty state
+                if (live.currentSlideText.isNotBlank() && !live.cleared.slide) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = SanctuaryCard),
+                        border = BorderStroke(1.2.dp, HamroPink),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = live.currentGroup.ifBlank { AppStrings.liveOutput(ne) },
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = HamroCyan
+                                )
+                                Text(
+                                    text = "LIVE",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = LiveGreen
+                                )
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = live.currentSlideText,
+                                fontSize = 13.5.sp,
+                                color = Color.White,
+                                lineHeight = 19.sp
+                            )
+                        }
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Slideshow,
+                                contentDescription = null,
+                                tint = TextSecondary.copy(alpha = 0.5f),
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = AppStrings.noActiveSlide(ne),
+                                fontSize = 13.sp,
+                                color = TextSecondary
                             )
                         }
                     }
@@ -345,68 +349,80 @@ fun LiveControlScreen(
             } else {
                 LazyColumn(
                     state = listState,
-                    contentPadding = PaddingValues(vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(live.slides, key = { "${it.index}_${it.id}" }) { slide ->
                         val isCurrent = slide.index == live.currentSlideIndex && !live.cleared.slide
                         val accent = parseSlideColor(slide.color)
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isCurrent) HamroPink.copy(alpha = 0.2f) else SanctuaryCard
-                            ),
+                        Surface(
+                            color = if (isCurrent) HamroPink.copy(alpha = 0.16f) else SanctuaryCard,
                             border = BorderStroke(
-                                width = if (isCurrent) 2.dp else 1.dp,
+                                width = if (isCurrent) 1.4.dp else 0.8.dp,
                                 color = if (isCurrent) HamroPink else SanctuaryBorder
                             ),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(9.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(9.dp))
                                 .clickable(enabled = !slide.disabled) {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     onSelectSlide(slide.index)
                                 }
                         ) {
-                            Row(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min)
+                            ) {
                                 Box(
                                     modifier = Modifier
-                                        .width(6.dp)
-                                        .height(68.dp)
-                                        .background(accent)
+                                        .width(3.5.dp)
+                                        .fillMaxHeight()
+                                        .background(if (isCurrent) LiveGreen else accent)
                                 )
                                 Column(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                                        .padding(horizontal = 10.dp, vertical = 7.dp)
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
                                             text = "${slide.index + 1}. ${slide.group}",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isCurrent) Color(0xFF7DD3FC) else TextSecondary
+                                            fontSize = 10.5.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (isCurrent) HamroCyan else TextSecondary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                         if (isCurrent) {
-                                            Text(
-                                                text = "LIVE",
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = LiveGreen
-                                            )
+                                            Surface(
+                                                color = LiveGreen.copy(alpha = 0.18f),
+                                                shape = RoundedCornerShape(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = "LIVE",
+                                                    fontSize = 9.5.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = LiveGreen,
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                                )
+                                            }
                                         }
                                     }
-                                    Spacer(Modifier.height(4.dp))
+                                    Spacer(Modifier.height(2.dp))
                                     Text(
                                         text = slide.text.ifBlank { "—" },
-                                        fontSize = 14.sp,
+                                        fontSize = 13.sp,
                                         color = if (slide.disabled) TextSecondary.copy(alpha = 0.5f) else Color.White,
-                                        maxLines = 3,
+                                        maxLines = if (isCurrent) 3 else 2,
                                         overflow = TextOverflow.Ellipsis,
-                                        lineHeight = 19.sp
+                                        lineHeight = 18.sp
                                     )
                                 }
                             }
@@ -416,12 +432,12 @@ fun LiveControlScreen(
             }
         }
 
-        // 5. Giant Tactile PREV / NEXT Bottom Action Bar
+        // 4. Sleek, Proportionate PREV / NEXT Bar (44dp instead of giant 62dp)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(62.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                .height(44.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Button(
                 onClick = {
@@ -430,14 +446,15 @@ fun LiveControlScreen(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = SanctuaryCard, contentColor = Color.White),
                 border = BorderStroke(1.dp, SanctuaryBorder),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
             ) {
-                Icon(Icons.AutoMirrored.Filled.NavigateBefore, contentDescription = null, modifier = Modifier.size(28.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(AppStrings.prevBtn(ne), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Icon(Icons.AutoMirrored.Filled.NavigateBefore, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(3.dp))
+                Text(AppStrings.prevBtn(ne), fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
             }
 
             Button(
@@ -446,15 +463,53 @@ fun LiveControlScreen(
                     onNextSlide()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = HamroPink, contentColor = Color.White),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                 modifier = Modifier
-                    .weight(1.35f)
+                    .weight(1.25f)
                     .fillMaxHeight()
             ) {
-                Text(AppStrings.nextBtn(ne), fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
-                Spacer(Modifier.width(4.dp))
-                Icon(Icons.AutoMirrored.Filled.NavigateNext, contentDescription = null, modifier = Modifier.size(28.dp))
+                Text(AppStrings.nextBtn(ne), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.width(3.dp))
+                Icon(Icons.AutoMirrored.Filled.NavigateNext, contentDescription = null, modifier = Modifier.size(20.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun CompactToolPill(
+    label: String,
+    icon: ImageVector?,
+    tint: Color,
+    bgColor: Color,
+    borderColor: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(7.dp))
+            .background(bgColor)
+            .border(0.8.dp, borderColor, RoundedCornerShape(7.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 5.dp)
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(13.dp)
+            )
+            Spacer(Modifier.width(4.dp))
+        }
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (tint == TextSecondary) Color(0xFFE2E8F0) else tint,
+            maxLines = 1
+        )
     }
 }
