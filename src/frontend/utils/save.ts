@@ -122,6 +122,7 @@ type HymnSyncPayload = {
     categoryId: HymnSyncCategoryId
     number?: string
     authors?: string
+    modifiedAt?: number
 }
 
 function normalizeHymnText(value: any) {
@@ -151,37 +152,54 @@ function getHymnCategoryFromShow(show: any): HymnSyncCategoryId {
     return "bhajan"
 }
 
-function getHymnSyncPayloads(showsData: Shows): HymnSyncPayload[] {
-    const seen = new Set<string>()
+function getHymnSyncPayloads(showsData: Shows): { payloads: HymnSyncPayload[]; syncedShowIds: string[] } {
+    const byHymnKey = new Map<string, { payload: HymnSyncPayload; showId: string; modifiedAt: number }>()
 
-    return Object.values(showsData || {}).flatMap((show: any) => {
-        if (show?.origin !== "hamro-hymns") return []
+    for (const [showId, show] of Object.entries<any>(showsData || {})) {
+        if (show?.origin !== "hamro-hymns") continue
+
+        // Only sync back into nepali_hymns.json when a hymn show has an explicit sync timestamp AND
+        // its slides were genuinely modified in the Slide Editor AFTER that hymn sync.
+        // This prevents old/unedited cached .show copies from ever overwriting Edit Hymn updates!
+        const syncedAt = Number(show?.quickAccess?.metadata?.hymnSyncedAt || 0)
+        const modifiedAt = Number(show?.timestamps?.modified || 0)
+        if (!syncedAt || modifiedAt <= syncedAt + 250) continue
 
         const title = normalizeHymnText(show?.meta?.title || show?.name || "")
         const lyrics = getHymnLyricsFromShow(show)
-        if (!title || !lyrics) return []
+        if (!title || !lyrics) continue
 
         const id = normalizeHymnText(show?.quickAccess?.metadata?.hymnSourceKey || "")
         const number = normalizeHymnText(show?.quickAccess?.number || show?.meta?.number || "")
         const dedupeKey = id || `${title}|${number}`
-        if (seen.has(dedupeKey)) return []
-        seen.add(dedupeKey)
+
+        const prev = byHymnKey.get(dedupeKey)
+        if (prev && prev.modifiedAt >= modifiedAt) continue
 
         const titleEn = normalizeHymnText(show?.quickAccess?.metadata?.hymnTitleEn || "")
         const authors = normalizeHymnText(show?.meta?.author || "")
 
-        return [
-            {
+        byHymnKey.set(dedupeKey, {
+            showId,
+            modifiedAt,
+            payload: {
                 id: id || undefined,
                 title,
                 titleEn: titleEn || undefined,
                 lyrics,
                 categoryId: getHymnCategoryFromShow(show),
                 number: number || undefined,
-                authors: authors || undefined
+                authors: authors || undefined,
+                modifiedAt
             }
-        ]
-    })
+        })
+    }
+
+    const entries = Array.from(byHymnKey.values())
+    return {
+        payloads: entries.map((e) => e.payload),
+        syncedShowIds: entries.map((e) => e.showId)
+    }
 }
 
 export function save(closeWhenFinished = false, customTriggers: SaveActions = {}) {
@@ -295,10 +313,26 @@ export function save(closeWhenFinished = false, customTriggers: SaveActions = {}
     renamedShows.set([])
 
     if (customTriggers.backup) newToast("settings.backup_started")
-    // trigger toast before saving
-    const hymnSyncPayloads = getHymnSyncPayloads(saveData.showsCache || {})
+    // Sync only genuinely Slide-Editor-modified hymn shows atomically inside Main.SAVE (before close)
+    const { payloads: hymnSyncPayloads, syncedShowIds } = getHymnSyncPayloads(saveData.showsCache || {})
+    if (hymnSyncPayloads.length) {
+        const syncedNow = Date.now()
+        saveData.hymnSyncPayloads = hymnSyncPayloads
+        for (const showId of syncedShowIds) {
+            if (saveData.showsCache?.[showId]?.quickAccess?.metadata) {
+                saveData.showsCache[showId].quickAccess.metadata.hymnSyncedAt = syncedNow
+            }
+        }
+        showsCache.update((cache) => {
+            for (const showId of syncedShowIds) {
+                if (cache?.[showId]?.quickAccess?.metadata) {
+                    cache[showId].quickAccess.metadata.hymnSyncedAt = syncedNow
+                }
+            }
+            return cache
+        })
+    }
     setTimeout(() => {
-        if (hymnSyncPayloads.length) sendMain(Main.SYNC_HYMN_SHOWS, hymnSyncPayloads)
         sendMain(Main.SAVE, saveData)
     })
 }

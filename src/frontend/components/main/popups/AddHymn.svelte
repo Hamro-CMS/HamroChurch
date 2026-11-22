@@ -5,8 +5,10 @@
     import { Main } from "../../../../types/IPC/Main"
     import { requestMain } from "../../../IPC/main"
     import { activePopup, shows, showsCache } from "../../../stores"
-    import { hymnEditTarget, hymnSelectedId, loadHymns } from "../../drawer/hymns/hymns"
+    import { applyHymnToExistingShow, hymnEditTarget, hymnItems, hymnSelectedId, loadHymns, type HymnRecord } from "../../drawer/hymns/hymns"
+    import { saveTextCache } from "../../helpers/setShow"
     import { newToast } from "../../../utils/common"
+    import { save } from "../../../utils/save"
     import T from "../../helpers/T.svelte"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import MaterialDropdown from "../../inputs/MaterialDropdown.svelte"
@@ -37,57 +39,56 @@
         { value: "new", label: "New Songs / नयाँ गीत" }
     ]
 
-    function syncLinkedHymnShows(savedHymnId: string, cleanNumber: string) {
+    function syncLinkedHymnShows(updatedHymn: HymnRecord, cleanNumber: string) {
+        const savedHymnId = updatedHymn.sourceKey || updatedHymn.id
         if (!savedHymnId) return
 
-        const matchedIds: string[] = []
+        const syncedAt = Math.max(Date.now(), updatedHymn.updatedAt || 0)
+        const updatedEntries: [string, any][] = []
+
         showsCache.update((cache) => {
             for (const [showId, show] of Object.entries(cache || {})) {
-                if (show?.quickAccess?.metadata?.hymnSourceKey !== savedHymnId) continue
-                matchedIds.push(showId)
-                const nextQuickAccess = {
-                    ...(show.quickAccess || {}),
-                    metadata: {
-                        ...(show.quickAccess?.metadata || {}),
-                        hymnCategoryId: categoryId,
-                        hymnTitleEn: titleEn.trim()
-                    }
-                }
-                if (cleanNumber) nextQuickAccess.number = cleanNumber
-                else delete nextQuickAccess.number
+                const metaKey = show?.quickAccess?.metadata?.hymnSourceKey
+                const isLegacyMatch = show?.origin === "hamro-hymns" && !metaKey && show?.meta?.title === editTarget?.title
+                if (metaKey !== savedHymnId && !isLegacyMatch) continue
 
-                cache[showId] = {
-                    ...show,
-                    quickAccess: nextQuickAccess,
-                    meta: {
-                        ...(show.meta || {}),
-                        title: title.trim(),
-                        number: cleanNumber || undefined,
-                        author: authors.trim() || undefined
-                    }
-                }
+                const refreshed = applyHymnToExistingShow(show, updatedHymn, syncedAt)
+                cache[showId] = refreshed
+                updatedEntries.push([showId, refreshed])
             }
             return cache
         })
 
-        if (matchedIds.length) {
-            shows.update((allShows) => {
-                for (const showId of matchedIds) {
-                    if (!allShows[showId]) continue
-                    const nextQuickAccess = {
-                        ...(allShows[showId].quickAccess || {}),
-                        metadata: {
-                            ...(allShows[showId].quickAccess?.metadata || {}),
-                            hymnCategoryId: categoryId,
-                            hymnTitleEn: titleEn.trim()
-                        }
+        for (const [showId, refreshed] of updatedEntries) {
+            saveTextCache(showId, refreshed)
+        }
+
+        shows.update((allShows) => {
+            for (const [showId, entry] of Object.entries(allShows || {})) {
+                const metaKey = entry?.quickAccess?.metadata?.hymnSourceKey
+                const wasUpdatedInCache = updatedEntries.some(([id]) => id === showId)
+                if (metaKey !== savedHymnId && !wasUpdatedInCache) continue
+
+                const nextQuickAccess = {
+                    ...(entry.quickAccess || {}),
+                    metadata: {
+                        ...(entry.quickAccess?.metadata || {}),
+                        hymnSourceKey: savedHymnId,
+                        hymnCategoryId: categoryId,
+                        hymnTitleEn: titleEn.trim(),
+                        hymnSyncedAt: syncedAt
                     }
-                    if (cleanNumber) nextQuickAccess.number = cleanNumber
-                    else delete nextQuickAccess.number
-                    allShows[showId].quickAccess = nextQuickAccess
                 }
-                return allShows
-            })
+                if (cleanNumber) nextQuickAccess.number = cleanNumber
+                else delete nextQuickAccess.number
+                allShows[showId].quickAccess = nextQuickAccess
+                if (allShows[showId].timestamps) allShows[showId].timestamps.modified = syncedAt
+            }
+            return allShows
+        })
+
+        if (updatedEntries.length) {
+            save(false, { autosave: true })
         }
     }
 
@@ -122,7 +123,10 @@
         const resolvedId = result.id || editId
         if (resolvedId) {
             hymnSelectedId.set(resolvedId)
-            syncLinkedHymnShows(resolvedId, cleanNumber)
+            const updatedHymn = get(hymnItems).find((h) => h.id === resolvedId || h.sourceKey === resolvedId)
+            if (updatedHymn) {
+                syncLinkedHymnShows(updatedHymn, cleanNumber)
+            }
         }
         if (isEditing) newToast("hymns.updated")
         activePopup.set(null)
@@ -132,12 +136,12 @@
 </script>
 
 <div class="form">
-    <MaterialTextInput label="hymns.form_title" value={title} on:input={(e) => (title = e.detail)} autofocus />
-    <MaterialTextInput label="hymns.form_transliteration" value={titleEn} on:input={(e) => (titleEn = e.detail)} />
+    <MaterialTextInput label="hymns.form_title" value={title} on:input={(e) => (title = e.detail)} on:change={(e) => (title = e.detail)} autofocus />
+    <MaterialTextInput label="hymns.form_transliteration" value={titleEn} on:input={(e) => (titleEn = e.detail)} on:change={(e) => (titleEn = e.detail)} />
     <MaterialDropdown label="hymns.form_category" options={categoryOptions} value={categoryId} on:change={(e) => (categoryId = e.detail)} />
-    <MaterialTextInput label="hymns.form_number" value={number} disableNepaliTyping on:input={(e) => (number = sanitizeHymnNumber(e.detail))} />
-    <MaterialTextInput label="hymns.form_author" value={authors} on:input={(e) => (authors = e.detail)} />
-    <MaterialTextarea label="hymns.form_lyrics" value={lyrics} rows={10} on:input={(e) => (lyrics = e.detail)} />
+    <MaterialTextInput label="hymns.form_number" value={number} disableNepaliTyping on:input={(e) => (number = sanitizeHymnNumber(e.detail))} on:change={(e) => (number = sanitizeHymnNumber(e.detail))} />
+    <MaterialTextInput label="hymns.form_author" value={authors} on:input={(e) => (authors = e.detail)} on:change={(e) => (authors = e.detail)} />
+    <MaterialTextarea label="hymns.form_lyrics" value={lyrics} rows={10} on:input={(e) => (lyrics = e.detail)} on:change={(e) => (lyrics = e.detail)} />
 
     {#if errorMessage}
         <p class="error">{errorMessage}</p>

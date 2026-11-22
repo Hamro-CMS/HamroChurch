@@ -6,10 +6,11 @@ import type { Show } from "../../../../types/Show"
 import { ShowObj } from "../../../classes/Show"
 import { createCategory } from "../../../converters/importHelpers"
 import { requestMain } from "../../../IPC/main"
-import { activeProject, activeShow, language } from "../../../stores"
+import { activeProject, activeShow, language, projects, shows, showsCache } from "../../../stores"
 import { newToast } from "../../../utils/common"
 import { translateText } from "../../../utils/language"
 import { history } from "../../helpers/history"
+import { loadShows, saveTextCache } from "../../helpers/setShow"
 import { checkName } from "../../helpers/show"
 import { Main } from "../../../../types/IPC/Main"
 
@@ -28,6 +29,7 @@ type RawHymnSong = {
     slides?: string[]
     authors?: string
     hasLyrics?: boolean
+    updatedAt?: number
     rawDetails?: string
 }
 
@@ -51,6 +53,7 @@ export type HymnRecord = {
     lyrics: string
     verses: string[]
     authors: string
+    updatedAt: number
     rawDetails: string
     firstLine: string
     slidesCount: number
@@ -207,7 +210,7 @@ function shouldExcludeHymn(song: RawHymnSong) {
 
 function deriveVerses(song: RawHymnSong) {
     const slides = Array.isArray(song.slides) ? song.slides.map((entry) => normalizeWhitespace(String(entry))).filter(Boolean) : []
-    if (slides.length > 1) return slides
+    if (slides.length >= 1) return slides
 
     const lyrics = normalizeWhitespace(String(song.lyrics || ""))
     if (!lyrics) return []
@@ -356,7 +359,7 @@ export async function loadHymns() {
                 const title = normalizeWhitespace(String(song.title || ""))
                 const titleEn = normalizeWhitespace(String(song.titleEn || ""))
                 const verses = deriveVerses(song)
-                const lyrics = normalizeWhitespace(String(song.lyrics || verses.join("\n\n")))
+                const lyrics = verses.length > 1 ? verses.join("\n\n") : normalizeWhitespace(String(song.lyrics || verses[0] || ""))
                 if (!title || !lyrics || !verses.length) return
 
                 const resolved = resolveHymnNumber(song.sourceRefs || [], mapCategoryId(song.category || category.name || "") as HymnBookCategoryId)
@@ -367,6 +370,7 @@ export async function loadHymns() {
                 const slidesCount = verses.length
                 const wordCount = lyrics.split(/\s+/).filter(Boolean).length
                 const repeatChorus = verses.some((verse) => inferSlideGroup(verse) === "chorus") && verses.length > 1
+                const updatedAt = Number(song.updatedAt || 0) || 0
 
                 items.push({
                     id: song.sourceKey || `hymn-${index}-${uid(4)}`,
@@ -381,6 +385,7 @@ export async function loadHymns() {
                     lyrics,
                     verses,
                     authors: normalizeWhitespace(String(song.authors || "")),
+                    updatedAt,
                     rawDetails: normalizeWhitespace(String(song.rawDetails || "")),
                     firstLine,
                     slidesCount,
@@ -440,17 +445,16 @@ export function highlightHymnText(text: string, query: string) {
     return escapeHtml(text).replace(new RegExp(escaped, "gi"), (match) => `<mark>${match}</mark>`)
 }
 
-export function buildHymnShow(hymn: HymnRecord): Show {
-    const layoutId = uid()
-    const created = Date.now()
+export function buildHymnSlides(verses: string[]) {
     const slides: Record<string, any> = {}
     const layoutSlides: { id: string }[] = []
 
-    hymn.verses.forEach((verseText) => {
+    verses.forEach((verseText) => {
         const slideId = uid()
+        const grp = inferSlideGroup(verseText)
         slides[slideId] = {
-            group: inferSlideGroup(verseText),
-            globalGroup: inferSlideGroup(verseText),
+            group: grp,
+            globalGroup: grp,
             color: null,
             settings: {},
             notes: "",
@@ -464,6 +468,59 @@ export function buildHymnShow(hymn: HymnRecord): Show {
         }
         layoutSlides.push({ id: slideId })
     })
+
+    return { slides, layoutSlides }
+}
+
+export function applyHymnToExistingShow(existingShow: Show, hymn: HymnRecord, syncedAt = Date.now()): Show {
+    const { slides, layoutSlides } = buildHymnSlides(hymn.verses)
+    const layoutIds = Object.keys(existingShow.layouts || {})
+    const activeLayoutId = (existingShow.settings?.activeLayout && existingShow.layouts?.[existingShow.settings.activeLayout] ? existingShow.settings.activeLayout : layoutIds[0]) || uid()
+    const baseLayout = existingShow.layouts?.[activeLayoutId] || { name: shouldUseNepaliLocale(get(language)) ? "मूल" : "Main", notes: "", slides: [] }
+
+    const nextQuickAccess: Record<string, any> = {
+        ...(existingShow.quickAccess || {}),
+        metadata: {
+            ...(existingShow.quickAccess?.metadata || {}),
+            hymnSourceKey: hymn.sourceKey || hymn.id,
+            hymnCategoryId: hymn.categoryId,
+            hymnTitleEn: hymn.titleEn || "",
+            hymnSyncedAt: syncedAt
+        }
+    }
+    if (hymn.number) nextQuickAccess.number = hymn.number
+    else delete nextQuickAccess.number
+
+    return {
+        ...existingShow,
+        origin: "hamro-hymns",
+        quickAccess: nextQuickAccess,
+        meta: {
+            ...(existingShow.meta || {}),
+            title: hymn.title,
+            number: hymn.number || undefined,
+            author: hymn.authors || undefined,
+            copyright: hymn.rawDetails || undefined
+        },
+        timestamps: {
+            ...(existingShow.timestamps || { created: syncedAt, used: null }),
+            modified: syncedAt
+        },
+        slides,
+        layouts: {
+            ...(existingShow.layouts || {}),
+            [activeLayoutId]: {
+                ...baseLayout,
+                slides: layoutSlides
+            }
+        }
+    }
+}
+
+export function buildHymnShow(hymn: HymnRecord): Show {
+    const layoutId = uid()
+    const created = Date.now()
+    const { slides, layoutSlides } = buildHymnSlides(hymn.verses)
 
     const categoryNames: Record<Exclude<HymnCategoryId, "all">, string> = {
         bhajan: "bhajan",
@@ -480,9 +537,10 @@ export function buildHymnShow(hymn: HymnRecord): Show {
     show.origin = "hamro-hymns"
     show.quickAccess = hymn.number ? { number: hymn.number } : {}
     show.quickAccess.metadata = {
-        hymnSourceKey: hymn.sourceKey,
+        hymnSourceKey: hymn.sourceKey || hymn.id,
         hymnCategoryId: hymn.categoryId,
-        hymnTitleEn: hymn.titleEn || ""
+        hymnTitleEn: hymn.titleEn || "",
+        hymnSyncedAt: created
     }
     show.meta = {
         title: hymn.title,
@@ -497,9 +555,54 @@ export function buildHymnShow(hymn: HymnRecord): Show {
     return show
 }
 
-export function insertSelectedHymnIntoSlides() {
+export async function insertSelectedHymnIntoSlides() {
     const hymn = getSelectedHymn()
     if (!hymn) return
+
+    const targetSourceKey = hymn.sourceKey || hymn.id
+    let existingShowId = Object.entries(get(shows)).find(([, s]: any) => {
+        const metaKey = s?.quickAccess?.metadata?.hymnSourceKey
+        return metaKey && targetSourceKey && metaKey === targetSourceKey
+    })?.[0]
+
+    if (existingShowId) {
+        await loadShows([existingShowId])
+        const cached = get(showsCache)[existingShowId]
+        if (!cached) {
+            existingShowId = undefined
+        } else {
+            const cachedSyncedAt = Number(cached?.quickAccess?.metadata?.hymnSyncedAt || 0)
+            if (!cachedSyncedAt || (hymn.updatedAt && hymn.updatedAt > cachedSyncedAt)) {
+                const now = Math.max(Date.now(), hymn.updatedAt || 0)
+                const refreshed = applyHymnToExistingShow(cached, hymn, now)
+                showsCache.update((c) => ({ ...c, [existingShowId!]: refreshed }))
+                saveTextCache(existingShowId, refreshed)
+            }
+        }
+    }
+
+    if (existingShowId) {
+        const projId = get(activeProject)
+        let projectIndex: number | undefined = undefined
+        if (projId && get(projects)[projId]) {
+            projects.update((all) => {
+                const proj = all[projId]
+                if (!proj?.shows) return all
+                let idx = proj.shows.findIndex((item) => item.id === existingShowId)
+                if (idx === -1) {
+                    const insertAt = get(activeShow)?.index === undefined ? proj.shows.length : get(activeShow)!.index! + 1
+                    proj.shows.splice(insertAt, 0, { id: existingShowId!, type: "show" })
+                    proj.modified = Date.now()
+                    idx = insertAt
+                }
+                projectIndex = idx
+                return all
+            })
+        }
+        activeShow.set({ id: existingShowId, type: "show", ...(projectIndex !== undefined ? { index: projectIndex } : {}) })
+        newToast("hymns.inserted")
+        return
+    }
 
     const show = buildHymnShow(hymn)
     const selectedIndex = get(activeShow)?.index === undefined ? undefined : get(activeShow)!.index! + 1

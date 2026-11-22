@@ -310,6 +310,7 @@ export interface MainSendPayloads {
         categoryId: "bhajan" | "chorus" | "children" | "new"
         number?: string
         authors?: string
+        modifiedAt?: number
     }[]
     [Main.NEPALI_TRANSLITERATE]: { text: string; num?: number }
     [Main.RESET_HYMNS]?: undefined

@@ -39,7 +39,7 @@ import {
     version
 } from "../../stores"
 import { createScriptureShow, formatBibleText, loadJsonBible, moveSelection, outputIsScripture, playScripture } from "../drawer/bible/scripture"
-import { buildHymnShow, getCategoryCounts, getFilteredHymns, hymnItems, inferSlideGroup, loadHymns, type HymnCategoryId, type HymnRecord } from "../drawer/hymns/hymns"
+import { applyHymnToExistingShow, buildHymnShow, getCategoryCounts, getFilteredHymns, hymnItems, inferSlideGroup, loadHymns, type HymnCategoryId, type HymnRecord } from "../drawer/hymns/hymns"
 import { pauseAllTimers } from "../drawer/timers/timers"
 import { getTextLines } from "../edit/scripts/textStyle"
 import { keysToID, removeDeleted, sortByName } from "../helpers/array"
@@ -629,7 +629,17 @@ export async function mobileProjectHymn(data: { id?: string; number?: string; ca
 
     if (existingShowId) {
         await loadShows([existingShowId])
-        if (!get(showsCache)[existingShowId]) existingShowId = undefined
+        const cached = get(showsCache)[existingShowId]
+        if (!cached) {
+            existingShowId = undefined
+        } else {
+            const cachedSyncedAt = Number(cached?.quickAccess?.metadata?.hymnSyncedAt || 0)
+            if (!cachedSyncedAt || (hymn.updatedAt && hymn.updatedAt > cachedSyncedAt)) {
+                const now = Math.max(Date.now(), hymn.updatedAt || 0)
+                const refreshed = applyHymnToExistingShow(cached, hymn, now)
+                showsCache.update((c) => ({ ...c, [existingShowId!]: refreshed }))
+            }
+        }
     }
 
     let showId = existingShowId || ""

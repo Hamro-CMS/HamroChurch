@@ -81,6 +81,16 @@ export interface SaveData {
     scripturesCache?: { [key: string]: Bible }
     deletedShows?: { name: string; id: string }[]
     renamedShows?: { id: string; name: string; oldName: string }[]
+    hymnSyncPayloads?: {
+        id?: string
+        title: string
+        titleEn?: string
+        lyrics: string
+        categoryId: "bhajan" | "chorus" | "children" | "new"
+        number?: string
+        authors?: string
+        modifiedAt?: number
+    }[]
     // CACHES
     CACHE: { text: any }
     HISTORY: { undo: (History | HistoryNew)[]; redo: (History | HistoryNew)[] }

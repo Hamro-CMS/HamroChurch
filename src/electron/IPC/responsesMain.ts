@@ -3,6 +3,7 @@ import { app, desktopCapturer, screen, shell, systemPreferences } from "electron
 import fs from "fs"
 import os from "os"
 import path from "path"
+import { uid } from "uid"
 import { getMainWindow, isProd, mainWindow, maximizeMain, setGlobalMenu } from ".."
 import type { MainResponses } from "../../types/IPC/Main"
 import { Main } from "../../types/IPC/Main"
@@ -581,6 +582,7 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
             return true
         })
         const sourceRefs = trimmedNumber ? [`manual:${manualPrefix}${trimmedNumber}`, ...keptRefs] : keptRefs
+        const now = Date.now()
         const songRecord = {
             sourceKey: hymnId,
             sourcePage: String(previousSong?.sourcePage || ""),
@@ -593,6 +595,7 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
             slides,
             authors: String(data.authors || "").trim(),
             hasLyrics: true,
+            updatedAt: now,
             rawDetails: editId ? (trimmedNumber ? `Edited (${trimmedNumber})` : "Edited manually") : trimmedNumber ? `Added manually (${trimmedNumber})` : "Added manually"
         }
 
@@ -606,6 +609,11 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
         category.songs.push(songRecord)
 
         writeFile(targetPath, JSON.stringify(payload, null, 2))
+
+        // Immediately sync any existing .show files on disk linked to this hymn so neither unloaded
+        // shows nor closing without clicking File > Save can ever revert or show stale hymn slides.
+        syncHymnShowFilesOnDisk(hymnId, songRecord, data.categoryId, trimmedNumber, now)
+
         return { success: true, path: targetPath, id: hymnId }
     } catch (error) {
         return {
@@ -615,7 +623,116 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
     }
 }
 
-function syncHamroHymnShows(
+function inferHymnSlideGroup(text: string): "chorus" | "verse" {
+    const trimmed = String(text || "").trim().toLowerCase()
+    if (trimmed.startsWith("को.") || trimmed.includes("कोरस") || trimmed.includes("chorus")) return "chorus"
+    return "verse"
+}
+
+function syncHymnShowFilesOnDisk(
+    hymnId: string,
+    songRecord: { title: string; titleEn: string | null; slides: string[]; authors: string; rawDetails: string },
+    categoryId: "bhajan" | "chorus" | "children" | "new",
+    cleanNumber: string,
+    syncedAt: number
+) {
+    if (!hymnId || !songRecord.slides.length) return
+    try {
+        const showsFolder = getDataFolderPath("shows")
+        const fileNames = readFolder(showsFolder)
+        for (const fileName of fileNames) {
+            if (!fileName.toLowerCase().endsWith(".show")) continue
+            const fullPath = path.join(showsFolder, fileName)
+            const raw = readFile(fullPath)
+            if (!raw || !raw.includes(hymnId)) continue
+
+            let parsed: any
+            try {
+                parsed = JSON.parse(raw)
+            } catch {
+                continue
+            }
+            const showId = Array.isArray(parsed) ? parsed[0] : null
+            const show = Array.isArray(parsed) ? parsed[1] : parsed
+            if (!show || typeof show !== "object") continue
+
+            const metaSourceKey = String(show?.quickAccess?.metadata?.hymnSourceKey || "")
+            const isLegacyMigrated = show?.origin === "hamro-hymns" && !metaSourceKey && fileName.toLowerCase().endsWith(`-${hymnId.toLowerCase()}.show`)
+            if (metaSourceKey !== hymnId && !isLegacyMigrated) continue
+
+            const existingLayoutIds = Object.keys(show.layouts || {})
+            const activeLayoutId = (show.settings?.activeLayout && show.layouts?.[show.settings.activeLayout] ? show.settings.activeLayout : existingLayoutIds[0]) || uid()
+            const existingLayout = show.layouts?.[activeLayoutId] || { name: "मूल", notes: "", slides: [] }
+
+            const nextSlides: Record<string, any> = {}
+            const nextLayoutSlides: { id: string }[] = []
+            for (const slideText of songRecord.slides) {
+                const slideId = uid()
+                const grp = inferHymnSlideGroup(slideText)
+                nextSlides[slideId] = {
+                    group: grp,
+                    globalGroup: grp,
+                    color: null,
+                    settings: {},
+                    notes: "",
+                    items: [
+                        {
+                            type: "text",
+                            style: "top:88px;left:50px;height:904px;width:1820px;font-family:NotoSansDevanagari;",
+                            lines: slideText.split("\n").map((line: string) => ({ align: "", text: [{ value: line, style: "font-size: 100px;" }] }))
+                        }
+                    ]
+                }
+                nextLayoutSlides.push({ id: slideId })
+            }
+
+            const nextQuickAccess: Record<string, any> = {
+                ...(show.quickAccess || {}),
+                metadata: {
+                    ...(show.quickAccess?.metadata || {}),
+                    hymnSourceKey: hymnId,
+                    hymnCategoryId: categoryId,
+                    hymnTitleEn: songRecord.titleEn || "",
+                    hymnSyncedAt: syncedAt
+                }
+            }
+            if (cleanNumber) nextQuickAccess.number = cleanNumber
+            else delete nextQuickAccess.number
+
+            const updatedShow = {
+                ...show,
+                origin: "hamro-hymns",
+                quickAccess: nextQuickAccess,
+                meta: {
+                    ...(show.meta || {}),
+                    title: songRecord.title,
+                    number: cleanNumber || undefined,
+                    author: songRecord.authors || undefined,
+                    copyright: songRecord.rawDetails || undefined
+                },
+                timestamps: {
+                    ...(show.timestamps || { created: syncedAt, used: null }),
+                    modified: syncedAt
+                },
+                slides: nextSlides,
+                layouts: {
+                    ...(show.layouts || {}),
+                    [activeLayoutId]: {
+                        ...existingLayout,
+                        slides: nextLayoutSlides
+                    }
+                }
+            }
+
+            const serialized = showId ? JSON.stringify([showId, updatedShow]) : JSON.stringify(updatedShow)
+            writeFile(fullPath, serialized)
+        }
+    } catch (err) {
+        console.warn("Could not sync linked hymn show files on disk:", err)
+    }
+}
+
+export function syncHamroHymnShows(
     updates: {
         id?: string
         title: string
@@ -624,6 +741,7 @@ function syncHamroHymnShows(
         categoryId: "bhajan" | "chorus" | "children" | "new"
         number?: string
         authors?: string
+        modifiedAt?: number
     }[] = []
 ) {
     const normalize = (value: any) =>
@@ -696,6 +814,12 @@ function syncHamroHymnShows(
             const nextCategoryId = normalizeCategory(update?.categoryId)
 
             if (currentSong) {
+                const songUpdatedAt = Number(currentSong?.updatedAt || 0)
+                const showModifiedAt = Number(update?.modifiedAt || 0)
+                // Never let an older cached .show overwrite a newer Edit Hymn update
+                if (songUpdatedAt > 0 && showModifiedAt <= songUpdatedAt) continue
+                if (showModifiedAt <= 0) continue
+
                 const unchanged = normalize(currentSong?.title) === title && normalize(currentSong?.titleEn) === normalize(update?.titleEn) && normalize(currentSong?.authors) === normalize(update?.authors) && normalizeNumber(extractNumber(currentSong?.sourceRefs || [])) === normalizeNumber(update?.number) && matched?.categoryId === nextCategoryId && getSongLyrics(currentSong) === lyrics
 
                 if (unchanged) continue
