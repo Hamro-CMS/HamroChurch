@@ -44,40 +44,47 @@
     .sidebar {
         display: flex;
         flex-direction: column;
-        gap: 0.35rem;
-        padding: 0.65rem 0 0.85rem;
+        gap: 0.14rem;
+        padding: 0.3rem 0 0.2rem;
         background: var(--primary-darker);
         height: 100%;
+        min-height: 0;
+        box-sizing: border-box;
     }
 
     .sectionLabel {
-        padding: 0.25rem 1rem 0.1rem;
-        font-size: 0.78rem;
-        opacity: 0.7;
+        padding: 0.14rem 0.85rem 0.06rem;
+        font-size: 0.69rem;
+        font-weight: 600;
+        opacity: 0.68;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.05em;
+        flex-shrink: 0;
     }
 
     .filters {
         display: flex;
         flex-direction: column;
-        gap: 0.15rem;
+        gap: 2px;
         overflow-y: auto;
-        padding-right: 0.4rem;
+        min-height: 0;
+        padding-right: 0.25rem;
     }
 
     .item {
         display: grid;
-        grid-template-columns: 1rem 1fr auto;
+        grid-template-columns: 0.95rem 1fr auto;
         align-items: center;
-        gap: 0.65rem;
-        padding: 0.7rem 1rem;
+        gap: 0.52rem;
+        padding: 0.34rem 0.85rem;
+        font-size: 0.85rem;
         color: var(--text);
         cursor: pointer;
-        border-left: 3px solid transparent;
         border: none;
+        border-left: 3px solid transparent;
         background: transparent;
         text-align: left;
+        flex-shrink: 0;
     }
 
     .item:hover,
@@ -107,7 +114,7 @@
     }
 
     .icon {
-        font-size: 0.95rem;
+        font-size: 0.88rem;
         line-height: 1;
         opacity: 0.8;
     }
@@ -116,16 +123,16 @@
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: normal;
-        line-height: 1.25;
+        white-space: nowrap;
+        line-height: 1.2;
     }
 
     .count {
-        font-size: 0.8rem;
-        opacity: 0.65;
+        font-size: 0.76rem;
+        opacity: 0.68;
     }
 
     .allItem {
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.05rem;
     }
 </style>

@@ -90,6 +90,7 @@ import { updateThemeValues } from "../../utils/updateSettings"
 import { getActionTriggerId } from "../actions/actions"
 import { moveStageConnection } from "../actions/apiHelper"
 import { createScriptureShow, openActiveInRouteBible } from "../drawer/bible/scripture"
+import { copySelectedHymnToClipboard, hymnSelectedId, insertSelectedHymnIntoSlides, openEditHymnById, toggleFavorite } from "../drawer/hymns/hymns"
 import { stopMediaRecorder } from "../drawer/live/recorder"
 import { playPauseGlobal } from "../drawer/timers/timers"
 import { addChords } from "../edit/scripts/chords"
@@ -874,12 +875,28 @@ const clickActions = {
             show.layouts[layoutId].slides = layoutSlides
 
             history({ id: "UPDATE", newData: { data: show, remember: { project: get(activeProject) } }, location: { page: "show", id: "show" } })
+        } else if (obj.contextElem?.classList.contains("#hymn_item")) {
+            const hymnId = obj.contextElem.dataset.hymnId
+            void insertSelectedHymnIntoSlides(hymnId)
         } else if (obj.contextElem?.classList.contains("chapters")) {
             triggerFunction("scripture_selectAll")
             setTimeout(createScriptureShow)
         } else if (obj.sel?.id === "scripture") {
             createScriptureShow()
         }
+    },
+    hymn_edit: (obj: ObjData) => {
+        const hymnId = obj.contextElem?.dataset?.hymnId
+        openEditHymnById(hymnId)
+    },
+    hymn_copy: (obj: ObjData) => {
+        const hymnId = obj.contextElem?.dataset?.hymnId
+        if (hymnId) hymnSelectedId.set(hymnId)
+        void copySelectedHymnToClipboard()
+    },
+    hymn_favorite: (obj: ObjData) => {
+        const hymnId = obj.contextElem?.dataset?.hymnId || get(hymnSelectedId)
+        if (hymnId) toggleFavorite(hymnId)
     },
 
     // project

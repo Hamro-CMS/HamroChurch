@@ -11,6 +11,7 @@
     import T from "../helpers/T.svelte"
     import { ContextMenuItem, contextMenuItems } from "./contextMenus"
     import { menuClick } from "./menuClick"
+    import { hymnFavoriteIds, hymnSelectedId } from "../drawer/hymns/hymns"
 
     export let contextElem: HTMLDivElement | null = null
     export let topBar = false
@@ -220,6 +221,10 @@
                 let path = $selected.data[0]?.path || $selected.data[0]?.id
                 enabled = !!$media[path]?.favourite
             }
+        },
+        hymn_favorite: () => {
+            const hymnId = contextElem?.dataset?.hymnId || $hymnSelectedId
+            enabled = !!(hymnId && $hymnFavoriteIds.includes(hymnId))
         },
         effects_library_add: () => {
             // WIP don't show this if not an effect

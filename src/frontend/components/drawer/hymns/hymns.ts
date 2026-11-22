@@ -6,7 +6,7 @@ import type { Show } from "../../../../types/Show"
 import { ShowObj } from "../../../classes/Show"
 import { createCategory } from "../../../converters/importHelpers"
 import { requestMain } from "../../../IPC/main"
-import { activeProject, activeShow, language, projects, shows, showsCache } from "../../../stores"
+import { activeEdit, activePage, activePopup, activeProject, activeShow, focusMode, language, projects, projectView, shows, showsCache } from "../../../stores"
 import { newToast } from "../../../utils/common"
 import { translateText } from "../../../utils/language"
 import { history } from "../../helpers/history"
@@ -555,8 +555,11 @@ export function buildHymnShow(hymn: HymnRecord): Show {
     return show
 }
 
-export async function insertSelectedHymnIntoSlides() {
-    const hymn = getSelectedHymn()
+export async function insertSelectedHymnIntoSlides(targetHymnId?: string | Event) {
+    if (typeof targetHymnId === "string" && targetHymnId) {
+        hymnSelectedId.set(targetHymnId)
+    }
+    const hymn = typeof targetHymnId === "string" && targetHymnId ? get(hymnItems).find((item) => item.id === targetHymnId) || getSelectedHymn() : getSelectedHymn()
     if (!hymn) return
 
     const targetSourceKey = hymn.sourceKey || hymn.id
@@ -598,16 +601,35 @@ export async function insertSelectedHymnIntoSlides() {
                 projectIndex = idx
                 return all
             })
+            projectView.set(false)
         }
         activeShow.set({ id: existingShowId, type: "show", ...(projectIndex !== undefined ? { index: projectIndex } : {}) })
+        if (!get(focusMode)) {
+            activeEdit.set({ type: "show", slide: 0, items: [], showId: existingShowId })
+        }
+        if (get(activePage) !== "show" && get(activePage) !== "edit") {
+            activePage.set("show")
+        }
         newToast("hymns.inserted")
         return
+    }
+
+    if (get(activeProject) && get(projects)[get(activeProject)!]) {
+        projectView.set(false)
     }
 
     const show = buildHymnShow(hymn)
     const selectedIndex = get(activeShow)?.index === undefined ? undefined : get(activeShow)!.index! + 1
     history({ id: "UPDATE", newData: { data: show, remember: { project: get(activeProject), index: selectedIndex } }, location: { page: "show", id: "show" } })
     newToast("hymns.inserted")
+}
+
+export function openEditHymnById(targetHymnId?: string) {
+    if (targetHymnId) hymnSelectedId.set(targetHymnId)
+    const hymn = targetHymnId ? get(hymnItems).find((item) => item.id === targetHymnId) || getSelectedHymn() : getSelectedHymn()
+    if (!hymn) return
+    hymnEditTarget.set(hymn)
+    activePopup.set("edit_hymn")
 }
 
 export async function copySelectedHymnToClipboard() {

@@ -17,7 +17,12 @@
     function selectHymn(hymn: HymnRecord) {
         hymnSelectedId.set(hymn.id)
         dispatch("select", hymn)
-        insertSelectedHymnIntoSlides()
+        insertSelectedHymnIntoSlides(hymn.id)
+    }
+
+    function focusHymn(hymn: HymnRecord) {
+        hymnSelectedId.set(hymn.id)
+        dispatch("select", hymn)
     }
 </script>
 
@@ -36,7 +41,14 @@
 
     {#if filtered.length}
         {#each filtered as hymn}
-            <button class:selected={$hymnSelectedId === hymn.id} class="row" on:click={() => selectHymn(hymn)}>
+            <button
+                type="button"
+                class:selected={$hymnSelectedId === hymn.id}
+                class="row context #hymn_item"
+                data-hymn-id={hymn.id}
+                on:click={() => selectHymn(hymn)}
+                on:contextmenu={() => focusHymn(hymn)}
+            >
                 <span class="number">{formatHymnNumber(hymn.number, $language)}</span>
                 <span class="title">{@html highlightHymnText(hymn.title, $hymnSearchValue)}</span>
                 <span class="transliteration">{@html highlightHymnText(hymn.transliteration, $hymnSearchValue)}</span>
