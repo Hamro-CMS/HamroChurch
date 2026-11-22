@@ -1,4 +1,6 @@
 import { get } from "svelte/store"
+import { generateLocalCandidates } from "../../lib/googleNepaliTyping"
+import { handleKeyPress } from "../../lib/nepaliTyping"
 import { ShowList } from "../../types/Show"
 import { categories, drawerTabsData, textCache } from "../stores"
 import { formatSearch, tokenize } from "./search"
@@ -23,25 +25,124 @@ interface SearchIndex {
     lastBuildTime: number
 }
 
-interface BibleVerseRef {
+export interface BibleVerseRef {
     book: number
     chapter: number
     verse: number
     reference: string
     text: string
+    norm: string
+    loose: string
 }
 
-const BIBLE_INDEX_VERSION = 2 // Increment this to force index rebuild
+const BIBLE_INDEX_VERSION = 3 // Increment this to force index rebuild
 
 interface BibleIndex {
-    wordIndex: Map<string, BibleVerseRef[]>
+    entries: BibleVerseRef[]
     bibleId: string
     version: number
 }
 
 let searchIndex: SearchIndex | null = null
 let bibleIndex: BibleIndex | null = null
+let bibleIndexBuildingId = ""
+let bibleIndexBuildPromise: Promise<BibleIndex> | null = null
 let indexVersion = 0
+
+const BIBLE_CLEAN_MAP: Record<string, string> = {
+    "०": "0",
+    "१": "1",
+    "२": "2",
+    "३": "3",
+    "४": "4",
+    "५": "5",
+    "६": "6",
+    "७": "7",
+    "८": "8",
+    "९": "9",
+    "\u200b": "",
+    "\u200c": "",
+    "\u200d": "",
+    "\ufeff": ""
+}
+const BIBLE_LOOSE_MAP: Record<string, string> = {
+    ी: "ि",
+    ई: "इ",
+    ू: "ु",
+    ऊ: "उ",
+    श: "स",
+    ष: "स",
+    "ँ": "ं",
+    व: "ब",
+    ण: "न"
+}
+const BIBLE_CLEAN_RE = /[०-९\u200B-\u200D\uFEFF]/g
+const BIBLE_LOOSE_RE = /[ीईूऊशषँवण]/g
+const BIBLE_TAG_PUNCT_RE = /<[^>]+>|[.,\/#!?$%\^&\*;:{}=\-_'"´`~()\[\]“”‘’—–।॥]+/g
+const BIBLE_LATIN_ACCENT_RE = /[\u00C0-\u024F\u1E00-\u1EFF]/
+
+export function normalizeBibleSearchText(raw: string): string {
+    if (!raw) return ""
+    let out = raw
+        .replace(BIBLE_CLEAN_RE, (ch) => BIBLE_CLEAN_MAP[ch] ?? "")
+        .replace(BIBLE_TAG_PUNCT_RE, " ")
+        .toLowerCase()
+    if (BIBLE_LATIN_ACCENT_RE.test(out)) {
+        out = out.normalize("NFD").replace(/[\u0300-\u036f]/g, "").normalize("NFC")
+    }
+    return out.replace(/\s+/g, " ").trim()
+}
+
+export function normalizeBibleLooseText(alreadyNormalized: string): string {
+    if (!alreadyNormalized) return ""
+    return alreadyNormalized.replace(BIBLE_LOOSE_RE, (ch) => BIBLE_LOOSE_MAP[ch] ?? ch)
+}
+
+function transliterateRomanQueryToken(token: string): string {
+    let value = ""
+    let cursor = 0
+    for (const ch of token) {
+        const nextVal = value.slice(0, cursor) + ch + value.slice(cursor)
+        const nextCur = cursor + ch.length
+        const res = handleKeyPress({ inputType: "insertText", data: ch }, nextVal, nextCur)
+        if (res) {
+            value = res.newValue
+            cursor = res.newCursor
+        } else {
+            value = nextVal
+            cursor = nextCur
+        }
+    }
+    return value.replace(/\u094D$/g, "").trim()
+}
+
+function buildBibleQueryCandidates(rawQuery: string): string[] {
+    const base = normalizeBibleSearchText(rawQuery)
+    if (!base) return []
+    const candidates = new Set<string>([base])
+
+    if (/[a-z]/i.test(rawQuery)) {
+        const rawWords = rawQuery.trim().split(/\s+/).filter(Boolean)
+        const direct = rawWords.map((w) => (/[a-z]/i.test(w) ? transliterateRomanQueryToken(w) : w)).join(" ")
+        const normDirect = normalizeBibleSearchText(direct)
+        if (normDirect) candidates.add(normDirect)
+
+        if (rawWords.length === 1) {
+            for (const cand of generateLocalCandidates(rawWords[0], 4)) {
+                const nc = normalizeBibleSearchText(cand)
+                if (nc) candidates.add(nc)
+            }
+        } else {
+            const topVariant = rawWords
+                .map((w) => (/[a-z]/i.test(w) ? generateLocalCandidates(w, 2)[0] || transliterateRomanQueryToken(w) : w))
+                .join(" ")
+            const nt = normalizeBibleSearchText(topVariant)
+            if (nt) candidates.add(nt)
+        }
+    }
+
+    return Array.from(candidates).filter((c) => c.length >= 1)
+}
 
 /**
  * Build/rebuild the search index from shows and textCache
@@ -83,112 +184,152 @@ export function buildSearchIndex(shows: ShowList[]) {
 }
 
 /**
- * Fast Bible search using inverted index
+ * Fast Bible search supporting Nepali Devanagari (including invisible ZWJ/ZWNJ,
+ * agglutinative suffixes like ख्रीष्टको / परमेश्वरले, and loose vowel/consonant spelling),
+ * Romanized Nepali queries, and English / Latin Bibles.
  */
-export function fastBibleSearch(searchValue: string, MAX_RESULTS = 50): BibleVerseRef[] {
-    if (!bibleIndex) return []
+export function fastBibleSearch(searchValue: string, MAX_RESULTS = 120): BibleVerseRef[] {
+    if (!bibleIndex || !bibleIndex.entries.length) return []
 
-    const formattedQuery = formatSearch(searchValue)
-    const queryWords = tokenize(formattedQuery)
-    if (queryWords.length === 0) return []
+    const candidates = buildBibleQueryCandidates(searchValue)
+    if (candidates.length === 0) return []
 
-    // Map: Verse Key (Book-Chapter-Verse) -> { ref, score }
-    const resultsMap = new Map<string, { ref: BibleVerseRef; score: number }>()
+    const entries = bibleIndex.entries
+    const bestScores = new Map<number, number>()
 
-    // Use word index to find candidates
-    for (const word of queryWords) {
-        if (word.length < 2) continue
-        const matches = bibleIndex.wordIndex.get(word) || []
-        for (const ref of matches) {
-            const key = `${ref.book}-${ref.chapter}-${ref.verse}`
-            if (!resultsMap.has(key)) {
-                resultsMap.set(key, { ref, score: 0 })
+    // Pass 1: Exact / substring normalized matching (preserves exact vowel lengths, ZWJ stripped)
+    for (let cIdx = 0; cIdx < candidates.length; cIdx++) {
+        const cand = candidates[cIdx]
+        const words = cand.split(" ").filter(Boolean)
+        if (!words.length) continue
+        const w0 = words[0]
+        const candidateBonus = cIdx === 0 ? 15 : 0
+
+        for (let i = 0; i < entries.length; i++) {
+            const norm = entries[i].norm
+            if (!norm.includes(w0)) continue
+
+            let allFound = true
+            for (let j = 1; j < words.length; j++) {
+                if (!norm.includes(words[j])) {
+                    allFound = false
+                    break
+                }
             }
-            resultsMap.get(key)!.score += 1
+            if (!allFound) continue
+
+            let score = 30 + candidateBonus
+            if (norm.includes(cand)) score += 120
+            if (norm.startsWith(cand)) score += 35
+
+            const padded = ` ${norm} `
+            for (let j = 0; j < words.length; j++) {
+                if (padded.includes(` ${words[j]} `)) score += 14
+            }
+
+            const prev = bestScores.get(i) || 0
+            if (score > prev) bestScores.set(i, score)
         }
     }
 
-    // Generate subphrases for better scoring
-    const searchTerms = generateSearchTerms(queryWords, 2)
+    // Pass 2: Loose Devanagari phonetic equivalence (येशु <-> येशू, ख्रिष्ट <-> ख्रीष्ट, बिस्वास <-> विश्वास)
+    if (bestScores.size < Math.min(MAX_RESULTS, 25)) {
+        const looseCandidates = Array.from(new Set(candidates.map((c) => normalizeBibleLooseText(c)).filter(Boolean)))
+        for (const lCand of looseCandidates) {
+            const lWords = lCand.split(" ").filter(Boolean)
+            if (!lWords.length) continue
+            const lw0 = lWords[0]
 
-    // Re-score based on phrases and exact matches
-    const finalResults = Array.from(resultsMap.values())
-        .filter((r) => r.score >= Math.min(queryWords.length, 2)) // Require at least 2 word matches if possible
-        .map((r) => {
-            let extraScore = 0
-            const verseText = formatSearch(r.ref.text)
+            for (let i = 0; i < entries.length; i++) {
+                if (bestScores.has(i)) continue
+                const loose = entries[i].loose
+                if (!loose.includes(lw0)) continue
 
-            for (const { term, weight, isPhrase } of searchTerms) {
-                if (isPhrase && verseText.includes(term)) {
-                    // Match found for this subphrase or full phrase
-                    extraScore += weight * 20
+                let allFound = true
+                for (let j = 1; j < lWords.length; j++) {
+                    if (!loose.includes(lWords[j])) {
+                        allFound = false
+                        break
+                    }
                 }
+                if (!allFound) continue
+
+                let score = 18
+                if (loose.includes(lCand)) score += 65
+                if (loose.startsWith(lCand)) score += 20
+                bestScores.set(i, score)
             }
+        }
+    }
 
-            // Word frequency bonus (if multiple query words appear multiple times)
-            // But score already counts matched unique query words.
-            // Let's add the extraScore to the original score (which is word match count)
-            return { ...r, finalScore: r.score + extraScore }
-        })
-        .sort((a, b) => b.finalScore - a.finalScore)
+    return Array.from(bestScores.entries())
+        .sort((a, b) => b[1] - a[1] || a[0] - b[0])
         .slice(0, MAX_RESULTS)
-        .map((r) => r.ref)
-
-    return finalResults
+        .map(([idx]) => entries[idx])
 }
 
 /**
- * Build search index for a Bible
+ * Build search index for a Bible in non-blocking slices so UI never freezes.
  */
 export async function buildBibleIndex(bibleId: string, bibleData: any) {
     if (bibleIndex?.bibleId === bibleId && bibleIndex?.version === BIBLE_INDEX_VERSION) return bibleIndex
+    if (bibleIndexBuildPromise && bibleIndexBuildingId === bibleId) return bibleIndexBuildPromise
 
-    const wordIndex = new Map<string, BibleVerseRef[]>()
+    bibleIndexBuildingId = bibleId
+    bibleIndexBuildPromise = (async () => {
+        const entries: BibleVerseRef[] = []
+        const books = bibleData?.books || []
+        let processedSinceYield = 0
 
-    // We expect bibleData to have books
-    const books = bibleData.books || []
+        for (const book of books) {
+            const bookIndex = Number(book.number)
+            const bookName = String(book.name || "")
+            const chapters = book.chapters || []
 
-    for (const book of books) {
-        const bookIndex = book.number
-        const bookName = book.name
-        const chapters = book.chapters || []
+            for (const chapter of chapters) {
+                const chapterIndex = Number(chapter.number)
+                const verses = chapter.verses || []
 
-        for (const chapter of chapters) {
-            const chapterIndex = chapter.number
-            const verses = chapter.verses || []
+                for (const verse of verses) {
+                    const verseIndex = Number(verse.number)
+                    const text = String(verse.text || "")
+                    const norm = normalizeBibleSearchText(text)
+                    if (!norm) continue
 
-            for (const verse of verses) {
-                const verseIndex = verse.number
-                const text = verse.text || ""
-                const formattedText = formatSearch(text)
-                const tokens = tokenize(formattedText)
+                    entries.push({
+                        book: bookIndex,
+                        chapter: chapterIndex,
+                        verse: verseIndex,
+                        reference: `${bookName} ${chapterIndex}:${verseIndex}`,
+                        text,
+                        norm,
+                        loose: normalizeBibleLooseText(norm)
+                    })
 
-                const ref: BibleVerseRef = {
-                    book: bookIndex,
-                    chapter: chapterIndex,
-                    verse: verseIndex,
-                    reference: `${bookName} ${chapterIndex}:${verseIndex}`,
-                    text: text
-                }
-
-                // Index each unique word in the verse
-                const uniqueTokens = new Set(tokens)
-                for (const token of uniqueTokens) {
-                    if (token.length < 2) continue
-                    if (!wordIndex.has(token)) wordIndex.set(token, [])
-                    wordIndex.get(token)!.push(ref)
+                    processedSinceYield++
+                    if (processedSinceYield >= 5000) {
+                        processedSinceYield = 0
+                        await new Promise<void>((resolve) => setTimeout(resolve, 0))
+                    }
                 }
             }
         }
-    }
 
-    bibleIndex = {
-        wordIndex,
-        bibleId,
-        version: BIBLE_INDEX_VERSION
-    }
+        const built: BibleIndex = {
+            entries,
+            bibleId,
+            version: BIBLE_INDEX_VERSION
+        }
+        bibleIndex = built
+        return built
+    })().finally(() => {
+        if (bibleIndexBuildingId === bibleId) {
+            bibleIndexBuildingId = ""
+            bibleIndexBuildPromise = null
+        }
+    })
 
-    return bibleIndex
+    return bibleIndexBuildPromise
 }
 
 function indexWords(index: Map<string, IndexEntry[]>, showId: string, words: string[], field: "name" | "content") {

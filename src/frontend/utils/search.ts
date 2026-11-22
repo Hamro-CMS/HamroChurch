@@ -1,18 +1,27 @@
 import { get } from "svelte/store"
+import { fromNepaliDigits } from "../../common/nepali"
 import type { ShowList } from "../../types/Show"
 import { sortObjectNumbers } from "../components/helpers/array"
 import { similarity } from "../converters/txt"
 import { categories, drawerTabsData, textCache } from "../stores"
 
-const specialChars = /[.,\/#!?$%\^&\*;:{}=\-_'"´`~()]/g
+const specialChars = /[.,\/#!?$%\^&\*;:{}=\-_'"´`~()\[\]“”‘’—–।॥]/g
+const latinAccentChars = /[\u00C0-\u024F\u1E00-\u1EFF]/
+
 export function formatSearch(value: string, removeSpaces = false) {
     if (typeof value !== "string") return ""
-    let newValue = value
+    let newValue = fromNepaliDigits(value)
+        .replace(/<[^>]+>/g, " ")
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
         .toLowerCase()
-        .replace(specialChars, "")
-        .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
+        .replace(specialChars, removeSpaces ? "" : " ")
+
+    if (latinAccentChars.test(newValue)) {
+        newValue = newValue.normalize("NFD").replace(/[\u0300-\u036f]/g, "").normalize("NFC")
+    }
+
     if (removeSpaces) newValue = newValue.replace(/\s+/g, "")
+    else newValue = newValue.replace(/\s+/g, " ").trim()
 
     return newValue
 }

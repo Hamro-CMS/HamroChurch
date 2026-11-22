@@ -3,16 +3,17 @@
     import type { ApiBible } from "json-bible/lib/api"
     import type { Verse } from "json-bible/lib/Bible"
     import type { VerseReference } from "json-bible/lib/reference"
-    import { onMount } from "svelte"
-    import { localizeNumberText, shouldUseNepaliLocale } from "../../../../common/nepali"
+    import { onDestroy, onMount } from "svelte"
+    import { fromNepaliDigits, localizeNumberText, shouldUseNepaliLocale } from "../../../../common/nepali"
     import { sanitizeVerseText } from "../../../../common/scripture/sanitizeVerseText"
     import { defaultBibleBookNames } from "../../../converters/bebliaBible"
     import { activeEdit, activeScripture, activeTriggerFunction, customScriptureBooks, language, notFound, openScripture, outLocked, outputs, resized, scriptureHistory, scriptureHistoryUsed, scriptureMode, scriptures, scripturesCache, scriptureSettings, selected } from "../../../stores"
-    import { buildBibleIndex, fastBibleSearch } from "../../../utils/searchFast"
+    import { buildBibleIndex, fastBibleSearch, normalizeBibleLooseText, normalizeBibleSearchText } from "../../../utils/searchFast"
     import { wait } from "../../../utils/common"
     import { translateText } from "../../../utils/language"
     import { clone } from "../../helpers/array"
     import Icon from "../../helpers/Icon.svelte"
+    import { nepaliTypingInput } from "../../helpers/inputActions"
     import T from "../../helpers/T.svelte"
     import FloatingInputs from "../../input/FloatingInputs.svelte"
     import InputRow from "../../input/InputRow.svelte"
@@ -251,6 +252,10 @@
 
         if (!id) return
         if (data[id]) {
+            const existingRaw = $scripturesCache[id] || data[id]?.bibleData?.data
+            if (!$scriptures[id]?.api && existingRaw?.books?.length) {
+                void buildBibleIndex(id, existingRaw)
+            }
             openBook()
             return
         }
@@ -260,6 +265,10 @@
             if (!jsonBible) return
 
             data[id] = { bibleData: jsonBible }
+            const rawLoaded = $scripturesCache[id] || jsonBible?.data
+            if (!$scriptures[id]?.api && rawLoaded?.books?.length) {
+                void buildBibleIndex(id, rawLoaded)
+            }
         } catch (err) {
             console.error(err)
             if (isApi) apiError = true
@@ -315,11 +324,12 @@
     }
 
     function referenceInputChanged(e: any) {
-        referenceSearchField = e.target?.value || ""
-        searchValue = referenceSearchField
+        const nextVal = e.target?.value || ""
+        referenceSearchField = nextVal
+        lastSyncedDrawerSearch = nextVal
+        searchValue = nextVal
+        scheduleUnifiedBibleSearch(nextVal, "toolbar")
     }
-
-    $: if (!referenceSearchField && searchValue) referenceSearchField = searchValue
 
     function getLocalizedReferenceRange() {
         return localizeNumberText(joinRange(sortScriptureSelection(activeReference.verses[0] || [])), $language)
@@ -561,87 +571,302 @@
 
     /// SEARCH ///
 
-    $: if (searchValue.length) referenceSearch()
+    const ROMAN_NEPALI_BOOK_ALIASES: Record<number, string[]> = {
+        1: ["utpatti", "gen", "genesis"],
+        2: ["prasthan", "exo", "exod", "exodus"],
+        3: ["levi", "lev", "leviticus"],
+        4: ["ganti", "num", "numbers"],
+        5: ["vyavastha", "byawastha", "deu", "deut", "deuteronomy"],
+        6: ["yahoshu", "jos", "josh", "joshua"],
+        7: ["nyayakartaharu", "nyayakarta", "jdg", "judg", "judges"],
+        8: ["ruth", "rut"],
+        9: ["1 shamuel", "1 samuel", "1sam", "1 sam", "1sa"],
+        10: ["2 shamuel", "2 samuel", "2sam", "2 sam", "2sa"],
+        11: ["1 rajaharu", "1 raja", "1 kings", "1ki", "1 kgs"],
+        12: ["2 rajaharu", "2 raja", "2 kings", "2ki", "2 kgs"],
+        13: ["1 itihas", "1 chronicles", "1ch", "1 chr"],
+        14: ["2 itihas", "2 chronicles", "2ch", "2 chr"],
+        15: ["ejra", "ezra", "ezr"],
+        16: ["nahemyah", "nehemiah", "neh"],
+        17: ["estar", "esther", "est"],
+        18: ["ayyub", "ayub", "job"],
+        19: ["bhajansangraha", "bhajan sangraha", "psalm", "psalms", "ps", "psa"],
+        20: ["hitopadesh", "proverbs", "prov", "pro"],
+        21: ["upadeshak", "ecclesiastes", "eccl", "ecc"],
+        22: ["shreshthagit", "song of solomon", "song of songs", "sos", "sng"],
+        23: ["yashaiya", "yesaiya", "isaiah", "isa"],
+        24: ["yarmiya", "jeremiah", "jer"],
+        25: ["yarmiyako vilap", "vilap", "lamentations", "lam"],
+        26: ["ijakiel", "ezekiel", "ezek", "ezk"],
+        27: ["daniyal", "daniel", "dan"],
+        28: ["hoshe", "hosea", "hos"],
+        29: ["yoel", "joel", "jol"],
+        30: ["amos", "amo"],
+        31: ["obadiya", "obadiah", "oba"],
+        32: ["yona", "jonah", "jon"],
+        33: ["mika", "micah", "mic"],
+        34: ["nahum", "nah", "nam"],
+        35: ["habakuk", "habakkuk", "hab"],
+        36: ["sapanyah", "zephaniah", "zeph", "zep"],
+        37: ["haggai", "hag"],
+        38: ["jakariya", "zechariah", "zech", "zec"],
+        39: ["malaki", "malachi", "mal"],
+        40: ["matti", "matthew", "matt", "mat"],
+        41: ["markus", "mark", "mrk", "mk"],
+        42: ["luka", "luke", "luk", "lk"],
+        43: ["yuhanna", "john", "jhn", "jn"],
+        44: ["preritharuka kam", "prerit", "acts", "act"],
+        45: ["romi", "romans", "rom"],
+        46: ["1 korinthi", "1 corinthians", "1cor", "1 cor", "1co"],
+        47: ["2 korinthi", "2 corinthians", "2cor", "2 cor", "2co"],
+        48: ["galati", "galatians", "gal"],
+        49: ["ephisi", "ephesians", "eph"],
+        50: ["philippi", "philippians", "phil", "php"],
+        51: ["kalassi", "colossians", "col"],
+        52: ["1 thissaloniki", "1 thessalonians", "1thess", "1 thess", "1th"],
+        53: ["2 thissaloniki", "2 thessalonians", "2thess", "2 thess", "2th"],
+        54: ["1 timothi", "1 timothy", "1tim", "1 tim", "1ti"],
+        55: ["2 timothi", "2 timothy", "2tim", "2 tim", "2ti"],
+        56: ["titas", "titus", "tit"],
+        57: ["philemon", "phlm", "phm"],
+        58: ["hibru", "hebrews", "heb"],
+        59: ["yakub", "james", "jas", "jam"],
+        60: ["1 patrus", "1 peter", "1pet", "1 pet", "1pe"],
+        61: ["2 patrus", "2 peter", "2pet", "2 pet", "2pe"],
+        62: ["1 yuhanna", "1 john", "1jn", "1 jn"],
+        63: ["2 yuhanna", "2 john", "2jn", "2 jn"],
+        64: ["3 yuhanna", "3 john", "3jn", "3 jn"],
+        65: ["yahuda", "jude", "jud"],
+        66: ["prakash", "revelation", "rev"]
+    }
 
     let selectAllTimeout: NodeJS.Timeout | null = null
-    let freezeTimeout: NodeJS.Timeout | null = null
-    let freezeInput: string | null = null
-
+    let unifiedSearchDebounce: ReturnType<typeof setTimeout> | null = null
+    let bottomSearchDebounce: ReturnType<typeof setTimeout> | null = null
     let currentSearchId = 0
-    async function referenceSearch() {
-        const searchId = ++currentSearchId
+    let lastSyncedDrawerSearch = ""
+    let lastPreviewBibleId = ""
+    let exactBookSearchCandidate = ""
+    let activeVerseSearchQuery = ""
 
+    let contentSearchFieldActive = false
+    let contentSearchValue = ""
+    let contentSearchResults: VerseReference[] | null = null
+
+    $: if (previewBibleId && previewBibleId !== lastPreviewBibleId) {
+        if (lastPreviewBibleId) {
+            resetContentSearch(false)
+        }
+        lastPreviewBibleId = previewBibleId
+    }
+
+    $: if (searchValue !== lastSyncedDrawerSearch) {
+        lastSyncedDrawerSearch = searchValue
+        referenceSearchField = searchValue
+        scheduleUnifiedBibleSearch(searchValue, "drawer")
+    }
+
+    onDestroy(() => {
         if (selectAllTimeout) clearTimeout(selectAllTimeout)
+        if (unifiedSearchDebounce) clearTimeout(unifiedSearchDebounce)
+        if (bottomSearchDebounce) clearTimeout(bottomSearchDebounce)
+    })
 
-        // if search value ends with any number, unfreeze
-        if (/\d$/.test(searchValue) || searchValue.length < (freezeInput?.length || 0)) {
-            if (freezeTimeout) clearTimeout(freezeTimeout)
-            freezeInput = null
-        } else if (freezeInput) {
-            searchValue = freezeInput
-            return
+    function normalizeBookLookupKey(value: string): string {
+        return normalizeBibleSearchText(fromNepaliDigits(String(value || ""))).replace(/\s+/g, " ").trim()
+    }
+
+    function parseVerseSpecList(rawSpec: string): number[] {
+        if (!rawSpec) return []
+        const result: number[] = []
+        for (const chunk of rawSpec.split(/[+,]/)) {
+            const trimmed = chunk.trim()
+            if (!trimmed) continue
+            const rangeMatch = trimmed.match(/^(\d+)\s*-\s*(\d+)$/)
+            if (rangeMatch) {
+                let start = Number(rangeMatch[1])
+                let end = Number(rangeMatch[2])
+                if (start > end) [start, end] = [end, start]
+                if (start > 0 && end <= 200) {
+                    for (let v = start; v <= end; v++) result.push(v)
+                }
+            } else {
+                const single = Number(trimmed)
+                if (Number.isFinite(single) && single > 0 && single <= 200) result.push(single)
+            }
         }
+        return result
+    }
 
-        const multiReference = await parseMultiChapterReference(searchValue)
+    function resolveSmartBookReference(rawQuery: string): { book: number; chapter: number; verses: number[]; exactBook: boolean } | null {
+        const cleaned = fromNepaliDigits(String(rawQuery || ""))
+            .replace(/[\u200B-\u200D\uFEFF]/g, "")
+            .replace(/\s+/g, " ")
+            .trim()
+        if (!cleaned) return null
 
-        if (searchId !== currentSearchId) return
+        const refMatch = cleaned.match(/^(.+?)(?:\s+(\d+)(?:\s*[:.,]\s*([0-9,\-+]+))?)?$/u)
+        if (!refMatch) return null
 
-        if (multiReference) {
-            // normalize the search box so it reflects the exact selection the user will get
-            searchValue = multiReference.referenceLabel
-            await openBook(multiReference.bookNumber, multiReference.chapters, multiReference.verses)
-            return
-        }
+        const rawBookPart = refMatch[1].trim()
+        const chapter = refMatch[2] ? Number(refMatch[2]) : 0
+        const verses = refMatch[3] ? parseVerseSpecList(refMatch[3]) : []
+        const bookKey = normalizeBookLookupKey(rawBookPart)
+        const bookKeyNoSpace = bookKey.replace(/\s+/g, "")
+        const bookLoose = normalizeBibleLooseText(bookKey)
+        if (!bookKey) return null
 
-        const result = currentBibleData?.bibleData?.bookSearch(searchValue)
-        if (!result) return
+        const bibleBooks = books || []
+        const customNames = $customScriptureBooks[previewBibleId] || []
 
-        // json-bible returns empty verses when chapter is not loaded, this fixes search issues
-        if (result.chapter && !result.verses?.length) {
-            const verseMatch = searchValue.match(/[:.,]\s*(\d+)(?:-(\d+))?[^a-zA-Z]*$/)
-            if (verseMatch) {
-                const start = parseInt(verseMatch[1])
-                const end = verseMatch[2] ? parseInt(verseMatch[2]) : start
-                if (start > 0 && start <= 150) {
-                    result.verses = Array.from({ length: end - start + 1 }, (_, i) => start + i)
+        // Pass 1: Exact match against local book name, custom name, English name, abbreviation, or Romanized Nepali alias
+        for (let i = 0; i < Math.max(bibleBooks.length, 66); i++) {
+            const bookObj = bibleBooks[i]
+            const bookNum = Number(bookObj?.number) || i + 1
+            if (bibleBooks.length && !bibleBooks.some((b) => Number(b.number) === bookNum)) continue
+
+            const namesToCheck = [
+                bookObj?.name,
+                customNames[i],
+                bookObj?.abbreviation,
+                defaultBibleBookNames[bookNum],
+                ...(ROMAN_NEPALI_BOOK_ALIASES[bookNum] || [])
+            ].filter(Boolean) as string[]
+
+            for (const candidate of namesToCheck) {
+                const candKey = normalizeBookLookupKey(candidate)
+                if (!candKey) continue
+                if (candKey === bookKey || candKey.replace(/\s+/g, "") === bookKeyNoSpace || normalizeBibleLooseText(candKey) === bookLoose) {
+                    return { book: bookNum, chapter, verses, exactBook: true }
                 }
             }
         }
 
-        const autocompleteChanged = result.autocompleted && result.autocompleted !== searchValue
-        if (result.autocompleted) searchValue = result.autocompleted
+        // Pass 2: Prefix match when a chapter number is provided (e.g. "उत्प 1:2", "मत 5:3", "Gen 1:2", "Matt 5")
+        if (chapter > 0 && bookKey.length >= 2) {
+            const prefixMatches: number[] = []
+            for (let i = 0; i < Math.max(bibleBooks.length, 66); i++) {
+                const bookObj = bibleBooks[i]
+                const bookNum = Number(bookObj?.number) || i + 1
+                if (bibleBooks.length && !bibleBooks.some((b) => Number(b.number) === bookNum)) continue
 
-        const bookChanged = result.book && result.book.toString() !== activeReference.book?.toString()
-        const chapterChanged = result.chapter && (!activeReference.chapters.length || result.chapter.toString() !== activeReference.chapters[0]?.toString())
+                const namesToCheck = [
+                    bookObj?.name,
+                    customNames[i],
+                    defaultBibleBookNames[bookNum],
+                    ...(ROMAN_NEPALI_BOOK_ALIASES[bookNum] || [])
+                ].filter(Boolean) as string[]
 
-        let newVerses: (number | string)[][] | undefined = undefined
-        if (result.verses?.length) {
-            newVerses = !bookChanged && !chapterChanged && splittedVerses ? [splittedVerses.filter((a) => result.verses.includes(a.number)).map((a) => a.id)] : [result.verses]
-        }
-
-        let success = true
-        if (bookChanged) {
-            // prevent inputs right after auto complete
-            if (!result.chapter) {
-                freezeInput = searchValue
-                freezeTimeout = setTimeout(() => (freezeInput = null), 1500)
+                if (namesToCheck.some((cand) => {
+                    const ck = normalizeBookLookupKey(cand)
+                    return ck.startsWith(bookKey) || normalizeBibleLooseText(ck).startsWith(bookLoose)
+                })) {
+                    prefixMatches.push(bookNum)
+                }
             }
-            success = await openBook(result.book, result.chapter ? [result.chapter] : undefined, newVerses)
-        } else if (autocompleteChanged && !result.chapter) {
-            // prevent inputs right after auto complete to already opened book
-            freezeInput = searchValue
-            freezeTimeout = setTimeout(() => (freezeInput = null), 1500)
-        } else if (chapterChanged) {
-            success = await openChapter([result.chapter], newVerses)
-        } else if (result.chapter) {
-            // Same book and chapter
-            if (newVerses) openVerse(newVerses)
+            if (prefixMatches.length === 1) {
+                return { book: prefixMatches[0], chapter, verses, exactBook: false }
+            }
         }
 
-        if (searchId !== currentSearchId || !success) return
+        // Fallback to json-bible bookSearch ONLY when chapter > 0 so partial words never hijack verse text searches
+        if (chapter > 0) {
+            const jb = currentBibleData?.bibleData?.bookSearch(cleaned)
+            if (jb?.book) {
+                return {
+                    book: Number(jb.book),
+                    chapter: Number(jb.chapter || chapter),
+                    verses: jb.verses?.length ? jb.verses : verses,
+                    exactBook: false
+                }
+            }
+        }
 
-        if (result.chapter && !newVerses) {
-            selectAllTimeout = setTimeout(selectAllVerses)
+        return null
+    }
+
+    function scheduleUnifiedBibleSearch(rawVal: string, source: "drawer" | "toolbar") {
+        if (unifiedSearchDebounce) clearTimeout(unifiedSearchDebounce)
+        const trimmed = rawVal.trim()
+        if (!trimmed) {
+            exactBookSearchCandidate = ""
+            activeVerseSearchQuery = ""
+            contentSearchResults = null
+            return
+        }
+
+        unifiedSearchDebounce = setTimeout(() => {
+            void runUnifiedBibleSearch(rawVal, source)
+        }, 110)
+    }
+
+    async function runUnifiedBibleSearch(rawVal: string, _source: "drawer" | "toolbar") {
+        const searchId = ++currentSearchId
+        if (selectAllTimeout) clearTimeout(selectAllTimeout)
+        exactBookSearchCandidate = ""
+
+        const normalizedDigitsInput = fromNepaliDigits(rawVal).replace(/[\u200B-\u200D\uFEFF]/g, "").trim()
+        if (!normalizedDigitsInput) {
+            contentSearchResults = null
+            return
+        }
+
+        // 1) Multi-chapter / semicolon reference (e.g. "उत्पत्ति 1:1-5;2:1-3" or "Genesis 1:1-12;2:1-10")
+        const multiReference = await parseMultiChapterReference(normalizedDigitsInput)
+        if (searchId !== currentSearchId) return
+        if (multiReference) {
+            contentSearchResults = null
+            activeVerseSearchQuery = ""
+            await openBook(multiReference.bookNumber, multiReference.chapters, multiReference.verses)
+            return
+        }
+
+        // 2) Smart Book / Chapter / Verse reference (Nepali, Nepali digits, Romanized Nepali, or English)
+        const smartRef = resolveSmartBookReference(rawVal)
+        if (smartRef?.book) {
+            if (smartRef.chapter > 0) {
+                contentSearchResults = null
+                activeVerseSearchQuery = ""
+                const bookChanged = smartRef.book.toString() !== activeReference.book?.toString()
+                const chapterChanged = !activeReference.chapters.length || smartRef.chapter.toString() !== activeReference.chapters[0]?.toString()
+                const newVerses = smartRef.verses.length
+                    ? !bookChanged && !chapterChanged && splittedVerses?.length
+                        ? [splittedVerses.filter((a) => smartRef.verses.includes(a.number)).map((a) => a.id)]
+                        : [smartRef.verses]
+                    : undefined
+
+                let success = true
+                if (bookChanged) {
+                    success = await openBook(smartRef.book, [smartRef.chapter], newVerses)
+                } else if (chapterChanged) {
+                    success = await openChapter([smartRef.chapter], newVerses)
+                } else if (newVerses) {
+                    openVerse(newVerses)
+                }
+
+                if (searchId === currentSearchId && success && !newVerses) {
+                    selectAllTimeout = setTimeout(selectAllVerses)
+                }
+                return
+            }
+
+            if (smartRef.exactBook) {
+                contentSearchResults = null
+                activeVerseSearchQuery = ""
+                exactBookSearchCandidate = normalizedDigitsInput
+                if (smartRef.book.toString() !== activeReference.book?.toString()) {
+                    await openBook(smartRef.book)
+                }
+                return
+            }
+        }
+
+        // 3) Otherwise, search all Bible verses directly (e.g. "येशू ख्रीष्ट", "परमेश्वरले संसारलाई", "प्रेम", "love")
+        if (normalizedDigitsInput.length >= 2) {
+            contentSearchValue = rawVal
+            await searchInBible(rawVal)
+        } else {
+            contentSearchResults = null
         }
     }
 
@@ -657,7 +882,7 @@
         const bibleData = currentBibleData?.bibleData
         if (!bibleData) return null
 
-        const sanitizedValue = value?.replace(/\s+/g, " ").trim()
+        const sanitizedValue = fromNepaliDigits(value || "").replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g, " ").trim()
         if (!sanitizedValue) return null
 
         const rawSegments = sanitizedValue
@@ -667,14 +892,18 @@
         const segmentsToProcess = rawSegments.length ? rawSegments : [sanitizedValue]
 
         const firstSegment = segmentsToProcess[0]
-        let baseResult = bibleData.bookSearch(firstSegment)
-        if (!baseResult?.book && firstSegment.includes("-")) {
-            const fallbackTarget = firstSegment.split("-")[0]?.trim()
-            if (fallbackTarget) baseResult = bibleData.bookSearch(fallbackTarget)
+        const smartFirst = resolveSmartBookReference(firstSegment.includes("-") ? firstSegment.split("-")[0]?.trim() || firstSegment : firstSegment)
+        let bookNumber = Number(smartFirst?.book || 0)
+        if (!bookNumber) {
+            let baseResult = bibleData.bookSearch(firstSegment)
+            if (!baseResult?.book && firstSegment.includes("-")) {
+                const fallbackTarget = firstSegment.split("-")[0]?.trim()
+                if (fallbackTarget) baseResult = bibleData.bookSearch(fallbackTarget)
+            }
+            bookNumber = Number(baseResult?.book || 0)
         }
-        if (!baseResult?.book) return null
+        if (!bookNumber) return null
 
-        const bookNumber = Number(baseResult.book)
         const canonicalBookName = books?.find((book) => Number(book.number) === bookNumber)?.name || firstSegment
 
         const resolvedSegments: string[] = []
@@ -691,7 +920,8 @@
         const chapters: (number | string)[] = []
         const verses: (number | string)[][] = []
         for (const segment of resolvedSegments) {
-            const parsed = bibleData.bookSearch(segment)
+            const smartParsed = resolveSmartBookReference(segment)
+            const parsed = smartParsed?.chapter ? { chapter: smartParsed.chapter, verses: smartParsed.verses } : bibleData.bookSearch(segment)
             if (!parsed?.chapter) return null
 
             const chapterNumber = Number(parsed.chapter)
@@ -714,6 +944,9 @@
     function normalizeSegment(segment: string, bookName: string, bookNumber: number, bibleData: any) {
         const trimmed = segment?.trim()
         if (!trimmed) return bookName
+
+        const smartAttempt = resolveSmartBookReference(trimmed)
+        if (smartAttempt?.book === bookNumber) return `${bookName} ${smartAttempt.chapter}${smartAttempt.verses.length ? ":" + smartAttempt.verses.join(",") : ""}`.trim()
 
         const attempt = bibleData.bookSearch(trimmed)
         if (attempt?.book === bookNumber) return trimmed
@@ -777,10 +1010,6 @@
         return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
     }
 
-    let contentSearchFieldActive = false
-    let contentSearchValue = ""
-    let contentSearchResults: VerseReference[] | null = null
-
     type RankedVerseReference = VerseReference & { score: number; source: "book" | "text" }
 
     function getVerseMatchKey(match: VerseReference) {
@@ -798,9 +1027,9 @@
     }
 
     function getTextMatchScore(match: VerseReference, query: string) {
-        const normalizedQuery = query.toLowerCase()
-        const reference = String(match.reference || "").toLowerCase()
-        const verseText = String(match.verse?.text || "").toLowerCase()
+        const normalizedQuery = normalizeBibleSearchText(query)
+        const reference = normalizeBibleSearchText(String(match.reference || ""))
+        const verseText = normalizeBibleSearchText(String(match.verse?.text || ""))
 
         let score = 0
         if (reference.startsWith(normalizedQuery)) score += 600
@@ -812,21 +1041,28 @@
         return score
     }
 
-    // auto search when char length is 5 or longer
     function searchValueChanged(e: any) {
         contentSearchValue = e.target?.value || ""
-        if (contentSearchValue.length < 5) {
+        if (bottomSearchDebounce) clearTimeout(bottomSearchDebounce)
+
+        const trimmed = contentSearchValue.trim()
+        if (trimmed.length < 2) {
             contentSearchResults = null
+            activeVerseSearchQuery = ""
             return
         }
 
-        searchInBible()
+        bottomSearchDebounce = setTimeout(() => {
+            void searchInBible(contentSearchValue)
+        }, 110)
     }
 
-    async function searchInBible() {
-        const query = contentSearchValue.trim()
-        if (query.length < 3) {
+    async function searchInBible(explicitQuery?: string | Event) {
+        const rawQuery = typeof explicitQuery === "string" ? explicitQuery : contentSearchValue
+        const query = rawQuery.trim()
+        if (query.length < 2) {
             contentSearchResults = null
+            activeVerseSearchQuery = ""
             return
         }
 
@@ -836,10 +1072,12 @@
             return
         }
 
+        activeVerseSearchQuery = query
         const rankedMatches = new Map<string, RankedVerseReference>()
 
         // Priority 1: reference/book matches.
-        const referenceResult = bibleData.bookSearch(query)
+        const smartRef = resolveSmartBookReference(query)
+        const referenceResult = smartRef?.book ? { book: smartRef.book, chapter: smartRef.chapter || 1, verses: smartRef.verses } : bibleData.bookSearch(fromNepaliDigits(query))
         if (referenceResult?.book) {
             try {
                 const bookData = await bibleData.getBook(referenceResult.book)
@@ -871,7 +1109,7 @@
             const rawBible = $scripturesCache[previewBibleId] || currentBibleData?.bibleData?.data
             if (rawBible?.books?.length) {
                 await buildBibleIndex(previewBibleId, rawBible)
-                const fastMatches = fastBibleSearch(query, 120)
+                const fastMatches = fastBibleSearch(query, 150)
                 textMatches = fastMatches.map(
                     (match) =>
                         ({
@@ -885,11 +1123,12 @@
         }
 
         if (!textMatches.length) {
-            textMatches = ((await bibleData.textSearch(query)) || []) as VerseReference[]
+            const cleanQueryForFallback = fromNepaliDigits(query).replace(/[\u200B-\u200D\uFEFF]/g, "")
+            textMatches = ((await bibleData.textSearch(cleanQueryForFallback)) || []) as VerseReference[]
         }
 
         textMatches.forEach((match, index) => {
-            const score = getTextMatchScore(match, query) + Math.max(0, 100 - index)
+            const score = getTextMatchScore(match, query) + Math.max(0, 150 - index)
             addRankedMatch(rankedMatches, match, score, "text")
         })
 
@@ -901,19 +1140,75 @@
             .map(({ score: _score, source: _source, ...match }) => match as VerseReference)
     }
 
-    // reset if another reference is loaded
-    $: if (activeReference) resetContentSearch()
-    function resetContentSearch() {
+    function resetContentSearch(clearInputs = true) {
         contentSearchValue = ""
         contentSearchResults = null
         contentSearchFieldActive = false
+        activeVerseSearchQuery = ""
+        exactBookSearchCandidate = ""
+        if (clearInputs) {
+            referenceSearchField = ""
+            if (searchValue) {
+                lastSyncedDrawerSearch = ""
+                searchValue = ""
+            }
+        }
+    }
+
+    function formatMatchReference(match: VerseReference): string {
+        const bookIdx = Math.max(Number(match.book || 1) - 1, 0)
+        const bookObj = books?.find((b) => Number(b.number) === Number(match.book)) || books?.[bookIdx]
+        const displayBook = getDisplayBookName(bookObj, bookIdx) || match.reference?.split(/\s+\d+/)[0] || ""
+        const divider = $scriptureSettings.referenceDivider || ":"
+        const chapVerse = localizeNumberText(`${match.chapter}${divider}${match.verse?.number || 1}`, $language)
+        return `${displayBook} ${chapVerse}`.trim()
+    }
+
+    function highlightBibleMatchText(formattedHtml: string, rawQuery: string): string {
+        if (!formattedHtml || !rawQuery) return formattedHtml
+        const cleanedWords = fromNepaliDigits(rawQuery)
+            .replace(/[\u200B-\u200D\uFEFF]/g, "")
+            .split(/\s+/)
+            .map((w) => w.replace(/[.,\/#!?$%\^&\*;:{}=\-_'"´`~()\[\]“”‘’—–।॥]/g, "").trim())
+            .filter((w) => w.length >= 2)
+        if (!cleanedWords.length) return formattedHtml
+
+        const patterns = cleanedWords
+            .sort((a, b) => b.length - a.length)
+            .map((w) => [...w].map((ch) => escapeRegExp(ch)).join("[\\u200B-\\u200D]*"))
+        if (!patterns.length) return formattedHtml
+
+        const tokenRegex = new RegExp(`(${patterns.join("|")})`, "giu")
+        // Only highlight outside HTML tags
+        return formattedHtml
+            .split(/(<[^>]+>)/g)
+            .map((segment) => (segment.startsWith("<") ? segment : segment.replace(tokenRegex, '<mark class="bibleMatchMark">$1</mark>')))
+            .join("")
+    }
+
+    async function selectSearchMatch(match: VerseReference, shouldPlay = false) {
+        if (!match?.book || !match?.chapter || !match?.verse?.number) return
+        if (shouldPlay) {
+            playWhenLoaded = true
+            resetContentSearch(false)
+        }
+        await openBook(match.book, [match.chapter], [[match.verse.number]])
+        if (!shouldPlay && isActiveInOutput) {
+            setTimeout(playScripture)
+        }
+    }
+
+    async function focusSearchMatchForContext(match: VerseReference) {
+        if (!match?.book || !match?.chapter || !match?.verse?.number) return
+        selected.set({ id: "scripture", data: [] })
+        await openBook(match.book, [match.chapter], [[match.verse.number]])
     }
 
     /// KEYBOARD SHORTCUTS ///
 
     function mouseup(e: any) {
         if (e.target.closest(".drawer")) return
-        if (!contentSearchResults) resetContentSearch()
+        if (!contentSearchResults) contentSearchFieldActive = false
     }
 
     function keydown(e: KeyboardEvent) {
@@ -1106,7 +1401,40 @@
 
 <svelte:window on:keydown={keydown} on:mouseup={mouseup} />
 
-<div class="scroll" style="flex: 1;overflow-y: auto;">
+<div class="bibleTopToolbar">
+    <div class="bibleTopSearchBox">
+        <Icon id="search" size={0.95} white />
+        <input
+            class="bibleTopSearchInput edit"
+            type="text"
+            value={referenceSearchField}
+            on:input={referenceInputChanged}
+            placeholder={shouldUseNepaliLocale($language) ? "पुस्तक, अध्याय:पद वा बाइबलका शब्दहरू खोज्नुहोस् (जस्तै: मत्ती ५:३, येशू ख्रीष्ट)..." : "Search book, chapter:verse, or verse words (e.g. John 3:16, येशू ख्रीष्ट)..."}
+            use:nepaliTypingInput
+        />
+        {#if referenceSearchField || contentSearchResults !== null}
+            <button type="button" class="bibleClearBtn" on:click={() => resetContentSearch(true)} title={translateText("clear.search")}>✕</button>
+        {/if}
+    </div>
+
+    {#if exactBookSearchCandidate && contentSearchResults === null}
+        <button type="button" class="bibleToolbarActionBtn" on:click={() => searchInBible(exactBookSearchCandidate)}>
+            {shouldUseNepaliLocale($language) ? `"${exactBookSearchCandidate}" पदहरूमा खोज्नुहोस्` : `Search "${exactBookSearchCandidate}" in verses`}
+        </button>
+    {/if}
+
+    {#if contentSearchResults !== null}
+        <span class="bibleResultsBadge">
+            {localizeNumberText(contentSearchResults.length, $language)}
+            {shouldUseNepaliLocale($language) ? "पदहरू" : contentSearchResults.length === 1 ? "verse" : "verses"}
+        </span>
+        <button type="button" class="bibleToolbarActionBtn" on:click={() => resetContentSearch(true)}>
+            ← {shouldUseNepaliLocale($language) ? "फर्कनुहोस्" : "Back"}
+        </button>
+    {/if}
+</div>
+
+<div class="scroll" style="flex: 1;overflow-y: auto;min-height: 0;">
     <div class="main scripture">
         {#if !previewBibleId || $notFound.bible?.includes(previewBibleId) || !$scriptures[previewBibleId] || apiError}
             <Center faded>
@@ -1114,18 +1442,23 @@
             </Center>
         {:else if contentSearchResults !== null}
             {#if contentSearchResults.length}
-                <div class="verses verseList">
+                <div class="verses verseList context #scripture_verse">
                     {#each contentSearchResults as match}
+                        {@const isMatchActive =
+                            activeReference.book?.toString() === match.book?.toString() &&
+                            activeReference.chapters[0]?.toString() === match.chapter?.toString() &&
+                            activeReference.verses[0]?.some((v) => Number(String(v).split("_")[0]) === Number(match.verse?.number))}
                         <span
-                            class="verse"
+                            class="verse searchResultRow"
+                            class:isActive={isMatchActive}
                             class:showAllText={$resized.rightPanelDrawer <= 5}
-                            on:dblclick={() => {
-                                openBook(match.book, [match.chapter], [[match.verse.number]])
-                                playWhenLoaded = true
-                            }}
+                            on:click={() => selectSearchMatch(match, false)}
+                            on:dblclick={() => selectSearchMatch(match, true)}
+                            on:contextmenu={() => focusSearchMatchForContext(match)}
                             data-title={formatBibleText(match.verse.text)}
+                            role="none"
                         >
-                            <span style="width: 250px;text-align: start;color: var(--text);" class="v">{match.reference}</span>{@html formatBibleText(match.verse.text, true)}
+                            <span style="width: 190px;text-align: start;color: var(--secondary);flex-shrink: 0;" class="v">{formatMatchReference(match)}</span>{@html highlightBibleMatchText(formatBibleText(match.verse.text, true), activeVerseSearchQuery)}
                         </span>
                     {/each}
                 </div>
@@ -1160,9 +1493,6 @@
             <!-- LIST/GRID MODE -->
             <div class={$scriptureMode === "grid" ? "grid" : "list"}>
                 <div class="books" bind:this={booksScrollElem} class:center={!books?.length}>
-                    <div class="bookSearchBar">
-                        <TextInput placeholder={translateText("scripture.search")} value={referenceSearchField} on:input={referenceInputChanged} style="width: 100%;border-radius: 14px;" />
-                    </div>
                     {#if books?.length}
                         {#key books}
                             {#each books as book, i}
@@ -1327,7 +1657,10 @@
 
 {#if contentSearchFieldActive}
     <FloatingInputs>
-        <TextInput placeholder={translateText("scripture.search")} value={contentSearchValue} on:input={searchValueChanged} on:change={searchInBible} style="width: 300px;border-radius: 20px;" autofocus />
+        <TextInput placeholder={translateText("scripture.search")} value={contentSearchValue} on:input={searchValueChanged} on:change={searchInBible} style="width: 280px;border-radius: 20px;" autofocus />
+        <MaterialButton title={translateText("clear.search")} on:click={() => resetContentSearch(true)} style="padding: 0.35em 0.65em;">
+            <Icon size={1} id="close" white />
+        </MaterialButton>
     </FloatingInputs>
 {:else if $scriptureMode !== "grid" || $resized.rightPanelDrawer > 5}
     <FloatingInputs arrow let:open>
@@ -1616,5 +1949,125 @@
         font-weight: normal;
         padding: 0 !important;
         margin: 0 !important;
+    }
+
+    .bibleTopToolbar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.36rem 0.65rem;
+        border-bottom: 1px solid var(--primary-lighter);
+        background: linear-gradient(180deg, color-mix(in srgb, var(--primary-darkest) 92%, var(--secondary) 8%) 0%, var(--primary-darker) 100%);
+        flex-shrink: 0;
+    }
+
+    .bibleTopSearchBox {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0 0.65rem;
+        height: 33px;
+        border-radius: 999px;
+        background: var(--primary-darkest);
+        border: 1px solid color-mix(in srgb, var(--secondary) 36%, var(--primary-lighter) 64%);
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .bibleTopSearchBox:focus-within {
+        border-color: var(--secondary);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary) 22%, transparent 78%);
+    }
+
+    .bibleTopSearchInput {
+        flex: 1;
+        min-width: 0;
+        height: 100%;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.85rem;
+        padding: 0;
+    }
+
+    .bibleTopSearchInput::placeholder {
+        color: var(--text);
+        opacity: 0.52;
+    }
+
+    .bibleClearBtn {
+        width: 21px;
+        height: 21px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        font-size: 0.72rem;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+        flex-shrink: 0;
+    }
+
+    .bibleClearBtn:hover {
+        background: color-mix(in srgb, var(--secondary) 35%, transparent 65%);
+        color: #ffffff;
+    }
+
+    .bibleResultsBadge {
+        display: inline-flex;
+        align-items: center;
+        height: 28px;
+        padding: 0 0.65rem;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--secondary) 18%, var(--primary-darkest) 82%);
+        border: 1px solid color-mix(in srgb, var(--secondary) 45%, transparent 55%);
+        color: var(--secondary);
+        font-size: 0.78rem;
+        font-weight: 700;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .bibleToolbarActionBtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: 28px;
+        padding: 0 0.68rem;
+        border-radius: 999px;
+        border: 1px solid color-mix(in srgb, var(--secondary) 42%, var(--primary-lighter) 58%);
+        background: var(--primary-darkest);
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .bibleToolbarActionBtn:hover {
+        background: color-mix(in srgb, var(--secondary) 22%, var(--primary-darkest) 78%);
+        border-color: var(--secondary);
+    }
+
+    .main span.searchResultRow {
+        cursor: pointer;
+        border-bottom: 1px solid color-mix(in srgb, var(--primary-lighter) 45%, transparent 55%);
+        padding: 6px 12px;
+    }
+
+    .main :global(mark.bibleMatchMark) {
+        background: color-mix(in srgb, var(--secondary) 34%, transparent 66%);
+        color: inherit;
+        border-radius: 3px;
+        padding: 0 2px;
     }
 </style>

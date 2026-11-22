@@ -842,8 +842,13 @@ export async function getMobileBibleSearch(data: { bibleId?: string; query: stri
                 const verse = verses[vIdx]
                 const rawText = String(verse?.text || "").replace(/<[^>]+>/g, "").trim()
                 if (!rawText) continue
-                const normalized = fromNepaliDigits(rawText.toLowerCase())
-                if (exactCandidates.some((cand) => normalized.includes(cand))) {
+                const normalized = fromNepaliDigits(rawText.replace(/[\u200B-\u200D\uFEFF]/g, "").toLowerCase())
+                const matchedExact = exactCandidates.some((cand) => {
+                    if (normalized.includes(cand)) return true
+                    const parts = cand.split(/\s+/).filter((p) => p.length >= 2)
+                    return parts.length > 1 && parts.every((p) => normalized.includes(p))
+                })
+                if (matchedExact) {
                     exactResults.push({
                         book: bookNum,
                         bookName,
@@ -853,7 +858,12 @@ export async function getMobileBibleSearch(data: { bibleId?: string; query: stri
                     })
                 } else if (looseResults.length < limit && looseCandidates.length > 0) {
                     const looseNorm = normalizeDevanagariLoose(rawText)
-                    if (looseCandidates.some((lc) => looseNorm.includes(lc))) {
+                    const matchedLoose = looseCandidates.some((lc) => {
+                        if (looseNorm.includes(lc)) return true
+                        const parts = lc.split(/\s+/).filter((p) => p.length >= 2)
+                        return parts.length > 1 && parts.every((p) => looseNorm.includes(p))
+                    })
+                    if (matchedLoose) {
                         looseResults.push({
                             book: bookNum,
                             bookName,
