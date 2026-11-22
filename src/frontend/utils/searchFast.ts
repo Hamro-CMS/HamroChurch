@@ -66,15 +66,15 @@ const BIBLE_CLEAN_MAP: Record<string, string> = {
     "\ufeff": ""
 }
 const BIBLE_LOOSE_MAP: Record<string, string> = {
-    ी: "ि",
-    ई: "इ",
-    ू: "ु",
-    ऊ: "उ",
-    श: "स",
-    ष: "स",
-    "ँ": "ं",
-    व: "ब",
-    ण: "न"
+    "\u0940": "\u093f",
+    "\u0908": "\u0907",
+    "\u0942": "\u0941",
+    "\u090a": "\u0909",
+    "\u0936": "\u0938",
+    "\u0937": "\u0938",
+    "\u0901": "\u0902",
+    "\u0935": "\u092c",
+    "\u0923": "\u0928"
 }
 const BIBLE_CLEAN_RE = /[०-९\u200B-\u200D\uFEFF]/g
 const BIBLE_LOOSE_RE = /[ीईूऊशषँवण]/g

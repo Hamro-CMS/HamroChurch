@@ -1829,14 +1829,6 @@
         width: 100%;
     }
 
-    .bookSearchBar {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        padding: 0.35rem 0.45rem 0.45rem;
-        background: var(--primary-darker);
-    }
-
     .list .content {
         display: flex;
         flex-direction: row;
