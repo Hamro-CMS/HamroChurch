@@ -26,7 +26,8 @@ data class MobilePromotion(
     val transitionStyle: String = "auto_mix",
     val sortOrder: Int = 0,
     val eventUrl: String? = null,
-    val updatedAt: String? = null
+    val updatedAt: String? = null,
+    val isStutiSong: Boolean = false
 )
 
 object PromotionSanitizer {
@@ -174,14 +175,99 @@ object PromotionSanitizer {
         return if (detectSafeRasterImageMime(decoded) != null) decoded else null
     }
 
-    fun parsePromotion(obj: JSONObject?): MobilePromotion? {
+    private val YOUTUBE_ID_REGEX = Regex("^[A-Za-z0-9_-]{11}$")
+
+    fun extractYouTubeVideoId(rawUrl: String?): String? {
+        if (rawUrl.isNullOrBlank()) return null
+        return try {
+            val uri = java.net.URI(rawUrl.trim())
+            val host = uri.host?.lowercase(Locale.US)?.removePrefix("www.") ?: return null
+            val pathSegments = uri.path?.split("/")?.filter { it.isNotBlank() }.orEmpty()
+            val candidate = when {
+                host == "youtu.be" -> pathSegments.firstOrNull()
+                host == "youtube.com" || host == "m.youtube.com" || host == "music.youtube.com" -> {
+                    val queryVid = uri.rawQuery
+                        ?.split("&")
+                        ?.firstOrNull { it.startsWith("v=") }
+                        ?.substringAfter("v=")
+                    if (!queryVid.isNullOrBlank()) {
+                        queryVid
+                    } else if (pathSegments.size >= 2 && pathSegments[0] in setOf("shorts", "live", "embed", "v")) {
+                        pathSegments[1]
+                    } else {
+                        null
+                    }
+                }
+                else -> null
+            }?.trim()
+            if (candidate != null && YOUTUBE_ID_REGEX.matches(candidate)) candidate else null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun parseStutiSongItem(obj: JSONObject?): MobilePromotion? {
         if (obj == null) return null
-        val id = obj.optInt("id", 0)
+        val videoId = obj.optString("video_id", "").trim()
+        if (!YOUTUBE_ID_REGEX.matches(videoId)) return null
+
         val title = sanitizePlainText(
             if (obj.isNull("title")) "" else obj.optString("title", ""),
             180
         )
-        if (id <= 0 || title.isEmpty()) return null
+        if (title.isEmpty()) return null
+
+        val defaultThumb = "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
+        val rawHd = if (obj.isNull("thumbnail_hd_url")) null else obj.optString("thumbnail_hd_url", "")
+        val rawStd = if (obj.isNull("thumbnail_url")) null else obj.optString("thumbnail_url", "")
+        val imageUrl = sanitizeHttpsUrl(rawHd, null) ?: sanitizeHttpsUrl(rawStd, defaultThumb) ?: defaultThumb
+
+        val relayedDataUri = if (obj.isNull("resolved_image_src")) null else obj.optString("resolved_image_src", "")
+        val inlineBytes = decodeSafeDataUriBytes(relayedDataUri)
+        val verifiedMime = if (inlineBytes != null) detectSafeRasterImageMime(inlineBytes) else "image/jpeg"
+
+        val publishedAt = sanitizePlainText(
+            if (obj.isNull("published_at")) "" else obj.optString("published_at", ""),
+            40
+        ).ifEmpty { null }
+
+        return MobilePromotion(
+            id = 0,
+            campaignKey = "stuti-$videoId",
+            campaignVersion = 1,
+            title = title,
+            body = null,
+            imageUrl = imageUrl,
+            imageMime = verifiedMime,
+            imageBytes = inlineBytes,
+            ctaLabel = null,
+            ctaUrl = "https://www.youtube.com/watch?v=$videoId",
+            targetPlatform = "all",
+            position = "clock_area",
+            dismissMode = "every_launch",
+            delaySeconds = 0,
+            rotateIntervalSeconds = 8,
+            transitionStyle = "auto_mix",
+            sortOrder = 0,
+            eventUrl = null,
+            updatedAt = publishedAt,
+            isStutiSong = true
+        )
+    }
+
+    fun parsePromotion(obj: JSONObject?): MobilePromotion? {
+        if (obj == null) return null
+        if (!obj.isNull("video_id") && obj.optString("video_id", "").isNotBlank()) {
+            return parseStutiSongItem(obj)
+        }
+        val id = obj.optInt("id", 0)
+        val rawKeyPreview = if (obj.isNull("campaign_key")) "" else obj.optString("campaign_key", "").trim()
+        val isRelayedStuti = obj.optBoolean("is_stuti_song", false) || rawKeyPreview.startsWith("stuti-")
+        val title = sanitizePlainText(
+            if (obj.isNull("title")) "" else obj.optString("title", ""),
+            180
+        )
+        if ((!isRelayedStuti && id <= 0) || title.isEmpty()) return null
 
         val rawTarget = obj.optString("target_platform", "all").trim().lowercase(Locale.US)
         val targetPlatform = if (rawTarget in VALID_TARGETS) rawTarget else "all"
@@ -269,8 +355,49 @@ object PromotionSanitizer {
             transitionStyle = transitionStyle,
             sortOrder = sortOrder,
             eventUrl = eventUrl,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            isStutiSong = isRelayedStuti
         )
+    }
+
+    fun mergePromotionsWithStutiSongs(
+        basePromos: List<MobilePromotion>,
+        extraStutiSongs: List<MobilePromotion>
+    ): List<MobilePromotion> {
+        val adminPromos = mutableListOf<MobilePromotion>()
+        val stutiSongs = mutableListOf<MobilePromotion>()
+        val seenCampaignKeys = mutableSetOf<String>()
+        val seenVideoIds = mutableSetOf<String>()
+
+        for (p in basePromos) {
+            if (p.isStutiSong || p.campaignKey.startsWith("stuti-")) {
+                stutiSongs.add(p)
+            } else if (seenCampaignKeys.add(p.campaignKey)) {
+                adminPromos.add(p)
+                extractYouTubeVideoId(p.ctaUrl)?.let { seenVideoIds.add(it) }
+            }
+        }
+
+        val uniqueStuti = mutableListOf<MobilePromotion>()
+        for (s in extraStutiSongs + stutiSongs) {
+            val vid = extractYouTubeVideoId(s.ctaUrl) ?: s.campaignKey.removePrefix("stuti-")
+            if (vid.isNotEmpty() && !seenVideoIds.add(vid)) continue
+            if (!seenCampaignKeys.add(s.campaignKey)) continue
+            uniqueStuti.add(s)
+        }
+
+        val interleaved = mutableListOf<MobilePromotion>()
+        val maxLen = maxOf(adminPromos.size, uniqueStuti.size)
+        for (i in 0 until maxLen) {
+            if (i < uniqueStuti.size) {
+                interleaved.add(uniqueStuti[i])
+            }
+            if (i < adminPromos.size) {
+                interleaved.add(adminPromos[i])
+            }
+        }
+
+        return interleaved.mapIndexed { idx, item -> item.copy(sortOrder = idx) }
     }
 
     fun parsePromotionsResponse(raw: Any?): List<MobilePromotion> {
@@ -294,7 +421,23 @@ object PromotionSanitizer {
                 list.add(parsed)
             }
         }
-        return list
+
+        val inlineStutiSongs = mutableListOf<MobilePromotion>()
+        if (raw is JSONObject) {
+            val stutiArr = raw.optJSONArray("stuti_media_latest") ?: raw.optJSONArray("videos")
+            if (stutiArr != null) {
+                for (i in 0 until stutiArr.length()) {
+                    val parsedSong = parseStutiSongItem(stutiArr.optJSONObject(i)) ?: continue
+                    inlineStutiSongs.add(parsedSong)
+                }
+            }
+        }
+
+        return if (inlineStutiSongs.isNotEmpty() || list.any { it.isStutiSong }) {
+            mergePromotionsWithStutiSongs(list, inlineStutiSongs)
+        } else {
+            list
+        }
     }
 
     fun todayLocalStamp(now: Date = Date()): String {

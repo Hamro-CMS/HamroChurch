@@ -249,16 +249,53 @@ export async function getStutiMediaFeed(forceFresh = false): Promise<StutiMediaF
     return await fetchStutiMediaFeed(forceFresh, true)
 }
 
+export function getCurrentStutiSongs(limit = 5): StutiMediaSong[] {
+    return (ensureCurrentFeed().videos || []).slice(0, Math.max(0, limit))
+}
+
+export function ingestLatestStutiSongsPreview(rawList: unknown): void {
+    const incoming = sanitizeSongList(rawList, "video")
+    if (!incoming.length) return
+
+    const baseline = ensureCurrentFeed()
+    const existingById = new Map((baseline.videos || []).map((v) => [v.video_id, v]))
+    let hasNewOrUpdated = false
+
+    const merged: StutiMediaSong[] = []
+    const seen = new Set<string>()
+    for (const song of incoming) {
+        if (seen.has(song.video_id)) continue
+        seen.add(song.video_id)
+        if (!existingById.has(song.video_id)) hasNewOrUpdated = true
+        merged.push(song)
+    }
+    for (const oldSong of baseline.videos || []) {
+        if (seen.has(oldSong.video_id)) continue
+        seen.add(oldSong.video_id)
+        merged.push(oldSong)
+    }
+
+    if (!hasNewOrUpdated && merged[0]?.video_id === baseline.videos?.[0]?.video_id) return
+
+    currentFeed = {
+        ...baseline,
+        videos: merged,
+        updated_at: new Date().toISOString()
+    }
+    writeDiskCache(currentFeed)
+    sendToMain(ToMain.STUTI_MEDIA_SONGS, currentFeed)
+}
+
 export function startStutiMediaSync() {
     if (initialTimer || pollTimer) return
 
     initialTimer = setTimeout(() => {
         initialTimer = null
-        void fetchStutiMediaFeed(false, true)
+        void fetchStutiMediaFeed(true, true)
     }, INITIAL_DELAY_MS)
 
     pollTimer = setInterval(() => {
-        void fetchStutiMediaFeed(false, true)
+        void fetchStutiMediaFeed(true, true)
     }, POLL_INTERVAL_MS)
 }
 

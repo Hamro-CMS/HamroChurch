@@ -69,10 +69,43 @@ class PromotionClient(
             }
 
             val parsedList = PromotionSanitizer.parsePromotionsResponse(JSONObject(bodyText))
-            val enriched = attachVerifiedImages(parsedList)
+            val latestFeedSongs = fetchLatestStutiSongs()
+            val combined = PromotionSanitizer.mergePromotionsWithStutiSongs(parsedList, latestFeedSongs)
+            val enriched = attachVerifiedImages(combined)
             Result.success(enriched)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private fun fetchLatestStutiSongs(): List<MobilePromotion> {
+        val safeFeedUrl = PromotionSanitizer.sanitizeHttpsUrl(DEFAULT_STUTI_MEDIA_URL, null) ?: return emptyList()
+        return try {
+            val req = Request.Builder()
+                .url(safeFeedUrl)
+                .header("Accept", "application/json")
+                .header("Cache-Control", "no-cache")
+                .header("User-Agent", userAgent)
+                .get()
+                .build()
+
+            val bodyText = httpClient.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) return emptyList()
+                resp.body?.string().orEmpty()
+            }
+            if (bodyText.isBlank()) return emptyList()
+
+            val json = JSONObject(bodyText)
+            val videosArr = json.optJSONArray("videos") ?: return emptyList()
+            val out = mutableListOf<MobilePromotion>()
+            val limit = minOf(5, videosArr.length())
+            for (i in 0 until limit) {
+                val parsed = PromotionSanitizer.parseStutiSongItem(videosArr.optJSONObject(i)) ?: continue
+                out.add(parsed)
+            }
+            out
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 
@@ -164,6 +197,7 @@ class PromotionClient(
     companion object {
         private const val DEFAULT_PROMOTION_BASE = "https://hamrocms.com/api/v1/software"
         const val DEFAULT_MOBILE_PROMOTION_URL = "$DEFAULT_PROMOTION_BASE/promotion?target=mobile"
+        const val DEFAULT_STUTI_MEDIA_URL = "$DEFAULT_PROMOTION_BASE/stuti-media?refresh=1"
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 }

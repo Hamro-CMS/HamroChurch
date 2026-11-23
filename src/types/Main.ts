@@ -47,6 +47,7 @@ export interface SoftwarePromotionPayload {
     ends_at: string | null
     event_url: string | null
     updated_at: string | null
+    is_stuti_song?: boolean
 }
 
 export interface StutiMediaSong {

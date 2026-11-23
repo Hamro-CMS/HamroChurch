@@ -4,6 +4,7 @@ import { ToMain } from "../../types/IPC/ToMain"
 import type { SoftwarePromotionPayload, SoftwarePromotionTargetPlatform, SoftwarePromotionTransitionStyle } from "../../types/Main"
 import { config } from "../data/store"
 import { sendToMain } from "../IPC/main"
+import { getCurrentStutiSongs, ingestLatestStutiSongsPreview } from "./stutiMedia"
 
 const DEFAULT_PROMOTION_URL = "https://hamrocms.com/api/v1/software/promotion"
 const INITIAL_DELAY_MS = 2800
@@ -294,12 +295,40 @@ function emitMobilePromotionsToMainRenderer(promos: SoftwarePromotionPayload[], 
     sendToMain(ToMain.MOBILE_SOFTWARE_PROMOTIONS, promos)
 }
 
+function extractYouTubeVideoId(rawUrl: string | null | undefined): string | null {
+    if (!rawUrl) return null
+    try {
+        const parsed = new URL(rawUrl.trim())
+        const host = parsed.hostname.toLowerCase().replace(/^www\./, "")
+        let candidate: string | null = null
+        if (host === "youtu.be") {
+            candidate = parsed.pathname.split("/").filter(Boolean)[0] || null
+        } else if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
+            const queryVid = parsed.searchParams.get("v")
+            if (queryVid) {
+                candidate = queryVid
+            } else {
+                const segs = parsed.pathname.split("/").filter(Boolean)
+                if (segs.length >= 2 && ["shorts", "live", "embed", "v"].includes(segs[0])) {
+                    candidate = segs[1]
+                }
+            }
+        }
+        return candidate && /^[A-Za-z0-9_-]{11}$/.test(candidate.trim()) ? candidate.trim() : null
+    } catch {
+        return null
+    }
+}
+
 export async function ingestPromotionsFromServer(rawInput: any, forceEmit = false): Promise<SoftwarePromotionPayload[]> {
     let rawList: any[] = []
     let rawMobileList: any[] | null = null
     if (Array.isArray(rawInput)) {
         rawList = rawInput
     } else if (rawInput && typeof rawInput === "object") {
+        if (Array.isArray(rawInput.stuti_media_latest)) {
+            ingestLatestStutiSongsPreview(rawInput.stuti_media_latest)
+        }
         if (Array.isArray(rawInput.mobile_promotions)) {
             rawMobileList = rawInput.mobile_promotions
         }
@@ -327,7 +356,8 @@ export async function ingestPromotionsFromServer(rawInput: any, forceEmit = fals
     }
 
     const seenMobileKeys = new Set<string>()
-    const activeMobileList: SoftwarePromotionPayload[] = []
+    const seenMobileVideoIds = new Set<string>()
+    const adminMobileList: SoftwarePromotionPayload[] = []
     const mobileSource = rawMobileList ?? rawList
     for (const item of mobileSource) {
         const parsed = sanitizePromotion(item)
@@ -335,7 +365,51 @@ export async function ingestPromotionsFromServer(rawInput: any, forceEmit = fals
         if (parsed.target_platform === "desktop") continue
         if (seenMobileKeys.has(parsed.campaign_key)) continue
         seenMobileKeys.add(parsed.campaign_key)
-        activeMobileList.push(parsed)
+        const vid = extractYouTubeVideoId(parsed.cta_url)
+        if (vid) seenMobileVideoIds.add(vid)
+        adminMobileList.push(parsed)
+    }
+
+    const stutiMobileList: SoftwarePromotionPayload[] = []
+    for (const song of getCurrentStutiSongs(5)) {
+        if (!song?.video_id || seenMobileVideoIds.has(song.video_id)) continue
+        const campaignKey = `stuti-${song.video_id}`
+        if (seenMobileKeys.has(campaignKey)) continue
+        seenMobileKeys.add(campaignKey)
+        seenMobileVideoIds.add(song.video_id)
+        const thumbUrl = sanitizeSafePromotionUrl(song.thumbnail_hd_url || song.thumbnail_url, `https://i.ytimg.com/vi/${song.video_id}/hqdefault.jpg`)
+        stutiMobileList.push({
+            id: 0,
+            campaign_key: campaignKey,
+            campaign_version: 1,
+            title: sanitizePlainText(song.title, 180),
+            body: null,
+            image_url: thumbUrl,
+            image_mime: "image/jpeg",
+            resolved_image_src: null,
+            cta_label: null,
+            cta_url: `https://www.youtube.com/watch?v=${song.video_id}`,
+            target_platform: "all",
+            position: "clock_area",
+            dismiss_mode: "every_launch",
+            delay_seconds: 0,
+            rotate_interval_seconds: 8,
+            transition_style: "auto_mix",
+            sort_order: 0,
+            draggable: false,
+            starts_at: null,
+            ends_at: null,
+            event_url: null,
+            updated_at: song.published_at || null,
+            is_stuti_song: true
+        })
+    }
+
+    const activeMobileList: SoftwarePromotionPayload[] = []
+    const maxMobileLen = Math.max(adminMobileList.length, stutiMobileList.length)
+    for (let i = 0; i < maxMobileLen; i++) {
+        if (i < stutiMobileList.length) activeMobileList.push({ ...stutiMobileList[i], sort_order: activeMobileList.length })
+        if (i < adminMobileList.length) activeMobileList.push({ ...adminMobileList[i], sort_order: activeMobileList.length })
     }
 
     await Promise.all([

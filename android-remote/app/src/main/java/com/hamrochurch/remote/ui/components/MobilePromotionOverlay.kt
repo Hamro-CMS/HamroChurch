@@ -299,6 +299,7 @@ fun MobilePromotionOverlay(
                                 .height(66.dp),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
+                            val isStutiSong = promo.isStutiSong || promo.campaignKey.startsWith("stuti-")
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -309,10 +310,10 @@ fun MobilePromotionOverlay(
                                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                                 ) {
                                     Text(
-                                        text = "HamroCMS.com",
+                                        text = if (isStutiSong) "Stuti Media" else "HamroCMS.com",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = Color(0xFFFBBF24),
+                                        color = if (isStutiSong) Color(0xFFF87171) else Color(0xFFFBBF24),
                                         maxLines = 1
                                     )
                                     if (eligiblePromos.size > 1) {
@@ -346,7 +347,11 @@ fun MobilePromotionOverlay(
                             ) {
                                 Text(
                                     text = promo.body?.takeIf { it.isNotBlank() }
-                                        ?: if (nepaliLanguage) "आराधना र चर्च सेवा सामग्री" else "Worship & church ministry updates",
+                                        ?: if (isStutiSong) {
+                                            if (nepaliLanguage) "स्तुति मिडिया नयाँ आराधना भजन" else "Stuti Media • New Worship Song"
+                                        } else {
+                                            if (nepaliLanguage) "आराधना र चर्च सेवा सामग्री" else "Worship & church ministry updates"
+                                        },
                                     fontSize = 10.5.sp,
                                     color = TextSecondary,
                                     maxLines = 1,
@@ -368,7 +373,11 @@ fun MobilePromotionOverlay(
                                 ) {
                                     val rawLabel = promo.ctaLabel?.trim().orEmpty()
                                     val compactLabel = when {
-                                        rawLabel.isEmpty() -> if (nepaliLanguage) "हेर्नुहोस्" else "Open"
+                                        rawLabel.isEmpty() -> if (isStutiSong) {
+                                            if (nepaliLanguage) "भजन सुन्नुहोस्" else "Watch Song"
+                                        } else {
+                                            if (nepaliLanguage) "हेर्नुहोस्" else "Open"
+                                        }
                                         rawLabel.length > 14 -> if (nepaliLanguage) "भजन सुन्नुहोस्" else "Explore"
                                         else -> rawLabel
                                     }
