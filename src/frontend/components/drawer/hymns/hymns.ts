@@ -9,6 +9,8 @@ import { requestMain } from "../../../IPC/main"
 import { activeEdit, activePage, activePopup, activeProject, activeShow, focusMode, language, projects, projectView, shows, showsCache } from "../../../stores"
 import { newToast } from "../../../utils/common"
 import { translateText } from "../../../utils/language"
+import { confirmCustom } from "../../../utils/popup"
+import { save } from "../../../utils/save"
 import { history } from "../../helpers/history"
 import { loadShows, saveTextCache } from "../../helpers/setShow"
 import { checkName } from "../../helpers/show"
@@ -44,6 +46,7 @@ export type HymnRecord = {
     id: string
     sourceKey: string
     sourcePage: string
+    isCustom: boolean
     title: string
     titleEn: string
     transliteration: string
@@ -372,10 +375,14 @@ export async function loadHymns() {
                 const repeatChorus = verses.some((verse) => inferSlideGroup(verse) === "chorus") && verses.length > 1
                 const updatedAt = Number(song.updatedAt || 0) || 0
 
+                const rawSourceKey = String(song.sourceKey || "")
+                const isCustom = !/^song\d+$/i.test(rawSourceKey)
+
                 items.push({
-                    id: song.sourceKey || `hymn-${index}-${uid(4)}`,
-                    sourceKey: String(song.sourceKey || ""),
+                    id: rawSourceKey || `hymn-${index}-${uid(4)}`,
+                    sourceKey: rawSourceKey,
                     sourcePage: String(song.sourcePage || ""),
+                    isCustom,
                     title,
                     titleEn,
                     transliteration,
@@ -400,8 +407,54 @@ export async function loadHymns() {
             })
         })
 
+        // Assign deterministic sequential continuation numbers to unnumbered songs in each category
+        // (e.g. Bhajan 849+, Chorus 337+, Bal Sangati 71+, New Songs 16+) while preserving 100% of official book numbers.
+        const bookCategories: HymnBookCategoryId[] = ["bhajan", "chorus", "children", "new"]
+        for (const cat of bookCategories) {
+            let maxBundled = 0
+            for (const item of items) {
+                if (item.categoryId !== cat || item.isCustom || !item.number) continue
+                const parsedNum = Number.parseInt(item.number, 10)
+                if (Number.isFinite(parsedNum) && parsedNum > maxBundled) {
+                    maxBundled = parsedNum
+                }
+            }
+
+            const unnumberedBundled = items
+                .filter((item) => item.categoryId === cat && !item.isCustom && !item.number)
+                .sort((left, right) => left.title.localeCompare(right.title, "ne") || left.sourceKey.localeCompare(right.sourceKey))
+
+            let nextNum = maxBundled
+            for (const item of unnumberedBundled) {
+                nextNum += 1
+                const assigned = String(nextNum)
+                item.number = assigned
+                item.searchNumber = normalizeSearchText(assigned)
+            }
+
+            let maxCategory = nextNum
+            for (const item of items) {
+                if (item.categoryId !== cat || !item.number) continue
+                const parsedNum = Number.parseInt(item.number, 10)
+                if (Number.isFinite(parsedNum) && parsedNum > maxCategory) {
+                    maxCategory = parsedNum
+                }
+            }
+
+            for (const item of items) {
+                if (item.categoryId !== cat || !item.isCustom || item.number) continue
+                maxCategory += 1
+                const assigned = String(maxCategory)
+                item.number = assigned
+                item.searchNumber = normalizeSearchText(assigned)
+            }
+        }
+
         hymnItems.set(items)
-        if (!get(hymnSelectedId) && items[0]) hymnSelectedId.set(items[0].id)
+        const currentSelected = get(hymnSelectedId)
+        if ((!currentSelected || !items.some((item) => item.id === currentSelected)) && items[0]) {
+            hymnSelectedId.set(items[0].id)
+        }
     } catch (error) {
         hymnLoadError.set(error instanceof Error ? error.message : String(error))
         hymnItems.set([])
@@ -622,6 +675,93 @@ export async function insertSelectedHymnIntoSlides(targetHymnId?: string | Event
     const selectedIndex = get(activeShow)?.index === undefined ? undefined : get(activeShow)!.index! + 1
     history({ id: "UPDATE", newData: { data: show, remember: { project: get(activeProject), index: selectedIndex } }, location: { page: "show", id: "show" } })
     newToast("hymns.inserted")
+}
+
+export function isCustomHymn(hymnOrId?: HymnRecord | string | null): boolean {
+    if (!hymnOrId) return false
+    if (typeof hymnOrId === "object") return Boolean(hymnOrId.isCustom)
+    const found = get(hymnItems).find((item) => item.id === hymnOrId || item.sourceKey === hymnOrId)
+    if (found) return Boolean(found.isCustom)
+    return !/^song\d+$/i.test(String(hymnOrId).trim())
+}
+
+export function getNextAvailableHymnNumber(categoryId: Exclude<HymnCategoryId, "all"> = "bhajan", items = get(hymnItems)): string {
+    let maxNum = 0
+    for (const item of items) {
+        if (item.categoryId !== categoryId || !item.number) continue
+        const parsed = Number.parseInt(item.number, 10)
+        if (Number.isFinite(parsed) && parsed > maxNum) {
+            maxNum = parsed
+        }
+    }
+    return String(maxNum + 1)
+}
+
+export async function deleteHymnById(targetHymnId?: string) {
+    const hymn = targetHymnId ? get(hymnItems).find((item) => item.id === targetHymnId || item.sourceKey === targetHymnId) || null : getSelectedHymn()
+    if (!hymn || !hymn.isCustom) return
+
+    const confirmed = await confirmCustom(translateText("hymns.delete_confirm"))
+    if (!confirmed) return
+
+    const targetKey = hymn.sourceKey || hymn.id
+    const result = await requestMain(Main.DELETE_HYMN, { id: targetKey })
+    if (!result?.success) {
+        newToast("hymns.load_error")
+        return
+    }
+
+    const removedShowIds = new Set<string>(result.deletedShowIds || [])
+    shows.update((allShows) => {
+        for (const [showId, s] of Object.entries<any>(allShows || {})) {
+            if (removedShowIds.has(showId) || String(s?.quickAccess?.metadata?.hymnSourceKey || "") === targetKey) {
+                removedShowIds.add(showId)
+                delete allShows[showId]
+            }
+        }
+        return allShows
+    })
+
+    if (removedShowIds.size > 0) {
+        showsCache.update((cache) => {
+            for (const showId of removedShowIds) {
+                delete cache[showId]
+            }
+            return cache
+        })
+
+        projects.update((allProjects) => {
+            for (const proj of Object.values<any>(allProjects || {})) {
+                if (Array.isArray(proj?.shows)) {
+                    const before = proj.shows.length
+                    proj.shows = proj.shows.filter((item: any) => !removedShowIds.has(String(item?.id || "")))
+                    if (proj.shows.length !== before) {
+                        proj.modified = Date.now()
+                    }
+                }
+            }
+            return allProjects
+        })
+
+        const currentActive = get(activeShow)
+        if (currentActive?.id && removedShowIds.has(currentActive.id)) {
+            activeShow.set(null)
+        }
+    }
+
+    hymnFavoriteIds.update((current) => {
+        if (!current.includes(hymn.id)) return current
+        const next = current.filter((id) => id !== hymn.id)
+        const storage = getLocalStorageSafe()
+        if (storage) storage.setItem(FAVORITES_KEY, JSON.stringify(next))
+        return next
+    })
+
+    await loadHymns()
+    if (removedShowIds.size > 0) {
+        save(false, { autosave: true })
+    }
+    newToast("hymns.deleted")
 }
 
 export function openEditHymnById(targetHymnId?: string) {

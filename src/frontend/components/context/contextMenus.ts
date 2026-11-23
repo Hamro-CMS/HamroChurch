@@ -200,6 +200,7 @@ export const contextMenuItems: { [key: string]: ContextMenuItem } = {
     route_bible: { label: "main.open: route.bible", icon: "launch" },
     // HYMNS
     hymn_edit: { label: "hymns.edit_title", icon: "edit", iconColor: "#97c7ff" },
+    hymn_delete: { label: "hymns.delete_title", icon: "delete", iconColor: "#ff5757" },
     hymn_copy: { label: "hymns.copy", icon: "copy", iconColor: "#97c7ff" },
     hymn_favorite: { label: "hymns.favorites", icon: "star", iconColor: "#fff1ad" },
     // STAGE
@@ -316,7 +317,7 @@ export const contextMenuLayouts: { [key: string]: string[] } = {
     action_readonly: ["action_tag_filter"],
     scripture_verse: ["create_show", "SEPARATOR", "selectAll", "SEPARATOR", "route_bible"],
     scripture_chapter: ["create_show"],
-    hymn_item: ["create_show", "SEPARATOR", "hymn_edit", "hymn_copy", "hymn_favorite"],
+    hymn_item: ["create_show", "SEPARATOR", "hymn_edit", "hymn_delete", "hymn_copy", "hymn_favorite"],
 
     // PROJECT
     projects: ["newProject", "newFolder", "SEPARATOR", "sort_projects_by"],

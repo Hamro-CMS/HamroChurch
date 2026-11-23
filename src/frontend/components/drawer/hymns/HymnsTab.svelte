@@ -6,7 +6,7 @@
     import { newToast } from "../../../utils/common"
     import HymnList from "./HymnList.svelte"
     import HymnSearchBar from "./HymnSearchBar.svelte"
-    import { getActiveCategoryId, getCategoryCounts, getHymnCategoryDisplay, hymnEditTarget, hymnItems, hymnLoadError, hymnLoading, hymnSelectedCategories, hymnSelectedId, initializeHymnsPreferences, insertSelectedHymnIntoSlides, loadHymns } from "./hymns"
+    import { deleteHymnById, getActiveCategoryId, getCategoryCounts, getHymnCategoryDisplay, hymnEditTarget, hymnItems, hymnLoadError, hymnLoading, hymnSelectedCategories, hymnSelectedId, initializeHymnsPreferences, insertSelectedHymnIntoSlides, loadHymns } from "./hymns"
     import Loader from "../../main/Loader.svelte"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import T from "../../helpers/T.svelte"
@@ -56,6 +56,14 @@
             return
         }
 
+        if (event.key === "Delete" && !$activePopup && selectedHymn?.isCustom) {
+            const activeElement = document.activeElement as HTMLElement | null
+            if (activeElement?.tagName === "INPUT" || activeElement?.tagName === "TEXTAREA" || activeElement?.isContentEditable) return
+            event.preventDefault()
+            void deleteHymnById(selectedHymn.id)
+            return
+        }
+
         if (event.key === "Enter" && !(event.ctrlKey || event.metaKey)) {
             const activeElement = document.activeElement as HTMLElement | null
             if (activeElement?.tagName === "TEXTAREA") return
@@ -87,6 +95,11 @@
             <MaterialButton variant="outlined" icon="edit" iconSize={0.9} style="padding: 0.38rem 0.68rem; font-size: 0.83rem; min-height: 36px; height: 36px; border-radius: 8px; gap: 6px;" on:click={openEditHymn} disabled={!selectedHymn} white>
                 <T id="hymns.edit_title" />
             </MaterialButton>
+            {#if selectedHymn?.isCustom}
+                <MaterialButton variant="outlined" icon="delete" iconSize={0.9} style="padding: 0.38rem 0.68rem; font-size: 0.83rem; min-height: 36px; height: 36px; border-radius: 8px; gap: 6px;" on:click={() => selectedHymn && deleteHymnById(selectedHymn.id)} white red>
+                    <T id="hymns.delete_title" />
+                </MaterialButton>
+            {/if}
             <MaterialButton variant="outlined" icon="reset" iconSize={0.9} style="padding: 0.38rem 0.68rem; font-size: 0.83rem; min-height: 36px; height: 36px; border-radius: 8px; gap: 6px;" on:click={resetHymns} disabled={resetting} title="hymns.reset_confirm" white red>
                 {#if confirmingReset}<T id="popup.continue" />?{:else}<T id="hymns.reset_original" />{/if}
             </MaterialButton>

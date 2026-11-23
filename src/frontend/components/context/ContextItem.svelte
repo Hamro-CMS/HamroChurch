@@ -12,7 +12,7 @@
     import { ContextMenuItem, contextMenuItems } from "./contextMenus"
     import { menuClick } from "./menuClick"
     import { isProtectedSystemBible } from "../drawer/bible/scripture"
-    import { hymnFavoriteIds, hymnSelectedId } from "../drawer/hymns/hymns"
+    import { hymnFavoriteIds, hymnItems, hymnSelectedId, isCustomHymn } from "../drawer/hymns/hymns"
 
     export let contextElem: HTMLDivElement | null = null
     export let topBar = false
@@ -228,6 +228,11 @@
                 let path = $selected.data[0]?.path || $selected.data[0]?.id
                 enabled = !!$media[path]?.favourite
             }
+        },
+        hymn_delete: () => {
+            const hymnId = contextElem?.dataset?.hymnId || $hymnSelectedId
+            const record = $hymnItems.find((item) => item.id === hymnId || item.sourceKey === hymnId)
+            hide = !(record ? record.isCustom : isCustomHymn(hymnId))
         },
         hymn_favorite: () => {
             const hymnId = contextElem?.dataset?.hymnId || $hymnSelectedId

@@ -5,7 +5,7 @@
     import { Main } from "../../../../types/IPC/Main"
     import { requestMain } from "../../../IPC/main"
     import { activePopup, shows, showsCache } from "../../../stores"
-    import { applyHymnToExistingShow, hymnEditTarget, hymnItems, hymnSelectedId, loadHymns, type HymnRecord } from "../../drawer/hymns/hymns"
+    import { applyHymnToExistingShow, getActiveCategoryId, getNextAvailableHymnNumber, hymnEditTarget, hymnItems, hymnSelectedCategories, hymnSelectedId, loadHymns, type HymnRecord } from "../../drawer/hymns/hymns"
     import { saveTextCache } from "../../helpers/setShow"
     import { newToast } from "../../../utils/common"
     import { save } from "../../../utils/save"
@@ -23,14 +23,23 @@
         return fromNepaliDigits(String(raw || "")).replace(/[^\d]/g, "")
     }
 
+    const activeCat = getActiveCategoryId(get(hymnSelectedCategories))
+    let categoryId: "bhajan" | "chorus" | "children" | "new" = editTarget && editTarget.categoryId !== "all" ? editTarget.categoryId : activeCat !== "all" ? activeCat : "bhajan"
+    let numberTouched = isEditing
     let title = editTarget?.title || ""
     let titleEn = editTarget?.titleEn || ""
     let lyrics = editTarget?.lyrics || ""
-    let number = sanitizeHymnNumber(editTarget?.number || "")
+    let number = isEditing ? sanitizeHymnNumber(editTarget?.number || "") : getNextAvailableHymnNumber(categoryId)
     let authors = editTarget?.authors || ""
     let saving = false
     let errorMessage = ""
-    let categoryId: "bhajan" | "chorus" | "children" | "new" = editTarget && editTarget.categoryId !== "all" ? editTarget.categoryId : "bhajan"
+
+    function handleCategoryChange(nextCat: "bhajan" | "chorus" | "children" | "new") {
+        categoryId = nextCat
+        if (!isEditing && !numberTouched) {
+            number = getNextAvailableHymnNumber(nextCat)
+        }
+    }
 
     const categoryOptions = [
         { value: "bhajan", label: "Bhajan / भजन" },
@@ -138,8 +147,20 @@
 <div class="form">
     <MaterialTextInput label="hymns.form_title" value={title} on:input={(e) => (title = e.detail)} on:change={(e) => (title = e.detail)} autofocus />
     <MaterialTextInput label="hymns.form_transliteration" value={titleEn} on:input={(e) => (titleEn = e.detail)} on:change={(e) => (titleEn = e.detail)} />
-    <MaterialDropdown label="hymns.form_category" options={categoryOptions} value={categoryId} on:change={(e) => (categoryId = e.detail)} />
-    <MaterialTextInput label="hymns.form_number" value={number} disableNepaliTyping on:input={(e) => (number = sanitizeHymnNumber(e.detail))} on:change={(e) => (number = sanitizeHymnNumber(e.detail))} />
+    <MaterialDropdown label="hymns.form_category" options={categoryOptions} value={categoryId} on:change={(e) => handleCategoryChange(e.detail)} />
+    <MaterialTextInput
+        label="hymns.form_number"
+        value={number}
+        disableNepaliTyping
+        on:input={(e) => {
+            numberTouched = true
+            number = sanitizeHymnNumber(e.detail)
+        }}
+        on:change={(e) => {
+            numberTouched = true
+            number = sanitizeHymnNumber(e.detail)
+        }}
+    />
     <MaterialTextInput label="hymns.form_author" value={authors} on:input={(e) => (authors = e.detail)} on:change={(e) => (authors = e.detail)} />
     <MaterialTextarea label="hymns.form_lyrics" value={lyrics} rows={10} on:input={(e) => (lyrics = e.detail)} on:change={(e) => (lyrics = e.detail)} />
 

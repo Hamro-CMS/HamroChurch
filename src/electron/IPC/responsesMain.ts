@@ -179,6 +179,7 @@ export const mainResponses: MainResponses = {
     },
     [Main.READ_HYMNS]: () => readHamroHymns(),
     [Main.SAVE_HYMN]: (data) => saveHamroHymn(data),
+    [Main.DELETE_HYMN]: (data) => deleteHamroHymn(data),
     [Main.SYNC_HYMN_SHOWS]: (data) => syncHamroHymnShows(data),
     [Main.RESET_HYMNS]: () => resetHamroData(),
     [Main.NEPALI_TRANSLITERATE]: async (data) => await fetchNepaliTransliteration(data),
@@ -623,6 +624,78 @@ function saveHamroHymn(data: { id?: string; title: string; titleEn?: string; lyr
     }
 }
 
+function deleteHamroHymn(data: { id: string }) {
+    try {
+        const hymnId = String(data?.id || "").trim()
+        if (!hymnId) {
+            return { success: false, error: "Missing hymn ID." }
+        }
+        if (/^song\d+$/i.test(hymnId)) {
+            return { success: false, error: "Built-in system hymns cannot be deleted." }
+        }
+
+        const dataFolder = createFolder(path.join(getDataFolderRoot(), "data"))
+        const targetPath = path.join(dataFolder, "nepali_hymns.json")
+
+        const existingContent = readFile(targetPath) || readHamroHymns().content
+        if (!existingContent) {
+            return { success: false, error: "Hymn catalog not found." }
+        }
+
+        const payload = JSON.parse(existingContent)
+        if (!Array.isArray(payload?.categories)) {
+            return { success: false, error: "Invalid hymn catalog." }
+        }
+
+        let removedCount = 0
+        for (const category of payload.categories) {
+            if (!Array.isArray(category?.songs)) continue
+            const before = category.songs.length
+            category.songs = category.songs.filter((song: any) => String(song?.sourceKey || "") !== hymnId)
+            removedCount += before - category.songs.length
+        }
+
+        if (removedCount === 0) {
+            return { success: false, error: "Hymn not found." }
+        }
+
+        writeFile(targetPath, JSON.stringify(payload, null, 2))
+
+        // Remove any linked .show files created from this custom hymn on disk
+        const deletedShowIds: string[] = []
+        try {
+            const showsFolder = getDataFolderPath("shows")
+            const fileNames = readFolder(showsFolder)
+            for (const fileName of fileNames) {
+                if (!fileName.toLowerCase().endsWith(".show")) continue
+                const fullPath = path.join(showsFolder, fileName)
+                const raw = readFile(fullPath)
+                if (!raw || !raw.includes(hymnId)) continue
+                try {
+                    const parsed = JSON.parse(raw)
+                    const showId = Array.isArray(parsed) ? String(parsed[0] || "") : ""
+                    const show = Array.isArray(parsed) ? parsed[1] : parsed
+                    if (String(show?.quickAccess?.metadata?.hymnSourceKey || "") === hymnId) {
+                        if (showId) deletedShowIds.push(showId)
+                        fs.unlinkSync(fullPath)
+                    }
+                } catch {
+                    // Ignore malformed show files
+                }
+            }
+        } catch (err) {
+            console.warn("Could not clean up custom hymn show files on disk:", err)
+        }
+
+        return { success: true, deletedShowIds }
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
+        }
+    }
+}
+
 function inferHymnSlideGroup(text: string): "chorus" | "verse" {
     const trimmed = String(text || "").trim().toLowerCase()
     if (trimmed.startsWith("को.") || trimmed.includes("कोरस") || trimmed.includes("chorus")) return "chorus"
@@ -823,7 +896,8 @@ export function syncHamroHymnShows(
                 const unchanged = normalize(currentSong?.title) === title && normalize(currentSong?.titleEn) === normalize(update?.titleEn) && normalize(currentSong?.authors) === normalize(update?.authors) && normalizeNumber(extractNumber(currentSong?.sourceRefs || [])) === normalizeNumber(update?.number) && matched?.categoryId === nextCategoryId && getSongLyrics(currentSong) === lyrics
 
                 if (unchanged) continue
-            } else if (!normalize(update?.id)) {
+            } else {
+                // Never re-create a deleted hymn from a leftover .show entry
                 continue
             }
 

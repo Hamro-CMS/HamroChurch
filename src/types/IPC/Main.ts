@@ -141,6 +141,7 @@ export enum Main {
     READ_BIBLES_FOLDER = "READ_BIBLES_FOLDER",
     READ_HYMNS = "READ_HYMNS",
     SAVE_HYMN = "SAVE_HYMN",
+    DELETE_HYMN = "DELETE_HYMN",
     SYNC_HYMN_SHOWS = "SYNC_HYMN_SHOWS",
     RESET_HYMNS = "RESET_HYMNS",
     NEPALI_TRANSLITERATE = "NEPALI_TRANSLITERATE",
@@ -301,6 +302,9 @@ export interface MainSendPayloads {
         categoryId: "bhajan" | "chorus" | "children" | "new"
         number?: string
         authors?: string
+    }
+    [Main.DELETE_HYMN]: {
+        id: string
     }
     [Main.SYNC_HYMN_SHOWS]: {
         id?: string
@@ -531,6 +535,11 @@ export interface MainReturnPayloads {
         success: boolean
         path?: string
         id?: string
+        error?: string
+    }
+    [Main.DELETE_HYMN]: {
+        success: boolean
+        deletedShowIds?: string[]
         error?: string
     }
     [Main.SYNC_HYMN_SHOWS]: void

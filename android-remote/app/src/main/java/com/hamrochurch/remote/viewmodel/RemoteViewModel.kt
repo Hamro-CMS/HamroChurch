@@ -681,9 +681,9 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application) 
                 put("query", query)
                 put("category", category)
                 put("offset", 0)
-                put("limit", 100)
+                put("limit", 5000)
             }
-            client.sendAction("get_mobile_hymns", params, timeoutMs = 5000L).onSuccess { data ->
+            client.sendAction("get_mobile_hymns", params, timeoutMs = 10000L).onSuccess { data ->
                 val items = RemoteParsers.parseHymns(data.optJSONArray("items"))
                 val counts = RemoteParsers.parseHymnCounts(data.optJSONObject("categoryCounts"))
                 val total = data.optInt("total", items.size)

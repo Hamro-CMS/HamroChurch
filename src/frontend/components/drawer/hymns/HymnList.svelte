@@ -71,7 +71,7 @@
 
     .headerRow {
         display: grid;
-        grid-template-columns: 52px minmax(0, 1.15fr) minmax(0, 0.85fr) 16px;
+        grid-template-columns: 58px minmax(0, 1.15fr) minmax(0, 0.85fr) 16px;
         gap: 10px;
         padding: 0.35rem 0.9rem;
         border-bottom: 1px solid var(--primary-lighter);
@@ -119,7 +119,7 @@
 
     .row {
         display: grid;
-        grid-template-columns: 52px minmax(0, 1.15fr) minmax(0, 0.85fr) 16px;
+        grid-template-columns: 58px minmax(0, 1.15fr) minmax(0, 0.85fr) 16px;
         gap: 10px;
         align-items: center;
         border: 1px solid transparent;

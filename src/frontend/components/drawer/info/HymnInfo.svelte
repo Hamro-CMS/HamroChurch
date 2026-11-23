@@ -4,7 +4,7 @@
     import { activeDrawerTab, activePopup, drawer, language, stutiMediaActiveVideoId, stutiMediaFeed } from "../../../stores"
     import { sendMain } from "../../../IPC/main"
     import { DEFAULT_DRAWER_HEIGHT } from "../../../utils/common"
-    import { copySelectedHymnToClipboard, formatHymnNumber, getHymnCategoryDisplay, hymnEditTarget, hymnFavoriteIds, hymnItems, hymnSelectedId, hymnSourceDates, toggleFavorite, insertSelectedHymnIntoSlides } from "../hymns/hymns"
+    import { copySelectedHymnToClipboard, deleteHymnById, formatHymnNumber, getHymnCategoryDisplay, hymnEditTarget, hymnFavoriteIds, hymnItems, hymnSelectedId, hymnSourceDates, toggleFavorite, insertSelectedHymnIntoSlides } from "../hymns/hymns"
     import MaterialButton from "../../inputs/MaterialButton.svelte"
     import Icon from "../../helpers/Icon.svelte"
     import T from "../../helpers/T.svelte"
@@ -123,6 +123,11 @@
             <MaterialButton variant="outlined" icon="edit" on:click={editSelectedHymn} white>
                 <T id="hymns.edit" />
             </MaterialButton>
+            {#if hymn.isCustom}
+                <MaterialButton variant="outlined" icon="delete" on:click={() => hymn && deleteHymnById(hymn.id)} white red>
+                    <T id="hymns.delete" />
+                </MaterialButton>
+            {/if}
             <MaterialButton variant="outlined" icon="copy" on:click={copySelectedHymnToClipboard} white>
                 <T id="hymns.copy" />
             </MaterialButton>

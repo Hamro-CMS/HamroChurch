@@ -90,7 +90,7 @@ import { updateThemeValues } from "../../utils/updateSettings"
 import { getActionTriggerId } from "../actions/actions"
 import { moveStageConnection } from "../actions/apiHelper"
 import { createScriptureShow, openActiveInRouteBible } from "../drawer/bible/scripture"
-import { copySelectedHymnToClipboard, hymnSelectedId, insertSelectedHymnIntoSlides, openEditHymnById, toggleFavorite } from "../drawer/hymns/hymns"
+import { copySelectedHymnToClipboard, deleteHymnById, hymnSelectedId, insertSelectedHymnIntoSlides, openEditHymnById, toggleFavorite } from "../drawer/hymns/hymns"
 import { stopMediaRecorder } from "../drawer/live/recorder"
 import { playPauseGlobal } from "../drawer/timers/timers"
 import { addChords } from "../edit/scripts/chords"
@@ -888,6 +888,10 @@ const clickActions = {
     hymn_edit: (obj: ObjData) => {
         const hymnId = obj.contextElem?.dataset?.hymnId
         openEditHymnById(hymnId)
+    },
+    hymn_delete: (obj: ObjData) => {
+        const hymnId = obj.contextElem?.dataset?.hymnId || get(hymnSelectedId)
+        if (hymnId) void deleteHymnById(hymnId)
     },
     hymn_copy: (obj: ObjData) => {
         const hymnId = obj.contextElem?.dataset?.hymnId

@@ -496,7 +496,7 @@ export async function getMobileHymns(data: { query?: string; category?: string; 
     const allItems = await ensureHymnsLoaded()
     const category = (["all", "bhajan", "chorus", "children", "new"].includes(String(data?.category)) ? data.category : "all") as HymnCategoryId
     const rawQuery = String(data?.query || "").trim()
-    const limit = Math.min(200, Math.max(1, Number(data?.limit || 80)))
+    const limit = Math.min(5000, Math.max(1, Number(data?.limit || 5000)))
     const offset = Math.max(0, Number(data?.offset || 0))
 
     let matched: HymnRecord[]
