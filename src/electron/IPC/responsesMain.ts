@@ -630,7 +630,7 @@ function deleteHamroHymn(data: { id: string }) {
         if (!hymnId) {
             return { success: false, error: "Missing hymn ID." }
         }
-        if (/^song\d+$/i.test(hymnId)) {
+        if (/^(?:song\d+|stuti-[A-Za-z0-9_-]{11})$/i.test(hymnId)) {
             return { success: false, error: "Built-in system hymns cannot be deleted." }
         }
 

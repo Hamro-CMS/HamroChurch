@@ -376,7 +376,7 @@ export async function loadHymns() {
                 const updatedAt = Number(song.updatedAt || 0) || 0
 
                 const rawSourceKey = String(song.sourceKey || "")
-                const isCustom = !/^song\d+$/i.test(rawSourceKey)
+                const isCustom = !/^(?:song\d+|stuti-[A-Za-z0-9_-]{11})$/i.test(rawSourceKey)
 
                 items.push({
                     id: rawSourceKey || `hymn-${index}-${uid(4)}`,
@@ -682,7 +682,7 @@ export function isCustomHymn(hymnOrId?: HymnRecord | string | null): boolean {
     if (typeof hymnOrId === "object") return Boolean(hymnOrId.isCustom)
     const found = get(hymnItems).find((item) => item.id === hymnOrId || item.sourceKey === hymnOrId)
     if (found) return Boolean(found.isCustom)
-    return !/^song\d+$/i.test(String(hymnOrId).trim())
+    return !/^(?:song\d+|stuti-[A-Za-z0-9_-]{11})$/i.test(String(hymnOrId).trim())
 }
 
 export function getNextAvailableHymnNumber(categoryId: Exclude<HymnCategoryId, "all"> = "bhajan", items = get(hymnItems)): string {

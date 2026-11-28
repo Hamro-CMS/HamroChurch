@@ -5,6 +5,7 @@ import path from "path"
 import { ToMain } from "../../types/IPC/ToMain"
 import type { StutiMediaFeedPayload, StutiMediaSong } from "../../types/Main"
 import { sendToMain } from "../IPC/main"
+import { syncStutiSongsIntoHymnsFile } from "./stutiHymnSync"
 
 const DEFAULT_STUTI_FEED_URL = "https://hamrocms.com/api/v1/software/stuti-media"
 const INITIAL_DELAY_MS = 3500
@@ -169,7 +170,7 @@ function sanitizeSongList(rawList: unknown, fallbackType: "video" | "short"): St
         out.push({
             video_id: videoId,
             title,
-            description: sanitizePlain((raw as any).description, 800) || null,
+            description: sanitizePlain((raw as any).description, 8000) || null,
             video_type: rawType,
             thumbnail_url: sanitizeHttpsUrl((raw as any).thumbnail_url, defaultThumb),
             thumbnail_hd_url: sanitizeHttpsUrl((raw as any).thumbnail_hd_url, defaultThumb),
@@ -213,6 +214,48 @@ function ensureCurrentFeed(): StutiMediaFeedPayload {
     return currentFeed
 }
 
+async function fetchFullYouTubeDescription(videoId: string): Promise<string | null> {
+    if (!VALID_VIDEO_ID.test(videoId)) return null
+    try {
+        const res = await axios.get<string>(`https://www.youtube.com/watch?v=${videoId}`, {
+            timeout: 7000,
+            responseType: "text",
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                "Accept-Language": "en-US,en;q=0.9"
+            }
+        })
+        const html = typeof res.data === "string" ? res.data : ""
+        const match = html.match(/"shortDescription":"((?:\\.|[^"\\])*)"/)
+        if (!match?.[1]) return null
+        const decoded = JSON.parse(`"${match[1]}"`)
+        const cleaned = sanitizePlain(decoded, 8000)
+        return cleaned || null
+    } catch {
+        return null
+    }
+}
+
+async function enrichStutiDescriptions(songs: StutiMediaSong[], baseline: StutiMediaFeedPayload): Promise<StutiMediaSong[]> {
+    const cachedById = new Map((baseline.videos || []).map((v) => [v.video_id, v]))
+    return await Promise.all(
+        songs.map(async (song) => {
+            const existingDesc = cachedById.get(song.video_id)?.description || ""
+            const currentDesc = song.description || ""
+            if (existingDesc.length > currentDesc.length && existingDesc.length > 1200) {
+                return { ...song, description: existingDesc }
+            }
+            if (currentDesc.length >= 1150) {
+                const fullDesc = await fetchFullYouTubeDescription(song.video_id)
+                if (fullDesc && fullDesc.length > currentDesc.length) {
+                    return { ...song, description: fullDesc }
+                }
+            }
+            return song
+        })
+    )
+}
+
 export async function fetchStutiMediaFeed(forceFresh = false, emit = true): Promise<StutiMediaFeedPayload> {
     const baseline = ensureCurrentFeed()
 
@@ -228,8 +271,10 @@ export async function fetchStutiMediaFeed(forceFresh = false, emit = true): Prom
 
         const parsed = sanitizeFeedPayload(res.data)
         if (parsed) {
+            parsed.videos = await enrichStutiDescriptions(parsed.videos, baseline)
             currentFeed = parsed
             writeDiskCache(parsed)
+            syncStutiSongsIntoHymnsFile(parsed.videos)
             if (emit) sendToMain(ToMain.STUTI_MEDIA_SONGS, parsed)
             return parsed
         }
@@ -237,6 +282,7 @@ export async function fetchStutiMediaFeed(forceFresh = false, emit = true): Prom
         // Keep cached / seed feed silently when offline
     }
 
+    syncStutiSongsIntoHymnsFile(baseline.videos)
     if (emit) sendToMain(ToMain.STUTI_MEDIA_SONGS, baseline)
     return baseline
 }

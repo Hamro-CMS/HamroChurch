@@ -47,8 +47,13 @@
             })
     }
 
-    function findMatchingStutiSong(title: string, transliteration: string, videos: StutiMediaSong[]): StutiMediaSong | null {
+    function findMatchingStutiSong(sourceKey: string, title: string, transliteration: string, videos: StutiMediaSong[]): StutiMediaSong | null {
         if (!videos.length) return null
+        if (sourceKey && sourceKey.startsWith("stuti-")) {
+            const directId = sourceKey.slice(6)
+            const directMatch = videos.find((v) => v.video_id === directId)
+            if (directMatch) return directMatch
+        }
         const normTitle = normalizeTitleText(title)
         const normTranslit = normalizeTitleText(transliteration)
         const hymnTokens = new Set([...extractMeaningfulTokens(title), ...extractMeaningfulTokens(transliteration)])
@@ -96,7 +101,7 @@
     }
 
     $: hymn = $hymnItems.find((item) => item.id === $hymnSelectedId) || null
-    $: matchedStutiSong = hymn ? findMatchingStutiSong(hymn.title, hymn.transliteration || "", $stutiMediaFeed?.videos || []) : null
+    $: matchedStutiSong = hymn ? findMatchingStutiSong(hymn.sourceKey || hymn.id, hymn.title, hymn.transliteration || "", $stutiMediaFeed?.videos || []) : null
     $: info = hymn
         ? [
               { label: "info.created", value: $hymnSourceDates.created, type: "date" },

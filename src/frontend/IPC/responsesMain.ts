@@ -7,6 +7,7 @@ import type { Show, Slide } from "../../types/Show"
 import { API_ACTIONS, triggerAction } from "../components/actions/api"
 import { receivedMidi } from "../components/actions/midi"
 import { menuClick } from "../components/context/menuClick"
+import { hymnItems, loadHymns } from "../components/drawer/hymns/hymns"
 import { getCurrentTimerValue } from "../components/drawer/timers/timers"
 import { _getVariableValue, getDynamicValue } from "../components/edit/scripts/itemHelpers"
 import { clone, keysToID } from "../components/helpers/array"
@@ -601,6 +602,9 @@ export const mainResponses: MainResponses = {
     [ToMain.STUTI_MEDIA_SONGS]: (data) => {
         if (data && typeof data === "object" && (Array.isArray(data.videos) || Array.isArray(data.shorts))) {
             stutiMediaFeed.set(data)
+            if (get(hymnItems).length > 0) {
+                void loadHymns()
+            }
         }
     }
 }
